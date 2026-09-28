@@ -1,0 +1,21 @@
+{
+  "events": [
+    {"event_ticker": "KXSENATEBILL-26OCT15", "series_ticker": "KXSENATEBILL", "title": "Will the Senate pass the bill by Oct 15?", "mutually_exclusive": false, "category": "Politics",
+     "markets": [
+       {"ticker": "KXSENATEBILL-26OCT15", "event_ticker": "KXSENATEBILL-26OCT15", "series_ticker": "KXSENATEBILL", "title": "Will the Senate pass the bill by Oct 15?", "subtitle": "", "yes_bid": 40, "yes_ask": 42, "no_bid": 58, "no_ask": 60, "close_time": "2026-10-15T14:00:00Z", "status": "open"}
+     ]},
+    {"event_ticker": "KXMAYOR-26", "series_ticker": "KXMAYOR", "title": "Who will be elected mayor?", "mutually_exclusive": true, "category": "Politics",
+     "markets": [
+       {"ticker": "KXMAYOR-26-A", "event_ticker": "KXMAYOR-26", "series_ticker": "KXMAYOR", "title": "Who will be elected mayor?", "yes_sub_title": "Adams", "yes_bid": 45, "yes_ask": 47, "no_bid": 53, "no_ask": 55, "close_time": "2026-11-03T00:00:00Z", "status": "open"},
+       {"ticker": "KXMAYOR-26-B", "event_ticker": "KXMAYOR-26", "series_ticker": "KXMAYOR", "title": "Who will be elected mayor?", "yes_sub_title": "Baker", "yes_bid": 28, "yes_ask": 30, "no_bid": 70, "no_ask": 72, "close_time": "2026-11-03T00:00:00Z", "status": "open"},
+       {"ticker": "KXMAYOR-26-C", "event_ticker": "KXMAYOR-26", "series_ticker": "KXMAYOR", "title": "Who will be elected mayor?", "yes_sub_title": "Chen", "yes_bid": 18, "yes_ask": 20, "no_bid": 80, "no_ask": 82, "close_time": "2026-11-03T00:00:00Z", "status": "open"}
+     ]},
+    {"event_ticker": "KXCUP-26", "series_ticker": "KXCUP", "title": "Who will win the cup?", "mutually_exclusive": true, "category": "Sports",
+     "markets": [
+       {"ticker": "KXCUP-26-A", "event_ticker": "KXCUP-26", "series_ticker": "KXCUP", "title": "Who will win the cup?", "yes_sub_title": "Team A", "yes_bid": 38, "yes_ask": 40, "no_bid": 60, "no_ask": 62, "close_time": "2026-10-20T00:00:00Z", "status": "open"},
+       {"ticker": "KXCUP-26-B", "event_ticker": "KXCUP-26", "series_ticker": "KXCUP", "title": "Who will win the cup?", "yes_sub_title": "Team B", "yes_bid": 28, "yes_ask": 30, "no_bid": 70, "no_ask": 72, "close_time": "2026-10-20T00:00:00Z", "status": "open"},
+       {"ticker": "KXCUP-26-C", "event_ticker": "KXCUP-26", "series_ticker": "KXCUP", "title": "Who will win the cup?", "yes_sub_title": "Team C", "yes_bid": 18, "yes_ask": 20, "no_bid": 80, "no_ask": 82, "close_time": "2026-10-20T00:00:00Z", "status": "open"}
+     ]}
+  ],
+  "cursor": ""
+}

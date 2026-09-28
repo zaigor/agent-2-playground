@@ -1,0 +1,8 @@
+[
+  {"asset_id": "yesAlice", "bids": [{"price": "0.38", "size": "100"}], "asks": [{"price": "0.40", "size": "30"}, {"price": "0.41", "size": "200"}]},
+  {"asset_id": "yesBob",   "bids": [{"price": "0.33", "size": "80"}],  "asks": [{"price": "0.35", "size": "50"}]},
+  {"asset_id": "yesCarol", "bids": [{"price": "0.18", "size": "60"}],  "asks": [{"price": "0.20", "size": "20"}, {"price": "0.22", "size": "500"}]},
+  {"asset_id": "noX", "bids": [{"price": "0.47", "size": "10"}], "asks": [{"price": "0.50", "size": "40"}]},
+  {"asset_id": "noY", "bids": [{"price": "0.67", "size": "10"}], "asks": [{"price": "0.70", "size": "25"}]},
+  {"asset_id": "noZ", "bids": [{"price": "0.73", "size": "10"}], "asks": [{"price": "0.76", "size": "60"}]}
+]

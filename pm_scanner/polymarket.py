@@ -1,0 +1,278 @@
+"""Read-only Polymarket clients: Gamma (market metadata) and CLOB (order books).
+
+Gamma:  GET https://gamma-api.polymarket.com/events?active=true&closed=false&limit=..&offset=..
+        Events carry `negRisk` (mutually exclusive multi-outcome), `tags`, and
+        nested `markets`. Market fields that matter here: `clobTokenIds`,
+        `outcomes`, `outcomePrices` (all JSON-encoded strings), `bestBid`,
+        `bestAsk` (for outcome[0], i.e. YES), `endDate`, `acceptingOrders`.
+CLOB:   GET  https://clob.polymarket.com/book?token_id=..
+        POST https://clob.polymarket.com/books  body: [{"token_id": ..}, ...]
+        Levels are {"price": "0.45", "size": "120"}; `asset_id` is the token id.
+"""
+from __future__ import annotations
+
+import json
+from collections.abc import Iterable, Iterator
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Any
+
+from .http import HttpClient, HttpError
+
+GAMMA_URL = "https://gamma-api.polymarket.com"
+CLOB_URL = "https://clob.polymarket.com"
+SITE_URL = "https://polymarket.com"
+
+
+def _jsonish_list(value: Any) -> list:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        try:
+            out = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+        return out if isinstance(out, list) else []
+    return []
+
+
+def _float(value: Any, default: float | None = None) -> float | None:
+    if value is None or value == "":
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def parse_dt(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+@dataclass
+class Level:
+    price: float
+    size: float
+
+
+@dataclass
+class Book:
+    token_id: str
+    bids: list[Level] = field(default_factory=list)
+    asks: list[Level] = field(default_factory=list)
+
+    @property
+    def best_bid(self) -> Level | None:
+        return max(self.bids, key=lambda lv: lv.price) if self.bids else None
+
+    @property
+    def best_ask(self) -> Level | None:
+        return min(self.asks, key=lambda lv: lv.price) if self.asks else None
+
+
+def _levels(raw: Any, cents: bool = False) -> list[Level]:
+    out: list[Level] = []
+    for item in raw or []:
+        if isinstance(item, dict):
+            price, size = _float(item.get("price")), _float(item.get("size"))
+        elif isinstance(item, (list, tuple)) and len(item) >= 2:
+            price, size = _float(item[0]), _float(item[1])
+        else:
+            continue
+        if price is None or size is None or size <= 0:
+            continue
+        if cents:
+            price = price / 100.0
+        out.append(Level(price, size))
+    return out
+
+
+def parse_book(data: dict[str, Any]) -> Book:
+    token = str(data.get("asset_id") or data.get("token_id") or "")
+    return Book(token_id=token, bids=_levels(data.get("bids")), asks=_levels(data.get("asks")))
+
+
+@dataclass
+class PolyMarket:
+    id: str
+    question: str
+    slug: str
+    condition_id: str
+    outcomes: list[str]
+    token_ids: list[str]
+    outcome_prices: list[float]
+    best_bid: float | None
+    best_ask: float | None
+    spread: float | None
+    end_date: datetime | None
+    neg_risk: bool
+    liquidity: float
+    volume_24h: float
+    accepting_orders: bool
+    enable_order_book: bool
+    group_item_title: str
+    raw: dict = field(default_factory=dict, repr=False)
+
+    @property
+    def is_binary(self) -> bool:
+        return len(self.token_ids) == 2
+
+    @property
+    def yes_token(self) -> str | None:
+        return self.token_ids[0] if self.token_ids else None
+
+    @property
+    def no_token(self) -> str | None:
+        return self.token_ids[1] if len(self.token_ids) > 1 else None
+
+    @property
+    def url(self) -> str:
+        return f"{SITE_URL}/market/{self.slug}" if self.slug else SITE_URL
+
+    @property
+    def label(self) -> str:
+        return self.group_item_title or self.question
+
+    # Gamma's bestBid/bestAsk are quoted on the YES token. The NO book is the
+    # mirror image (a NO ask at p is a YES bid at 1-p), so:
+    @property
+    def no_best_ask(self) -> float | None:
+        return None if self.best_bid is None else round(1.0 - self.best_bid, 6)
+
+    @property
+    def no_best_bid(self) -> float | None:
+        return None if self.best_ask is None else round(1.0 - self.best_ask, 6)
+
+
+def parse_market(d: dict[str, Any]) -> PolyMarket:
+    return PolyMarket(
+        id=str(d.get("id", "")),
+        question=str(d.get("question") or ""),
+        slug=str(d.get("slug") or ""),
+        condition_id=str(d.get("conditionId") or ""),
+        outcomes=[str(o) for o in _jsonish_list(d.get("outcomes"))],
+        token_ids=[str(t) for t in _jsonish_list(d.get("clobTokenIds"))],
+        outcome_prices=[_float(p, 0.0) or 0.0 for p in _jsonish_list(d.get("outcomePrices"))],
+        best_bid=_float(d.get("bestBid")),
+        best_ask=_float(d.get("bestAsk")),
+        spread=_float(d.get("spread")),
+        end_date=parse_dt(d.get("endDate")),
+        neg_risk=bool(d.get("negRisk", False)),
+        liquidity=_float(d.get("liquidityNum") or d.get("liquidity"), 0.0) or 0.0,
+        volume_24h=_float(d.get("volume24hr"), 0.0) or 0.0,
+        accepting_orders=bool(d.get("acceptingOrders", True)),
+        enable_order_book=bool(d.get("enableOrderBook", True)),
+        group_item_title=str(d.get("groupItemTitle") or ""),
+        raw=d,
+    )
+
+
+@dataclass
+class PolyEvent:
+    id: str
+    title: str
+    slug: str
+    neg_risk: bool
+    neg_risk_augmented: bool
+    tags: list[str]
+    markets: list[PolyMarket]
+    end_date: datetime | None
+
+    @property
+    def url(self) -> str:
+        return f"{SITE_URL}/event/{self.slug}" if self.slug else SITE_URL
+
+
+def parse_event(d: dict[str, Any]) -> PolyEvent:
+    tags: list[str] = []
+    for t in d.get("tags") or []:
+        if isinstance(t, dict):
+            slug = t.get("slug") or t.get("label")
+            if slug:
+                tags.append(str(slug).lower())
+        elif isinstance(t, str):
+            tags.append(t.lower())
+    markets = [parse_market(m) for m in d.get("markets") or [] if isinstance(m, dict)]
+    return PolyEvent(
+        id=str(d.get("id", "")),
+        title=str(d.get("title") or ""),
+        slug=str(d.get("slug") or ""),
+        neg_risk=bool(d.get("negRisk", False)) or any(m.neg_risk for m in markets),
+        neg_risk_augmented=bool(d.get("negRiskAugmented", False)),
+        tags=tags,
+        markets=markets,
+        end_date=parse_dt(d.get("endDate")),
+    )
+
+
+class PolymarketClient:
+    def __init__(self, http: HttpClient, gamma_url: str = GAMMA_URL, clob_url: str = CLOB_URL) -> None:
+        self.http = http
+        self.gamma_url = gamma_url.rstrip("/")
+        self.clob_url = clob_url.rstrip("/")
+
+    def iter_events(self, page_size: int = 100, max_events: int = 3000) -> Iterator[PolyEvent]:
+        offset = 0
+        seen = 0
+        while seen < max_events:
+            data = self.http.get_json(
+                f"{self.gamma_url}/events",
+                params={
+                    "active": "true",
+                    "closed": "false",
+                    "limit": page_size,
+                    "offset": offset,
+                    "order": "volume24hr",
+                    "ascending": "false",
+                },
+            )
+            if not isinstance(data, list) or not data:
+                return
+            for item in data:
+                if isinstance(item, dict):
+                    yield parse_event(item)
+                    seen += 1
+                    if seen >= max_events:
+                        return
+            if len(data) < page_size:
+                return
+            offset += page_size
+
+    def get_book(self, token_id: str) -> Book:
+        data = self.http.get_json(f"{self.clob_url}/book", params={"token_id": token_id})
+        book = parse_book(data if isinstance(data, dict) else {})
+        if not book.token_id:
+            book.token_id = token_id
+        return book
+
+    def get_books(self, token_ids: Iterable[str], chunk: int = 50) -> dict[str, Book]:
+        ids = [t for t in dict.fromkeys(token_ids) if t]
+        out: dict[str, Book] = {}
+        for i in range(0, len(ids), chunk):
+            batch = ids[i : i + chunk]
+            try:
+                data = self.http.post_json(f"{self.clob_url}/books", [{"token_id": t} for t in batch])
+                for item in data if isinstance(data, list) else []:
+                    if isinstance(item, dict):
+                        book = parse_book(item)
+                        if book.token_id:
+                            out[book.token_id] = book
+            except HttpError:
+                pass
+            for t in batch:
+                if t not in out:
+                    try:
+                        out[t] = self.get_book(t)
+                    except HttpError:
+                        out[t] = Book(token_id=t)
+        return out

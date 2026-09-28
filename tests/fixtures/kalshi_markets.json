@@ -1,0 +1,7 @@
+{
+  "markets": [
+    {"ticker": "KXSENATEBILL-26OCT15", "event_ticker": "KXSENATEBILL-26OCT15", "series_ticker": "KXSENATEBILL", "title": "Will the Senate pass the bill by Oct 15?", "subtitle": "", "yes_bid": 40, "yes_ask": 42, "no_bid": 58, "no_ask": 60, "close_time": "2026-10-15T14:00:00Z", "status": "open"},
+    {"ticker": "KXFEDCUT-26DEC", "event_ticker": "KXFEDCUT-26DEC", "series_ticker": "KXFEDCUT", "title": "Will the Fed cut rates in December?", "yes_bid_dollars": "0.7000", "yes_ask_dollars": "0.7200", "no_bid_dollars": "0.2800", "no_ask_dollars": "0.3000", "close_time": "2026-12-10T19:00:00Z", "status": "open"}
+  ],
+  "cursor": ""
+}

@@ -1,0 +1,68 @@
+[
+  {
+    "id": "1",
+    "title": "Will the Senate pass the bill by October 15?",
+    "slug": "senate-bill-oct-15",
+    "negRisk": false,
+    "endDate": "2026-10-15T12:00:00Z",
+    "tags": [{"slug": "politics", "label": "Politics"}],
+    "markets": [
+      {
+        "id": "m1",
+        "question": "Will the Senate pass the bill by October 15?",
+        "slug": "senate-bill-oct-15",
+        "conditionId": "0xc1",
+        "outcomes": "[\"Yes\", \"No\"]",
+        "clobTokenIds": "[\"yesA\", \"noA\"]",
+        "outcomePrices": "[\"0.63\", \"0.37\"]",
+        "bestBid": 0.62,
+        "bestAsk": 0.64,
+        "spread": 0.02,
+        "endDate": "2026-10-15T12:00:00Z",
+        "acceptingOrders": true,
+        "enableOrderBook": true,
+        "liquidityNum": 12000,
+        "volume24hr": 5000
+      }
+    ]
+  },
+  {
+    "id": "2",
+    "title": "Who will win the Ruritania election?",
+    "slug": "ruritania-election",
+    "negRisk": true,
+    "negRiskAugmented": false,
+    "endDate": "2026-11-03T00:00:00Z",
+    "tags": [{"slug": "politics"}, {"slug": "elections"}],
+    "markets": [
+      {"id": "m2a", "question": "Will Alice win the Ruritania election?", "groupItemTitle": "Alice", "slug": "ruritania-alice", "conditionId": "0xc2a", "outcomes": "[\"Yes\", \"No\"]", "clobTokenIds": "[\"yesAlice\", \"noAlice\"]", "outcomePrices": "[\"0.39\", \"0.61\"]", "bestBid": 0.38, "bestAsk": 0.40, "negRisk": true, "endDate": "2026-11-03T00:00:00Z", "acceptingOrders": true},
+      {"id": "m2b", "question": "Will Bob win the Ruritania election?", "groupItemTitle": "Bob", "slug": "ruritania-bob", "conditionId": "0xc2b", "outcomes": "[\"Yes\", \"No\"]", "clobTokenIds": "[\"yesBob\", \"noBob\"]", "outcomePrices": "[\"0.34\", \"0.66\"]", "bestBid": 0.33, "bestAsk": 0.35, "negRisk": true, "endDate": "2026-11-03T00:00:00Z", "acceptingOrders": true},
+      {"id": "m2c", "question": "Will Carol win the Ruritania election?", "groupItemTitle": "Carol", "slug": "ruritania-carol", "conditionId": "0xc2c", "outcomes": "[\"Yes\", \"No\"]", "clobTokenIds": "[\"yesCarol\", \"noCarol\"]", "outcomePrices": "[\"0.19\", \"0.81\"]", "bestBid": 0.18, "bestAsk": 0.20, "negRisk": true, "endDate": "2026-11-03T00:00:00Z", "acceptingOrders": true}
+    ]
+  },
+  {
+    "id": "3",
+    "title": "Which studio releases first?",
+    "slug": "studio-first",
+    "negRisk": true,
+    "negRiskAugmented": true,
+    "endDate": "2026-12-31T00:00:00Z",
+    "tags": [{"slug": "entertainment"}],
+    "markets": [
+      {"id": "m3x", "question": "Will Studio X release first?", "groupItemTitle": "Studio X", "slug": "studio-x", "conditionId": "0xc3x", "outcomes": "[\"Yes\", \"No\"]", "clobTokenIds": "[\"yesX\", \"noX\"]", "outcomePrices": "[\"0.51\", \"0.49\"]", "bestBid": 0.50, "bestAsk": 0.53, "negRisk": true, "endDate": "2026-12-31T00:00:00Z", "acceptingOrders": true},
+      {"id": "m3y", "question": "Will Studio Y release first?", "groupItemTitle": "Studio Y", "slug": "studio-y", "conditionId": "0xc3y", "outcomes": "[\"Yes\", \"No\"]", "clobTokenIds": "[\"yesY\", \"noY\"]", "outcomePrices": "[\"0.31\", \"0.69\"]", "bestBid": 0.30, "bestAsk": 0.33, "negRisk": true, "endDate": "2026-12-31T00:00:00Z", "acceptingOrders": true},
+      {"id": "m3z", "question": "Will Studio Z release first?", "groupItemTitle": "Studio Z", "slug": "studio-z", "conditionId": "0xc3z", "outcomes": "[\"Yes\", \"No\"]", "clobTokenIds": "[\"yesZ\", \"noZ\"]", "outcomePrices": "[\"0.25\", \"0.75\"]", "bestBid": 0.24, "bestAsk": 0.27, "negRisk": true, "endDate": "2026-12-31T00:00:00Z", "acceptingOrders": true}
+    ]
+  },
+  {
+    "id": "4",
+    "title": "Will it rain in Springfield on September 30?",
+    "slug": "rain-springfield",
+    "negRisk": false,
+    "endDate": "2026-10-01T00:00:00Z",
+    "tags": [{"slug": "weather"}],
+    "markets": [
+      {"id": "m4", "question": "Will it rain in Springfield on September 30?", "slug": "rain-springfield", "conditionId": "0xc4", "outcomes": "[\"Yes\", \"No\"]", "clobTokenIds": "[\"yesRain\", \"noRain\"]", "outcomePrices": "[\"0.965\", \"0.035\"]", "bestBid": 0.96, "bestAsk": 0.97, "endDate": "2026-10-01T00:00:00Z", "acceptingOrders": true}
+    ]
+  }
+]

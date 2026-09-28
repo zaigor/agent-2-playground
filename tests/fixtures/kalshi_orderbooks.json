@@ -1,0 +1,6 @@
+{
+  "KXSENATEBILL-26OCT15": {"orderbook": {"yes": [[40, 100], [39, 200]], "no": [[58, 150], [57, 100]]}},
+  "KXCUP-26-A": {"orderbook": {"yes": [[38, 80]], "no": [[60, 40]]}},
+  "KXCUP-26-B": {"orderbook": {"yes": [[28, 50]], "no": [[70, 30]]}},
+  "KXCUP-26-C": {"orderbook": {"yes": [[18, 10]], "no": [[80, 90]]}}
+}
