@@ -49,9 +49,17 @@ class Opportunity:
     legs: list[Leg] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     end_date: str | None = None
+    min_order_size: float | None = None  # smallest ticket the venue accepts per leg, in shares
+
+    @property
+    def executable(self) -> bool:
+        """False when the budget- and depth-limited size is below the venue minimum."""
+        return self.min_order_size is None or self.budget_sets >= self.min_order_size
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        d = asdict(self)
+        d["executable"] = self.executable
+        return d
 
 
 def _size_for_budget(cost_per_set: float, fillable: float | None, budget: float) -> float:
@@ -129,6 +137,7 @@ def evaluate_negrisk(
     edge = payout - cost - fees
     fillable = min(lg.size for lg in legs if lg.size is not None) if legs else 0.0
     budget_sets = _size_for_budget(cost, fillable, budget)
+    min_size = max(m.order_min_size for m in event.markets)
 
     notes = [
         f"fee rate {rate:.2f} from tags {event.tags[:4]}" if event.tags else f"fee rate {rate:.2f} (no tags, default)",
@@ -140,6 +149,8 @@ def evaluate_negrisk(
         notes.append(f"pays ${n - 1} if one outcome wins and ${n} if none does, so it is robust to non-exhaustive events")
     if event.neg_risk_augmented:
         notes.append("negRiskAugmented=true: new outcomes can be added later, which changes the payout")
+    if budget_sets < min_size:
+        notes.append(f"below the venue minimum of {min_size:g} shares per leg: not executable at this budget/depth")
 
     return Opportunity(
         kind=kind,
@@ -157,6 +168,7 @@ def evaluate_negrisk(
         legs=legs,
         notes=notes,
         end_date=_iso(event.end_date),
+        min_order_size=min_size,
     )
 
 
@@ -190,6 +202,13 @@ def scan_near_certain(
                     continue
                 shares = budget / ask
                 annualized = (edge / ask) * (365.0 / max(days, 1.0))
+                notes = [
+                    f"resolves in ~{days:.1f} days; ~{annualized * 100:.0f}% annualized if it pays",
+                    "NOT risk-free: read the resolution rules; UMA disputes and misreadings lose the whole stake",
+                    "depth unknown (no book pulled); a resting limit order one tick inside pays no taker fee",
+                ]
+                if shares < m.order_min_size:
+                    notes.append(f"below the venue minimum of {m.order_min_size:g} shares")
                 out.append(
                     Opportunity(
                         kind="near_certain",
@@ -205,12 +224,9 @@ def scan_near_certain(
                         budget_sets=round(shares, 2),
                         est_profit=round(shares * edge, 2),
                         legs=[Leg("polymarket", m.label, side, ask, None, fee_unit)],
-                        notes=[
-                            f"resolves in ~{days:.1f} days; ~{annualized * 100:.0f}% annualized if it pays",
-                            "NOT risk-free: read the resolution rules; UMA disputes and misreadings lose the whole stake",
-                            "depth unknown (no book pulled); a resting limit order one tick inside pays no taker fee",
-                        ],
+                        notes=notes,
                         end_date=_iso(m.end_date),
+                        min_order_size=m.order_min_size,
                     )
                 )
     return out
@@ -447,6 +463,7 @@ def scan_kalshi_mutex(
                     legs=legs,
                     notes=notes,
                     end_date=_iso(min((m.close_time for m in ev.markets if m.close_time), default=None)),
+                    min_order_size=1.0,
                 )
             )
     return out

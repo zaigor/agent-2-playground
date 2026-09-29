@@ -121,6 +121,7 @@ class PolyMarket:
     accepting_orders: bool
     enable_order_book: bool
     group_item_title: str
+    order_min_size: float  # smallest order the CLOB accepts, in shares (Gamma `orderMinSize`, usually 5)
     raw: dict = field(default_factory=dict, repr=False)
 
     @property
@@ -173,6 +174,7 @@ def parse_market(d: dict[str, Any]) -> PolyMarket:
         accepting_orders=bool(d.get("acceptingOrders", True)),
         enable_order_book=bool(d.get("enableOrderBook", True)),
         group_item_title=str(d.get("groupItemTitle") or ""),
+        order_min_size=_float(d.get("orderMinSize"), 5.0) or 5.0,
         raw=d,
     )
 

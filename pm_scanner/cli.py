@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +20,7 @@ from .scans import (
     utcnow,
 )
 from .sources import FixtureSource, LiveSource
+from .watch import ARB_KINDS, JsonlLog, TelegramNotifier, render_summary, summarize, watch
 
 
 def run_scan(
@@ -82,12 +85,8 @@ def run_scan(
     return opps, stats
 
 
-def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="pm_scanner", description="Read-only Polymarket/Kalshi opportunity scanner")
-    sub = p.add_subparsers(dest="cmd", required=True)
-
-    s = sub.add_parser("scan", help="scan live markets (or fixtures) for fee-adjusted edges")
-    s.add_argument("--platform", choices=["polymarket", "kalshi", "both"], default="both")
+def _add_scan_args(s: argparse.ArgumentParser) -> None:
+    s.add_argument("--platform", choices=["polymarket", "kalshi", "both"], default="polymarket")
     s.add_argument("--budget", type=float, default=50.0, help="cash available, used to size expected profit")
     s.add_argument("--min-edge", type=float, default=0.005, help="minimum net edge per $1-payout set")
     s.add_argument("--max-events", type=int, default=3000, help="Polymarket events to pull (by 24h volume)")
@@ -97,7 +96,42 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--kalshi-fee-multiplier", type=float, default=1.0)
     s.add_argument("--no-cross", action="store_true", help="skip Polymarket<->Kalshi matching")
     s.add_argument("--fixtures", type=Path, default=None, help="offline: read recorded API responses from DIR")
+
+
+def _scan_kwargs(args: argparse.Namespace) -> dict:
+    return dict(
+        budget=args.budget,
+        min_edge=args.min_edge,
+        max_events=args.max_events,
+        platform=args.platform,
+        near_min_price=args.near_certain_min_price,
+        near_max_days=args.near_certain_max_days,
+        poly_fee_rate=args.poly_fee_rate,
+        kalshi_multiplier=args.kalshi_fee_multiplier,
+        do_cross=not args.no_cross,
+    )
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="pm_scanner", description="Read-only Polymarket/Kalshi opportunity scanner")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    s = sub.add_parser("scan", help="scan once and print a report")
+    _add_scan_args(s)
     s.add_argument("--json", type=Path, default=None, help="also write results to this JSON file")
+
+    w = sub.add_parser("watch", help="re-scan on an interval and log appearances/disappearances (paper trading)")
+    _add_scan_args(w)
+    w.add_argument("--interval", type=float, default=60.0, help="seconds between scans")
+    w.add_argument("--log", type=Path, default=Path("watch.jsonl"), help="JSONL log to append to")
+    w.add_argument("--include-near-certain", action="store_true", help="also track near_certain rows (noisy)")
+    w.add_argument("--iterations", type=int, default=None, help="stop after N scans (default: run forever)")
+    w.add_argument("--telegram-token", default=os.environ.get("TELEGRAM_BOT_TOKEN"), help="or env TELEGRAM_BOT_TOKEN")
+    w.add_argument("--telegram-chat", default=os.environ.get("TELEGRAM_CHAT_ID"), help="or env TELEGRAM_CHAT_ID")
+
+    z = sub.add_parser("summarize", help="aggregate a watch log into rates, sizes and lifetimes")
+    z.add_argument("log", type=Path)
+    z.add_argument("--json", action="store_true", help="print raw JSON instead of a table")
 
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
     f.add_argument("--platform", choices=["polymarket", "kalshi"], required=True)
@@ -111,6 +145,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
     if args.cmd == "fee":
         if args.platform == "polymarket":
             fee = polymarket_taker_fee(args.price, args.shares, args.rate)
@@ -121,27 +156,40 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Kalshi {'maker' if args.maker else 'taker'} fee: ${fee:.2f} on {args.shares:g} contracts @ {args.price}")
         return 0
 
-    now = utcnow()
+    if args.cmd == "summarize":
+        summary = summarize(args.log)
+        print(json.dumps(summary, indent=2) if args.json else render_summary(summary))
+        return 0
+
     source = FixtureSource(args.fixtures) if args.fixtures else LiveSource()
+    kwargs = _scan_kwargs(args)
+
+    if args.cmd == "scan":
+        now = utcnow()
+        try:
+            opps, stats = run_scan(source, now=now, **kwargs)
+        except Exception as exc:  # surface proxy / network denials plainly
+            print(f"scan failed: {exc}", file=sys.stderr)
+            return 2
+        print(render_text(opps, stats, args.budget, args.min_edge, now))
+        if args.json:
+            write_json(args.json, opps, stats, args.budget, now)
+            print(f"\nwrote {args.json}")
+        return 0
+
+    # watch
+    notifier = TelegramNotifier(args.telegram_token, args.telegram_chat) if args.telegram_token and args.telegram_chat else None
+    kinds = set(ARB_KINDS) | ({"near_certain"} if args.include_near_certain else set())
+    print(f"watching every {args.interval:g}s, logging to {args.log}; alerts {'on' if notifier else 'off'}; Ctrl-C to stop")
     try:
-        opps, stats = run_scan(
-            source,
-            budget=args.budget,
-            min_edge=args.min_edge,
-            max_events=args.max_events,
-            platform=args.platform,
-            near_min_price=args.near_certain_min_price,
-            near_max_days=args.near_certain_max_days,
-            poly_fee_rate=args.poly_fee_rate,
-            kalshi_multiplier=args.kalshi_fee_multiplier,
-            do_cross=not args.no_cross,
-            now=now,
+        watch(
+            lambda now: run_scan(source, now=now, **kwargs),
+            interval=args.interval,
+            log=JsonlLog(args.log),
+            notifier=notifier,
+            kinds=kinds,
+            iterations=args.iterations,
         )
-    except Exception as exc:  # surface proxy / network denials plainly
-        print(f"scan failed: {exc}", file=sys.stderr)
-        return 2
-    print(render_text(opps, stats, args.budget, args.min_edge, now))
-    if args.json:
-        write_json(args.json, opps, stats, args.budget, now)
-        print(f"\nwrote {args.json}")
+    except KeyboardInterrupt:
+        print("\nstopped")
     return 0

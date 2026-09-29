@@ -31,14 +31,23 @@ pip install -e ".[dev]"
 # offline demo on recorded fixtures (no network needed)
 python -m pm_scanner scan --fixtures tests/fixtures --budget 50
 
-# live (needs egress to gamma-api.polymarket.com, clob.polymarket.com,
-# api.elections.kalshi.com)
-python -m pm_scanner scan --platform both --budget 50 --min-edge 0.005 --json scan-$(date +%F).json
+# one live scan (needs egress to gamma-api.polymarket.com and clob.polymarket.com;
+# add api.elections.kalshi.com for --platform both)
+python -m pm_scanner scan --platform polymarket --budget 50 --min-edge 0.005 --json scan-$(date +%F).json
 python -m pm_scanner scan --platform polymarket --poly-fee-rate 0   # pretend fee-free
 python -m pm_scanner fee --platform kalshi --price 0.42 --shares 1  # fee for one order
 
+# paper trading: re-scan every 60s, log every appearance/disappearance, run for days
+python -m pm_scanner watch --platform polymarket --budget 50 --interval 60 --log watch.jsonl
+#   optional push alerts: export TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=...
+python -m pm_scanner summarize watch.jsonl     # rates, sizes, lifetimes by kind
+
 pytest -q
 ```
+
+`watch` and `summarize` are the cheap way to answer "is there anything here?"
+before any money moves. Nothing in this package calls an LLM; it runs fine on
+a laptop or a small VPS and costs nothing to leave running.
 
 ## Fee models (change them when the venues do)
 
@@ -62,9 +71,14 @@ pm_scanner/
   scans.py       detectors; every Opportunity is net of fees and budget-sized
   sources.py     LiveSource (APIs) and FixtureSource (recorded JSON)
   report.py      text table + JSON output
-  cli.py         `scan` and `fee` commands
+  watch.py       polling loop, JSONL log, Telegram alerts, log summarizer
+  cli.py         `scan`, `watch`, `summarize` and `fee` commands
 tests/           pytest suite running entirely on fixtures
 ```
+
+Every opportunity also carries the venue's minimum order size for its legs
+(Polymarket exposes it per market, usually 5 shares) and an `executable` flag
+that is false when the budget- and depth-limited size is below that minimum.
 
 ## Not included on purpose
 
