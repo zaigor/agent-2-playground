@@ -125,9 +125,26 @@ def test_set_horizon_annualizes_edge():
     assert o.days_to_resolve == 36.5 and abs(o.annualized - 0.02 * 10) < 1e-9
 
 
-def test_augmented_events_skipped_unless_allowed():
-    def titles(opps):
-        return {o.title for o in opps if o.kind != "near_certain"}
+def test_augmented_events_skip_buy_all_yes_but_keep_buy_all_no():
+    def kinds_for(opps, title):
+        return {o.kind for o in opps if o.title == title}
 
-    assert "Which studio releases first?" in titles(_fixture_scan(allow_augmented=True)[0])
-    assert "Which studio releases first?" not in titles(_fixture_scan(allow_augmented=False)[0])
+    studio = "Which studio releases first?"  # negRiskAugmented=true in the fixture; bids sum > 1, asks sum > 1
+    assert kinds_for(_fixture_scan(allow_augmented=True)[0], studio) == {"negrisk_buy_all_no"}
+    # a NO set pays N-1 if a listed outcome wins and N if a later-added one wins, so it survives the filter
+    assert kinds_for(_fixture_scan(allow_augmented=False)[0], studio) == {"negrisk_buy_all_no"}
+
+
+def test_augmented_filter_drops_buy_all_yes(monkeypatch):
+    from pm_scanner import cli
+
+    real = cli.find_negrisk_candidates
+
+    def only_yes(events, min_edge, fee_override=None):
+        # pretend every neg-risk event also looks like a buy-all-YES candidate
+        return [(ev, "negrisk_buy_all_yes") for ev, _ in real(events, min_edge, fee_override)]
+
+    monkeypatch.setattr(cli, "find_negrisk_candidates", only_yes)
+    monkeypatch.setattr(cli, "evaluate_negrisk", lambda ev, kind, books, budget, fee: _opp(kind=kind, url=ev.title))
+    urls = {o.url for o in _fixture_scan(allow_augmented=False)[0] if o.kind == "negrisk_buy_all_yes"}
+    assert "Which studio releases first?" not in urls and "Who will win the Ruritania election?" in urls

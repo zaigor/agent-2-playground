@@ -53,8 +53,10 @@ def run_scan(
         stats["poly_events"] = len(events)
         stats["poly_markets"] = sum(len(e.markets) for e in events)
         cands = find_negrisk_candidates(events, min_edge, poly_fee_rate)
-        if not allow_augmented:  # Polymarket may add outcomes later, so "buy every YES" can stop covering the winner
-            cands = [(ev, kind) for ev, kind in cands if not ev.neg_risk_augmented]
+        if not allow_augmented:
+            # Polymarket may add outcomes later, so "buy every YES" can stop covering the winner.
+            # "Buy every NO" is unaffected: it pays N-1 if a listed outcome wins and N if a new one does.
+            cands = [(ev, kind) for ev, kind in cands if not (ev.neg_risk_augmented and kind == "negrisk_buy_all_yes")]
         stats["negrisk_candidates"] = len(cands)
         token_ids: list[str] = []
         for ev, kind in cands:

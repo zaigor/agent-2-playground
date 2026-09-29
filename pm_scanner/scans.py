@@ -212,9 +212,7 @@ def scan_near_certain(
                 if edge <= 0:
                     continue
                 shares = budget / ask
-                annualized = (edge / ask) * (365.0 / max(days, 1.0))
                 notes = [
-                    f"resolves in ~{days:.1f} days; ~{annualized * 100:.0f}% annualized if it pays",
                     "NOT risk-free: read the resolution rules; UMA disputes and misreadings lose the whole stake",
                     "depth unknown (no book pulled); a resting limit order one tick inside pays no taker fee",
                 ]

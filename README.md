@@ -28,8 +28,9 @@ best asks always sum to at least $1.
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 
-# offline demo on recorded fixtures (no network needed)
-python -m pm_scanner scan --fixtures tests/fixtures --budget 50
+# offline demo on recorded fixtures (no network needed); --max-days 0 lifts the
+# default 30-day payout horizon, which the fixture events sit outside of
+python -m pm_scanner scan --fixtures tests/fixtures --budget 50 --max-days 0
 
 # one live scan (needs egress to gamma-api.polymarket.com and clob.polymarket.com;
 # add api.elections.kalshi.com for --platform both)
