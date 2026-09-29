@@ -46,6 +46,28 @@ python -m pm_scanner summarize watch.jsonl     # rates, sizes, lifetimes by kind
 pytest -q
 ```
 
+### Knesset election model (`israel`)
+
+The 27 Oct 2026 election has ~110 Polymarket markets (seat brackets, vote-share
+brackets, threshold and most-seats questions) with 10-40c spreads and a few
+hundred dollars at the touch. `israel` turns published polls into a seat
+distribution and prices every bracket against it:
+
+```bash
+# polls live in data/israel_polls_2026.csv (seats per party per poll; see the header)
+python -m pm_scanner israel --budget 500                       # live Gamma + CLOB
+python -m pm_scanner israel --fixtures tests/fixtures --all    # offline, on the 29 Sep snapshot
+python -m pm_scanner israel --sd utj=0.6,shas=0.9 --bloc-bias 0.01 --surplus yashar:dems,together:yb
+```
+
+Pipeline: recency- and pollster-weighted vote shares -> Monte Carlo with
+independent, bloc-correlated and Arab-turnout error -> 3.25% threshold and
+Bader-Ofer allocation with surplus-vote pairs -> P(bracket) for each market ->
+edge net of the 4% politics taker fee, quarter-Kelly stake capped at 10% of
+budget and at top-of-book depth, plus fee-free resting quotes 6c inside the
+model. Nothing under 5c a side is ever recommended. The shipped CSV contains
+PLACEHOLDER rows; the tool shouts until they are replaced with real polls.
+
 `watch` and `summarize` are the cheap way to answer "is there anything here?"
 before any money moves. Nothing in this package calls an LLM; it runs fine on
 a laptop or a small VPS and costs nothing to leave running.
@@ -73,8 +95,11 @@ pm_scanner/
   sources.py     LiveSource (APIs) and FixtureSource (recorded JSON)
   report.py      text table + JSON output
   watch.py       polling loop, JSONL log, Telegram alerts, log summarizer
-  cli.py         `scan`, `watch`, `summarize` and `fee` commands
-tests/           pytest suite running entirely on fixtures
+  israel.py      Knesset polls -> seat simulation -> bracket probabilities -> edges
+  cli.py         `scan`, `watch`, `summarize`, `israel` and `fee` commands
+data/            israel_polls_2026.csv (hand-maintained poll table)
+tests/           pytest suite running entirely on fixtures (incl. a 29 Sep 2026
+                 snapshot of the Israel election markets and their order books)
 ```
 
 Every opportunity also carries the venue's minimum order size for its legs

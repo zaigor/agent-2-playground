@@ -170,6 +170,79 @@ a month per subscriber), take paid automation or development work, or simply
 cut the credit burn by running fewer and shorter sessions. I have not started
 on any of these; say so if you want one.
 
+## 9. Niche hunt (29 Sep): the Knesset election is the niche
+
+You asked for a niche where research, alerts or bought data beat the crowd, that
+pays inside ~30 days, with enough volume to matter. I ranked the candidates by
+(your specific edge) x (fee) x (horizon) x (depth):
+
+| niche | horizon | fee | depth | your edge | verdict |
+| --- | --- | --- | --- | --- | --- |
+| **Israeli election, 27 Oct** (seat brackets, vote-share brackets, threshold, most seats) | 28 days | 4% politics | headline books $7-16K at the touch, brackets $5-300, 10-40c spreads | Hebrew press hours ahead of English, pollster house effects, threshold and surplus-vote mechanics | **do this** |
+| Israel geopolitics (ceasefire-by-date, strikes, Netanyahu-out) | weeks-months | 0% | $20-340K liquidity | same media edge, but event-driven, no model | opportunistic, second |
+| Entertainment (Rotten Tomatoes, box office, Netflix) | days | 5% | $20M volume across 500 markets | none you have; dedicated traders already there | later, only with a critic-tracking model |
+| Weather (daily highs) | 1 day | 5% | $50K/market | none; bots ingest model runs within minutes, edge ~3 points | no |
+| Sports vs sharp books | hours | 5% | huge | needs an offshore book: not legal from Israel | no |
+| Crypto 15-min/hourly | minutes | 7% | huge | latency game | no |
+
+Why the election is right for you specifically:
+
+* Polymarket lists ~110 Israel-election markets. The seat- and vote-share
+  brackets are thin and wide (Yashar 22-23 seats: bid 0.21 / ask 0.35;
+  Yisrael Beiteinu 8-9: 0.26 / 0.66; UTJ 7-8: 0.61 / 0.75). The CEPR study of
+  588M Polymarket trades found the consistent winners are limit-order traders in
+  exactly this kind of book, plus directional election traders. Wide spreads are
+  where a small maker earns.
+* The information is public and in Hebrew first: nightly polls on Channels 12,
+  13, Kan and Maariv, surplus-vote agreements, list disqualification appeals.
+  Trading on published polls is squarely allowed under Polymarket's March 2026
+  integrity rules (they forbid stolen confidential information and trading on
+  outcomes you can influence). Do not touch anything a party insider tells you.
+* The edge is a *model*, not a hunch: polls -> vote shares -> threshold ->
+  Bader-Ofer -> P(bracket). The market's implied numbers are already
+  inconsistent with the poll consensus in places (Likud bracket mids imply ~24
+  seats and give 12% to 30-34; polls have 18-23), and the two "most seats"
+  contracts trade at 58/42 while the poll gap is 2-3 seats.
+
+What I built: `python -m pm_scanner israel` (section in README). It runs live in
+three seconds, prints the poll table and weights, the simulated seat
+distribution per party against the market-implied one, bloc probabilities, and
+every bracket where model and market disagree by more than 3c after fees, sized
+at quarter-Kelly, capped at 10% of budget and at top-of-book depth, plus fee-free
+resting quotes 6c inside the model. Nothing under 5c a side is recommended: the
+model cannot price pennies.
+
+What it needs from you, daily, until 27 Oct:
+
+1. **Real polls in `data/israel_polls_2026.csv`.** I could only reach Gamma from
+   here, so the file holds two partial real rows and one PLACEHOLDER average
+   that you must replace. Wikipedia's "Opinion polling for the 2026 Israeli
+   legislative election" table has every poll in seats; add each new one as a
+   row (blank cell = not reported, `2.6%` for a list the poll puts under the
+   threshold). With 6-10 real rows the cross-pollster disagreement (Likud has
+   ranged 18-27) enters the error model automatically.
+2. **Surplus-vote pairs** as they are actually signed (`--surplus`). Defaults
+   are the reported ones; likud:rzp and otzma:amcha were still "planned" in the
+   press on 29 Sep.
+3. **Your judgement on the error model.** It is one-size-fits-all: sd = 0.8 pt
+   + 5% of share (a 4% list misses by ~1 pt, a 20% list by ~1.8), plus a 1-pt
+   right<->centre swing and an Arab-turnout shock, calibrated loosely on
+   2019-2022 (Shas and the Arab lists under-polled in 2022, Meretz missed the
+   threshold on a whisker, Likud beat its polls by 7 seats in April 2019). Use
+   `--sd utj=0.6` for lists you know are rock-steady and `--bloc-bias 0.01` if
+   you believe the "Bibi beats the polls" prior. Log which settings you used.
+4. **Paper first.** Run it once a day, save `--json`, and compare the trades it
+   flags with what the market does over the next days. If the model's brackets
+   keep converging toward market prices rather than the reverse, the market
+   knows something the polls do not, and you stop.
+
+Honest sizing: as a taker you can put $50-300 per bracket and perhaps $1-3K in
+total before you are the price; as a maker more, slowly. If the model is right
+about even a third of its 10-30c disagreements, that is a 10-20% return on the
+deployed capital in four weeks, i.e. $100-500 on $1-3K. It is not a living. It is
+the first strategy in this repo where the edge comes from something you have and
+the crowd does not, and its expiry date is 27 October.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
@@ -181,3 +254,8 @@ on any of these; say so if you want one.
 * Kalshi fees and access: [Kalshi fee schedule PDF](https://kalshi.com/docs/kalshi-fee-schedule.pdf), [Help Center: trading from outside the US](https://help.kalshi.com/en/articles/14026044-can-i-trade-on-kalshi-from-outside-the-united-states), [CoinPerps restricted list](https://www.coinperps.com/learn/kalshi-restricted-countries), [Laika Labs restricted list](https://laikalabs.ai/prediction-markets/kalshi-legal-supported-restricted-countries)
 * Retail arbitrage economics: [1023 Jack: are Polymarket bots profitable](https://1023jack.com/market/are-polymarket-trading-bots-actually-profitable-the-math-behind-2026-s-predictio/), [LayerX bot research](https://layerx.xyz/blog/polymarketbots)
 * RedotPay card: [CryptoSlate review](https://cryptoslate.com/crypto-cards/redotpay-card-review/), [Cardpilled](https://cardpilled.com/cards/redotpay)
+* Israel election markets: [Polymarket Israel election hub](https://polymarket.com/politics/israel-election), [most seats](https://polymarket.com/event/israeli-legislative-election-winner), [Yashar seats](https://polymarket.com/event/israel-election-yashar-of-seats), [which parties win a seat](https://polymarket.com/event/which-parties-will-win-a-seat-in-the-2026-knesset-elections); snapshot of all 39 events and books taken 29 Sep 2026 in `tests/fixtures/israel_*.json`.
+* Polls and mechanics: [Haaretz, Kan poll 27 Sep](https://www.haaretz.com/israel-news/israel-politics/2026-09-27/ty-article/israel-election-poll-eisenkot-netanyahu-tie-as-smotrich-hits-new-high/000001a0-e43c-db4b-a7a5-f67e17050000), [Haaretz, Channel 12 poll 23 Sep](https://www.haaretz.com/israel-news/elections/2026-09-23/ty-article/israel-election-poll-eisenkots-bloc-beats-netanyahu-as-likud-gains-ground/000001a0-cafa-dfbe-a3ff-ffffd6250000), [JPost: polls vary wildly, Likud 18-27](https://www.jpost.com/israel-election-2026/article-909804), [JPost: surplus-vote agreements](https://www.jpost.com/israel-election-2026/article-908296), [Israel Policy Forum: the electoral threshold](https://israelpolicyforum.org/2026/09/24/the-electoral-threshold-what-it-is-and-why-it-matters/), [Israel Elects: pollster scorecard](https://israelects.substack.com/p/the-pollster-scorecard), [Wikipedia: 2026 opinion polling](https://en.wikipedia.org/wiki/Opinion_polling_for_the_2026_Israeli_legislative_election).
+* Who wins on Polymarket: [CEPR DP21615, Who Wins and Who Loses in Prediction Markets](https://cepr.org/publications/dp21615) (limit-order traders and election/sports directional traders; top 1% take 76.5% of profits).
+* Rules: [Polymarket market-integrity rules, March 2026](https://www.businesswire.com/news/home/20260320997513/en/Polymarket-Publishes-Enhanced-Market-Integrity-Rules-Across-Its-DeFi-Platform-and-CFTC-Regulated-U.S.-Exchange), [Debevoise on the April 2026 insider-trading charges](https://www.debevoise.com/insights/publications/2026/04/polymarket-insider-trading-charges-illustrate-doj).
+* Other niches checked: [weather bots and edge compression](https://laikalabs.ai/prediction-markets/trade-polymarket-weather-markets), [The Ankler on entertainment markets](https://theankler.com/gamblers-prediction-markets-entertainment-rotten-tomatoes-box-office-polymarket/).

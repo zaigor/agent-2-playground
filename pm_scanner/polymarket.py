@@ -257,6 +257,30 @@ class PolymarketClient:
             if not cursor or len(items) < page_size:
                 return
 
+    def tag_id(self, tag_slug: str) -> str | None:
+        data = self.http.get_json(f"{self.gamma_url}/tags/slug/{tag_slug}")
+        tid = data.get("id") if isinstance(data, dict) else None
+        return str(tid) if tid is not None else None
+
+    def iter_events_by_tag(self, tag_slug: str, page_size: int = 100, include_closed: bool = False) -> Iterator[PolyEvent]:
+        """All events carrying a Gamma tag (e.g. `israel-election`), a few hundred at most."""
+        tid = self.tag_id(tag_slug)
+        if tid is None:
+            return
+        offset = 0
+        while True:
+            params: dict[str, Any] = {"tag_id": tid, "limit": page_size, "offset": offset}
+            if not include_closed:
+                params["closed"] = "false"
+            data = self.http.get_json(f"{self.gamma_url}/events", params=params)
+            items = data if isinstance(data, list) else []
+            for item in items:
+                if isinstance(item, dict):
+                    yield parse_event(item)
+            if len(items) < page_size:
+                return
+            offset += page_size
+
     def get_book(self, token_id: str) -> Book:
         data = self.http.get_json(f"{self.clob_url}/book", params={"token_id": token_id})
         book = parse_book(data if isinstance(data, dict) else {})

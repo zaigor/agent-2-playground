@@ -1,0 +1,10 @@
+# Knesset polls for the 27 Oct 2026 election. One row per published poll.
+# Cells: seats as published ("23"); a party the poll puts under the 3.25% threshold
+# as its vote share if given ("2.6%") or 0 if not; blank = party not reported.
+# Rows whose pollster contains PLACEHOLDER are stand-ins that must be replaced with
+# real polls (Hebrew press / Wikipedia "Opinion polling for the 2026 Israeli
+# legislative election"); the tool warns loudly while any remain.
+date,pollster,sample,likud,yashar,together,dems,yb,shas,utj,rzp,otzma,amcha,joint_list,raam,reservists,blue_white,unity
+2026-09-27,Kan 11 (Kantar),,21,23,11,,,,,,,,,,,,
+2026-09-23,Channel 12 (Midgam),,20,23,13,,,,,,,,,,4,,
+2026-09-25,PLACEHOLDER-late-September-average,,21,23,12,10,7,8,7,6,8,4,8,6,3.1%,1.0%,0.3%

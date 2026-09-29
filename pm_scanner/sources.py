@@ -21,6 +21,9 @@ class LiveSource:
     def poly_books(self, token_ids: list[str]) -> dict[str, Book]:
         return self.poly.get_books(token_ids)
 
+    def poly_events_by_tag(self, tag_slug: str) -> list[PolyEvent]:
+        return list(self.poly.iter_events_by_tag(tag_slug))
+
     def kalshi_markets(self) -> list[KalshiMarket]:
         return list(self.kalshi.iter_markets())
 
@@ -35,7 +38,8 @@ class LiveSource:
 
 
 class FixtureSource:
-    """Reads gamma_events.json, clob_books.json, kalshi_markets.json, kalshi_orderbooks.json."""
+    """Reads gamma_events.json, clob_books.json, kalshi_markets.json, kalshi_orderbooks.json,
+    plus israel_events.json / israel_books.json for the election model."""
 
     def __init__(self, directory: Path) -> None:
         self.dir = Path(directory)
@@ -50,8 +54,13 @@ class FixtureSource:
         return [parse_event(d) for d in self._load("gamma_events.json", [])][:max_events]
 
     def poly_books(self, token_ids: list[str]) -> dict[str, Book]:
-        books = {b.token_id: b for b in (parse_book(d) for d in self._load("clob_books.json", []))}
+        raw = self._load("clob_books.json", []) + self._load("israel_books.json", [])
+        books = {b.token_id: b for b in (parse_book(d) for d in raw)}
         return {t: books.get(t, Book(token_id=t)) for t in token_ids}
+
+    def poly_events_by_tag(self, tag_slug: str) -> list[PolyEvent]:
+        name = "israel_events.json" if "israel" in tag_slug else "gamma_events.json"
+        return [parse_event(d) for d in self._load(name, [])]
 
     def kalshi_markets(self) -> list[KalshiMarket]:
         data = self._load("kalshi_markets.json", {})

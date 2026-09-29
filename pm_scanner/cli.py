@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
+from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
 from .report import render_text, write_json
 from .scans import (
     Opportunity,
@@ -163,6 +164,28 @@ def build_parser() -> argparse.ArgumentParser:
     z.add_argument("log", type=Path)
     z.add_argument("--json", action="store_true", help="print raw JSON instead of a table")
 
+    i = sub.add_parser("israel", help="Knesset election model vs Polymarket's Israel election markets")
+    i.add_argument("--polls", type=Path, default=Path("data/israel_polls_2026.csv"), help="poll CSV (see the file header)")
+    i.add_argument("--budget", type=float, default=500.0)
+    i.add_argument("--min-edge", type=float, default=0.03, help="minimum edge per share after fees, e.g. 0.03 = 3 cents")
+    i.add_argument("--sims", type=int, default=10000)
+    i.add_argument("--seed", type=int, default=1)
+    i.add_argument("--half-life", type=float, default=7.0, help="poll recency half-life in days")
+    i.add_argument("--window", type=float, default=21.0, help="ignore polls older than this many days")
+    i.add_argument("--error-scale", type=float, default=1.0, help="multiply every party's polling-error sd")
+    i.add_argument("--bloc-sd", type=float, default=0.010, help="sd of a common right<->centre transfer, as a vote fraction")
+    i.add_argument("--bloc-bias", type=float, default=0.0, help="mean of that transfer; +0.01 = polls understate the right by 1 point")
+    i.add_argument("--sd", default="", help="per-party error sd overrides in vote points, e.g. utj=0.6,shas=0.9")
+    i.add_argument("--min-price", type=float, default=0.05, help="never trade a side cheaper than this; the model cannot price pennies")
+    i.add_argument("--surplus", default=",".join(f"{a}:{b}" for a, b in DEFAULT_SURPLUS_PAIRS), help="surplus-vote pairs, e.g. yashar:dems,together:yb")
+    i.add_argument("--kelly", type=float, default=0.25, help="fraction of Kelly to stake")
+    i.add_argument("--max-fraction", type=float, default=0.10, help="cap per market as a fraction of budget")
+    i.add_argument("--maker-margin", type=float, default=0.06, help="how far inside the model to post resting orders")
+    i.add_argument("--poly-fee-rate", type=float, default=None, help="override the taker rate (default: from tags, politics 0.04)")
+    i.add_argument("--fixtures", type=Path, default=None, help="offline: read israel_events.json / israel_books.json from DIR")
+    i.add_argument("--all", action="store_true", help="also list every modelled market with its model probability")
+    i.add_argument("--json", type=Path, default=None, help="also write the full report to this JSON file")
+
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
     f.add_argument("--platform", choices=["polymarket", "kalshi"], required=True)
     f.add_argument("--price", type=float, required=True)
@@ -192,6 +215,28 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     source = FixtureSource(args.fixtures) if args.fixtures else LiveSource()
+
+    if args.cmd == "israel":
+        pairs = tuple(tuple(x.split(":", 1)) for x in args.surplus.split(",") if ":" in x)
+        overrides = {k.strip(): float(v) / 100 for k, v in (x.split("=", 1) for x in args.sd.split(",") if "=" in x)}
+        model = ErrorModel(scale=args.error_scale, bloc_sd=args.bloc_sd, bloc_bias=args.bloc_bias, sd_overrides=overrides)
+        now = utcnow()
+        try:
+            report = run_israel(
+                source, args.polls, budget=args.budget, now=now, sims=args.sims, seed=args.seed,
+                half_life=args.half_life, window=args.window, min_edge=args.min_edge, model=model,
+                surplus_pairs=pairs, kelly_fraction=args.kelly, max_fraction=args.max_fraction,
+                maker_margin=args.maker_margin, min_price=args.min_price, fee_override=args.poly_fee_rate,
+            )
+        except Exception as exc:
+            print(f"israel failed: {exc}", file=sys.stderr)
+            return 2
+        print(render_israel(report, show_all=args.all))
+        if args.json:
+            args.json.write_text(json.dumps(report.to_dict(), indent=2, default=str))
+            print(f"\nwrote {args.json}")
+        return 0
+
     kwargs = _scan_kwargs(args)
 
     if args.cmd == "scan":
