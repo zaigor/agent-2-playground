@@ -124,6 +124,32 @@ class PolyMarket:
     group_item_title: str
     order_min_size: float  # smallest order the CLOB accepts, in shares (Gamma `orderMinSize`, usually 5)
     raw: dict = field(default_factory=dict, repr=False)
+    closed: bool = False
+    fee_rate: float | None = None  # Gamma `feeSchedule.rate` (taker rate of the category); None when Gamma omits it
+    last_trade_price: float | None = None
+    one_day_change: float | None = None  # Gamma `oneDayPriceChange`; frozen at close for resolved markets
+    created_at: datetime | None = None
+
+    @property
+    def resolved_yes(self) -> bool | None:
+        """True/False once a binary market has settled to 1/0, else None."""
+        if not self.closed or len(self.outcome_prices) != 2:
+            return None
+        p = self.outcome_prices[0]
+        return True if p > 0.99 else (False if p < 0.01 else None)
+
+    @property
+    def price_day_before_close(self) -> float | None:
+        """Last price about 24h before the final trade of a resolved market.
+
+        Gamma freezes `lastTradePrice` and `oneDayPriceChange` when a market closes, so
+        last - change is the price one day earlier. Checked against CLOB price history on
+        1,020 weather markets: correlation 0.90, median gap 1.5 cents.
+        """
+        if self.last_trade_price is None or self.one_day_change is None:
+            return None
+        p = self.last_trade_price - self.one_day_change
+        return p if 0.0 <= p <= 1.0 else None
 
     @property
     def is_binary(self) -> bool:
@@ -177,6 +203,11 @@ def parse_market(d: dict[str, Any]) -> PolyMarket:
         group_item_title=str(d.get("groupItemTitle") or ""),
         order_min_size=_float(d.get("orderMinSize"), 5.0) or 5.0,
         raw=d,
+        closed=bool(d.get("closed", False)),
+        fee_rate=_float((d.get("feeSchedule") or {}).get("rate")) if isinstance(d.get("feeSchedule"), dict) else None,
+        last_trade_price=_float(d.get("lastTradePrice")),
+        one_day_change=_float(d.get("oneDayPriceChange")),
+        created_at=parse_dt(d.get("createdAt")),
     )
 
 
@@ -190,6 +221,13 @@ class PolyEvent:
     tags: list[str]
     markets: list[PolyMarket]
     end_date: datetime | None
+    closed: bool = False
+    series_slug: str = ""  # Gamma recurring series (e.g. nyc-daily-weather); "" for one-off events
+    recurrence: str = ""  # daily / weekly / monthly / ... as Gamma labels the series
+    created_at: datetime | None = None
+    volume: float = 0.0
+    liquidity: float = 0.0
+    resolution_source: str = ""
 
     @property
     def url(self) -> str:
@@ -206,6 +244,8 @@ def parse_event(d: dict[str, Any]) -> PolyEvent:
         elif isinstance(t, str):
             tags.append(t.lower())
     markets = [parse_market(m) for m in d.get("markets") or [] if isinstance(m, dict)]
+    series = d.get("series") or []
+    first_series = series[0] if series and isinstance(series[0], dict) else {}
     return PolyEvent(
         id=str(d.get("id", "")),
         title=str(d.get("title") or ""),
@@ -215,6 +255,13 @@ def parse_event(d: dict[str, Any]) -> PolyEvent:
         tags=tags,
         markets=markets,
         end_date=parse_dt(d.get("endDate")),
+        closed=bool(d.get("closed", False)),
+        series_slug=str(d.get("seriesSlug") or first_series.get("slug") or ""),
+        recurrence=str(first_series.get("recurrence") or ""),
+        created_at=parse_dt(d.get("createdAt")),
+        volume=_float(d.get("volume"), 0.0) or 0.0,
+        liquidity=_float(d.get("liquidity"), 0.0) or 0.0,
+        resolution_source=str(d.get("resolutionSource") or ""),
     )
 
 
@@ -262,16 +309,40 @@ class PolymarketClient:
         tid = data.get("id") if isinstance(data, dict) else None
         return str(tid) if tid is not None else None
 
-    def iter_events_by_tag(self, tag_slug: str, page_size: int = 100, include_closed: bool = False) -> Iterator[PolyEvent]:
-        """All events carrying a Gamma tag (e.g. `israel-election`), a few hundred at most."""
+    def iter_events_by_tag(
+        self,
+        tag_slug: str,
+        page_size: int = 100,
+        include_closed: bool = False,
+        *,
+        closed_only: bool = False,
+        start_min: datetime | None = None,
+        start_max: datetime | None = None,
+        exclude_tag_id: str | None = None,
+        max_offset: int = 4000,
+    ) -> Iterator[PolyEvent]:
+        """Events carrying a Gamma tag (e.g. `israel-election`).
+
+        `start_min` / `start_max` bound the event start date so a big tag can be pulled in
+        windows: /events rejects offsets beyond a few thousand (HTTP 422), hence `max_offset`.
+        `exclude_tag_id` drops e.g. the 5-minute crypto series (tag 102127, "up-or-down").
+        """
         tid = self.tag_id(tag_slug)
         if tid is None:
             return
         offset = 0
-        while True:
+        while offset < max_offset:
             params: dict[str, Any] = {"tag_id": tid, "limit": page_size, "offset": offset}
-            if not include_closed:
+            if closed_only:
+                params["closed"] = "true"
+            elif not include_closed:
                 params["closed"] = "false"
+            if start_min is not None:
+                params["start_date_min"] = start_min.strftime("%Y-%m-%dT%H:%M:%SZ")
+            if start_max is not None:
+                params["start_date_max"] = start_max.strftime("%Y-%m-%dT%H:%M:%SZ")
+            if exclude_tag_id:
+                params["exclude_tag_id"] = exclude_tag_id
             data = self.http.get_json(f"{self.gamma_url}/events", params=params)
             items = data if isinstance(data, list) else []
             for item in items:

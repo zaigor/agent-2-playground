@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from .http import HttpClient, HttpError
@@ -24,6 +25,21 @@ class LiveSource:
     def poly_events_by_tag(self, tag_slug: str) -> list[PolyEvent]:
         return list(self.poly.iter_events_by_tag(tag_slug))
 
+    def poly_events_survey(self, tags: tuple[str, ...], since: datetime, until: datetime, exclude_tag_id: str | None = None) -> list[PolyEvent]:
+        """Open events plus events started in [since, until) for each tag, de-duplicated.
+        Closed events are pulled month by month to stay under Gamma's offset cap."""
+        seen: dict[str, PolyEvent] = {}
+        for tag in tags:
+            for ev in self.poly.iter_events_by_tag(tag, exclude_tag_id=exclude_tag_id):
+                seen.setdefault(ev.id, ev)
+            lo = since
+            while lo < until:
+                hi = min(until, (lo.replace(day=1) + timedelta(days=32)).replace(day=1))
+                for ev in self.poly.iter_events_by_tag(tag, closed_only=True, start_min=lo, start_max=hi, exclude_tag_id=exclude_tag_id):
+                    seen.setdefault(ev.id, ev)
+                lo = hi
+        return list(seen.values())
+
     def kalshi_markets(self) -> list[KalshiMarket]:
         return list(self.kalshi.iter_markets())
 
@@ -39,7 +55,8 @@ class LiveSource:
 
 class FixtureSource:
     """Reads gamma_events.json, clob_books.json, kalshi_markets.json, kalshi_orderbooks.json,
-    plus israel_events.json / israel_books.json for the election model."""
+    plus israel_events.json / israel_books.json for the election model and niche_events.json
+    for the niche survey."""
 
     def __init__(self, directory: Path) -> None:
         self.dir = Path(directory)
@@ -61,6 +78,9 @@ class FixtureSource:
     def poly_events_by_tag(self, tag_slug: str) -> list[PolyEvent]:
         name = "israel_events.json" if "israel" in tag_slug else "gamma_events.json"
         return [parse_event(d) for d in self._load(name, [])]
+
+    def poly_events_survey(self, tags: tuple[str, ...], since: datetime, until: datetime, exclude_tag_id: str | None = None) -> list[PolyEvent]:
+        return [parse_event(d) for d in self._load("niche_events.json", [])]
 
     def kalshi_markets(self) -> list[KalshiMarket]:
         data = self._load("kalshi_markets.json", {})

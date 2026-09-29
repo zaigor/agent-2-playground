@@ -68,6 +68,28 @@ budget and at top-of-book depth, plus fee-free resting quotes 6c inside the
 model. Nothing under 5c a side is ever recommended. The shipped CSV contains
 PLACEHOLDER rows; the tool shouts until they are replaced with real polls.
 
+### Niche survey (`niches`)
+
+Which market families recur every day or week, how deep they are, what they
+cost in fees, and how well their prices were calibrated a day before
+resolution. Families are Gamma recurring series (`nyc-daily-weather`,
+`box-office-openings`, `elon-tweets`, ...) or, for one-off titles, the title
+with dates and numbers normalised:
+
+```bash
+python -m pm_scanner niches --days 90 --sort steady            # live; ~10 min for the default 16 tags
+python -m pm_scanner niches --tags weather,box-office --days 60 --json niches.json
+python -m pm_scanner niches --fixtures tests/fixtures --days 400 --min-events 3   # offline sample
+```
+
+The calibration column needs no price-history calls: Gamma freezes
+`lastTradePrice` and `oneDayPriceChange` when a market closes, so their
+difference is the price one day before the close (checked against CLOB history
+on 1,020 weather markets: correlation 0.90, median gap 1.5c). `skill` is the
+Brier skill of that price; a negative `LSbias`/`midbias` means 3-20c / 30-70c
+contracts hit less often than they were priced. The 29 Sep 2026 survey and its
+conclusions are in MEMO.md section 10.
+
 `watch` and `summarize` are the cheap way to answer "is there anything here?"
 before any money moves. Nothing in this package calls an LLM; it runs fine on
 a laptop or a small VPS and costs nothing to leave running.
@@ -75,11 +97,13 @@ a laptop or a small VPS and costs nothing to leave running.
 ## Fee models (change them when the venues do)
 
 * Polymarket, Fee Structure V2 (2026): taker fee per share = `rate * p * (1-p)`;
-  makers pay nothing. Rate by category: crypto 0.07, sports 0.05,
-  finance/politics/mentions/tech 0.04, economics/culture/weather/other 0.05,
-  geopolitics/world events 0. The rate is inferred from Gamma tags and the
-  *highest* matching rate wins, so the edge is never overstated. Override with
-  `--poly-fee-rate`.
+  makers pay nothing. Gamma now publishes the schedule per market
+  (`feeSchedule.rate`) and that is used first; observed on 29 Sep 2026: crypto
+  0.07, finance/politics/mentions/tech 0.04, economics/culture/weather 0.05,
+  sports and esports 0.03, and a minority of geopolitics markets with no fee.
+  When a market has no schedule the rate falls back to the Gamma tag table in
+  `fees.py`, where the *highest* matching rate wins so the edge is never
+  overstated. Override with `--poly-fee-rate`.
 * Kalshi: taker fee = `ceil(0.07 * m * contracts * p * (1-p))` rounded up to the
   cent per order; maker fee is 25% of that. `--kalshi-fee-multiplier` sets `m`.
 
@@ -96,10 +120,12 @@ pm_scanner/
   report.py      text table + JSON output
   watch.py       polling loop, JSONL log, Telegram alerts, log summarizer
   israel.py      Knesset polls -> seat simulation -> bracket probabilities -> edges
-  cli.py         `scan`, `watch`, `summarize`, `israel` and `fee` commands
+  niches.py      recurring-family survey: cadence, depth, fees, day-before calibration
+  cli.py         `scan`, `watch`, `summarize`, `israel`, `niches` and `fee` commands
 data/            israel_polls_2026.csv (hand-maintained poll table)
 tests/           pytest suite running entirely on fixtures (incl. a 29 Sep 2026
-                 snapshot of the Israel election markets and their order books)
+                 snapshot of the Israel election markets and their order books,
+                 and a sample of weather / box-office / tweet-count events)
 ```
 
 Every opportunity also carries the venue's minimum order size for its legs

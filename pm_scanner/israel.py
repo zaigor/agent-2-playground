@@ -22,7 +22,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-from .fees import polymarket_rate_for_tags, polymarket_taker_fee
+from .fees import polymarket_rate_for_event, polymarket_taker_fee
 from .polymarket import Book, PolyEvent, PolyMarket
 
 THRESHOLD = 0.0325
@@ -660,7 +660,7 @@ def run_israel(
     for ev, m, b in classified:
         book = books.get(m.yes_token or "")
         p = model_probability(sim, b)
-        rate = fee_override if fee_override is not None else polymarket_rate_for_tags(ev.tags)
+        rate = polymarket_rate_for_event(ev, fee_override)
         bid, dbid, ask, dask = _best(book, m)
         all_markets.append({"event": ev.title, "label": b.label, "party": b.party, "kind": b.kind, "model_p": round(p, 4), "bid": bid, "ask": ask, "depth_bid": round(dbid), "depth_ask": round(dask), "url": m.url})
         trades.extend(evaluate_market(b, ev, m, book, p, budget=budget, fee_rate=rate, min_edge=min_edge, kelly_fraction=kelly_fraction, max_fraction=max_fraction, maker_margin=maker_margin, min_price=min_price))

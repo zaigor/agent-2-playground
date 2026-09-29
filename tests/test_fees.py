@@ -31,3 +31,15 @@ def test_kalshi_fee_formula_and_rounding():
     assert math.isclose(kalshi_taker_fee(0.42, 1, round_up=False), 0.07 * 0.42 * 0.58)
     assert math.isclose(kalshi_maker_fee(0.5, 100), 0.44)  # 0.4375 -> 0.44
     assert kalshi_taker_fee(0.5, 100, multiplier=2.0) == 3.5
+
+
+def test_polymarket_rate_for_event_uses_market_schedule_first():
+    from pm_scanner.polymarket import parse_event
+
+    ev = parse_event({"id": "1", "title": "t", "tags": [{"slug": "sports"}], "markets": [
+        {"id": "a", "clobTokenIds": '["1","2"]', "feeSchedule": {"rate": 0.03}},
+    ]})
+    from pm_scanner.fees import polymarket_rate_for_event
+
+    assert polymarket_rate_for_event(ev) == 0.03  # Gamma says 0.03 even though the table says 0.05
+    assert polymarket_rate_for_event(ev, override=0.01) == 0.01

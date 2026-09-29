@@ -243,6 +243,102 @@ deployed capital in four weeks, i.e. $100-500 on $1-3K. It is not a living. It i
 the first strategy in this repo where the edge comes from something you have and
 the crowd does not, and its expiry date is 27 October.
 
+## 10. Niche survey (29 Sep, second pass): steady families, and the one to build for
+
+You wanted out of Israeli politics (messy, event-driven) and into something
+steady: a family of markets that renews every day or week, resolves on a public
+number, and where a research process can beat the crowd. I surveyed the whole
+site instead of guessing. `python -m pm_scanner niches` reproduces it.
+
+**Method.** 82,801 Polymarket events (every open event plus everything started
+since Oct 2025) across 90 category tags, grouped into 690 recurring families by
+Gamma series or normalised title. For each family: events per month, volume,
+open liquidity, spread and depth at the touch (live order books), the fee
+schedule Gamma publishes per market, resolution source, and calibration of the
+price one day before close. That last number comes from Gamma's frozen
+`lastTradePrice - oneDayPriceChange`; I checked it against real CLOB history on
+1,020 weather markets (correlation 0.90, median gap 1.5c), so it is trustworthy
+for the day-before horizon and useless for longer ones.
+
+**What is steady and what is not.** Sports and esports (Counter-Strike 9,210
+events, League of Legends 2,914) and the 5-minute crypto series are the
+firehose, but they are priced by bookmakers' lines and bots. Outside those, only
+a few dozen families produce an event a day or a week:
+
+| family | cadence | volume (since Oct 25) | open liquidity | spread / depth within 5c of touch | fee | resolves on | day-before skill |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **Daily high (and low) temperature, 52 cities** (NYC, London, Seoul, Hong Kong, Paris, Tel Aviv, ...) | 106 series, 13,527 events, 144,631 markets; in September 29,128 markets, ~1,000 a day, $68M | $912M | $8.4M across 2,635 open markets (855 with two-sided books) | 1.7c median; $13 bid / $28 ask median, $146 at p75 | 5% | NOAA and Weather Underground station readings | 0.26 on 1,500 recent markets with real history |
+| Elon Musk tweet counts (weekly + 48h) | 9/month + 13/month | $1.16B + $195M | $1.1M | 0.5c; $64-$400 | 4-5% | xtracker / x.com | bots dominate; frozen fields sparse |
+| Box office opening weekend | 20/month (43 in the last 60 days) | $59M | $100K | 3c; $33 bid / $134 ask | 5% | the-numbers.com | 0.75-0.80 (market learns from Friday grosses) |
+| MrBeast day-1 / week-1 views | 12/month | $47M + $27M | $46K | 3c; $232 / $347 | 5% | YouTube view counter | 0.19 (markets live 1.3 days) |
+| "Best AI model end of month" (LMArena) | 1-2/month, 4 variants | $148M | $3.2M | 0.4c; $127 / $146, $1K at p75 | 4% | LMArena leaderboard | n/a |
+| Weekly stock and commodity ladders (NVDA, TSLA, AAPL, SPY, gold, oil, ~30 tickers) | weekly + monthly per ticker | $1-5M per ticker | $4-12K per ticker | 10-20c spreads | 4% | Yahoo Finance / Pyth | 0.6-0.7 for crypto strikes |
+| CDC measles count by date | 1-2/month | $11M | $29K | 1c; $138 / $416 | 4-5% | CDC weekly update | n/a |
+| Weekly 6.5+ earthquakes, monthly tornadoes | weekly / monthly | $3.3M / $1.8M | thin | 3c; $15 / $24 | 5% | USGS / NOAA SPC | n/a |
+| Netflix top 10, Spotify #1, Billboard #1, App Store #1 | weekly | $1-3M each | under $10K | 1-3c; $0-10 | 5% | published charts | n/a |
+| FOMC, CPI, jobs, ECB, BoJ, Bank of Israel | monthly | $1.08B FOMC, others $1-10M | deep | tight | 4-5% | official releases | efficient against futures and consensus |
+
+Post-mortem on my earlier "weather: no" line in section 9: I wrote it from a
+blog post, not data. The data say otherwise.
+
+**Weather is the niche.** Reasons, in order of weight:
+
+1. Steadiest family on the site: ~1,000 new bracket markets a day across 52
+   cities, every one resolving within 48 hours on a station reading anyone can
+   pull. No narrative, no insiders, no legal risk, no Hebrew required.
+2. It is measurably mispriced a day out. On 1,500 markets resolved 18-29 Sep
+   with real price history, contracts priced 10-60c the day before hit 5-7
+   points less often than their price. Selling (buying NO on) every bracket in
+   that band at the day-before price would have netted +4.2c per share after
+   the 5% fee, +5.9% on capital at risk per event-day, with 31% of event-days
+   losing. The overround is visible live too: best asks across a city's brackets
+   sum to 1.10-1.15 two days out and 1.01 on the day itself. That premium is
+   what makers collect and what a good forecast lets you collect selectively.
+3. The research edge is real and free: ECMWF, GFS and ICON runs through
+   Open-Meteo (hourly, 15-day, with historical forecast archives for
+   backtesting), plus the station's own hourly METAR feed during the day, which
+   is the resolution source itself. A model that knows the station's bias and
+   the ensemble spread prices the brackets better than a crowd eyeballing a
+   phone app. During the day, the running maximum from the hourly obs settles
+   most of the distribution hours before the market does.
+4. It fits the money. Depth is thin ($13-150 per bracket at the touch), which is
+   exactly right for $50-500 spread over 20-40 brackets a day, and it is why
+   the big players leave it alone: you cannot deploy $100K here.
+
+Honest caveats. (a) Bots have traded these since 2025; the 5-7 point bias is
+what is left *after* them, and it can shrink further. (b) The backtest is ten
+days of data, fills assumed at the day-before price with no adverse selection;
+treat +4c/share as the ceiling and plan for half. (c) With $300 deployed that is
+a few dollars a day; the way to scale is more cities and more brackets, not
+bigger tickets. (d) The 5% fee at p=0.5 is 1.25c a share, so quoting (fee-free,
+plus liquidity rewards on these markets) beats taking whenever you can wait.
+
+**Second and third.** Box office openings if you want to *buy* data: 20 films a
+month, decent depth, mechanical resolution, and the market only becomes sharp
+once Friday's grosses land, so the edge lives in the week before opening
+(tracking services, presales, review embargo timing). MrBeast view counts are a
+clean modelling exercise (first-hours growth curve vs. the bracket prices) with
+surprisingly good depth. Skip: Elon tweet counts (bot war), crypto and stock
+ladders (options-implied fair value is public, so the only edge is speed),
+economic releases (priced off futures), and anything narrative.
+
+**Plan for weather (test before funding, as agreed).**
+
+1. Backtest on your laptop, not here: this container cannot reach Open-Meteo or
+   NOAA (all weather hosts are blocked by the egress policy). Pull the previous
+   day's ECMWF/GFS/ICON forecast highs for the 40 stations from Open-Meteo's
+   historical-forecast API for the last 60 days, build a bias-corrected
+   distribution per station, and compare with the day-before prices the survey
+   already has. If the forecast Brier beats the market's 0.056 by a margin that
+   survives the fee, continue.
+2. Add a `weather` command on the pattern of `israel`: forecast distribution ->
+   P(bracket) -> edge net of fee -> takers and resting quotes, run twice a day,
+   plus an intraday leg that reads the station's hourly obs and sells brackets
+   the running maximum has already excluded.
+3. Paper-trade it through `watch` for a week; fund $100-300 in USDC only if the
+   paper log shows fills at the quoted prices. Scale by adding cities.
+
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
@@ -259,3 +355,4 @@ the crowd does not, and its expiry date is 27 October.
 * Who wins on Polymarket: [CEPR DP21615, Who Wins and Who Loses in Prediction Markets](https://cepr.org/publications/dp21615) (limit-order traders and election/sports directional traders; top 1% take 76.5% of profits).
 * Rules: [Polymarket market-integrity rules, March 2026](https://www.businesswire.com/news/home/20260320997513/en/Polymarket-Publishes-Enhanced-Market-Integrity-Rules-Across-Its-DeFi-Platform-and-CFTC-Regulated-U.S.-Exchange), [Debevoise on the April 2026 insider-trading charges](https://www.debevoise.com/insights/publications/2026/04/polymarket-insider-trading-charges-illustrate-doj).
 * Other niches checked: [weather bots and edge compression](https://laikalabs.ai/prediction-markets/trade-polymarket-weather-markets), [The Ankler on entertainment markets](https://theankler.com/gamblers-prediction-markets-entertainment-rotten-tomatoes-box-office-polymarket/).
+* Niche survey (section 10): Gamma `/events` by tag with `start_date_min/max` windows and `exclude_tag_id=102127`, `/series`, CLOB `/books` and `/prices-history` (history is purged about a week after a market closes; `data-api.polymarket.com/trades` keeps trades longer), 29 Sep 2026. Weather market rules cite NOAA `weather.gov/wrh/timeseries?site=<ICAO>` (US stations and LLBG Tel Aviv) and Weather Underground daily history (other cities). Forecast data for the backtest: [Open-Meteo historical forecast API](https://open-meteo.com/en/docs/historical-forecast-api), [Open-Meteo ensemble API](https://open-meteo.com/en/docs/ensemble-api).

@@ -17,7 +17,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 
-from .fees import kalshi_taker_fee, polymarket_rate_for_tags, polymarket_taker_fee
+from .fees import kalshi_taker_fee, polymarket_rate_for_event, polymarket_taker_fee
 from .kalshi import KalshiEvent, KalshiMarket
 from .polymarket import Book, PolyEvent, PolyMarket
 
@@ -88,7 +88,7 @@ def _iso(dt: datetime | None) -> str | None:
 # --------------------------------------------------------------------------- #
 
 def _event_rate(event: PolyEvent, override: float | None) -> float:
-    return override if override is not None else polymarket_rate_for_tags(event.tags)
+    return polymarket_rate_for_event(event, override)
 
 
 def find_negrisk_candidates(

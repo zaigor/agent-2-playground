@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
 from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
+from .niches import UP_OR_DOWN_TAG_ID, default_since, load_survey_tags, render_survey, survey
 from .report import render_text, write_json
 from .scans import (
     Opportunity,
@@ -186,6 +187,17 @@ def build_parser() -> argparse.ArgumentParser:
     i.add_argument("--all", action="store_true", help="also list every modelled market with its model probability")
     i.add_argument("--json", type=Path, default=None, help="also write the full report to this JSON file")
 
+    n = sub.add_parser("niches", help="survey recurring market families: cadence, depth, fees, day-before calibration")
+    n.add_argument("--tags", default=None, help="comma-separated Gamma tag slugs (default: weather, culture, tech, economy, finance, mentions, politics, ...)")
+    n.add_argument("--days", type=int, default=90, help="survey window: events started in the last N days (default 90)")
+    n.add_argument("--min-events", type=int, default=6, help="ignore families with fewer events than this")
+    n.add_argument("--top", type=int, default=60)
+    n.add_argument("--sort", choices=["volume", "steady", "liquidity"], default="volume")
+    n.add_argument("--include-sport", action="store_true", help="also list sports and esports families")
+    n.add_argument("--include-up-or-down", action="store_true", help="also pull the 5-minute/hourly crypto series (thousands a day)")
+    n.add_argument("--fixtures", type=Path, default=None, help="offline: read niche_events.json from DIR")
+    n.add_argument("--json", type=Path, default=None, help="also write every family's stats to this JSON file")
+
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
     f.add_argument("--platform", choices=["polymarket", "kalshi"], required=True)
     f.add_argument("--price", type=float, required=True)
@@ -234,6 +246,21 @@ def main(argv: list[str] | None = None) -> int:
         print(render_israel(report, show_all=args.all))
         if args.json:
             args.json.write_text(json.dumps(report.to_dict(), indent=2, default=str))
+            print(f"\nwrote {args.json}")
+        return 0
+
+    if args.cmd == "niches":
+        now = utcnow()
+        since = default_since(now, args.days)
+        try:
+            events = source.poly_events_survey(load_survey_tags(args.tags), since, now, exclude_tag_id=None if args.include_up_or_down else UP_OR_DOWN_TAG_ID)
+        except Exception as exc:
+            print(f"niches failed: {exc}", file=sys.stderr)
+            return 2
+        rows = survey(events, now=now, since=since, min_events=args.min_events)
+        print(render_survey(rows, now=now, since=since, top=args.top, include_sport=args.include_sport, sort=args.sort))
+        if args.json:
+            args.json.write_text(json.dumps([r.to_dict() for r in rows], indent=2, default=str))
             print(f"\nwrote {args.json}")
         return 0
 

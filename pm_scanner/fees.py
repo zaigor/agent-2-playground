@@ -3,9 +3,14 @@
 Polymarket (global site), effective 2026-03-30 with the July 2026 sports change:
     taker fee per share = rate * price * (1 - price)
     makers pay 0 and receive rebates funded by taker fees.
-    rate by category: crypto 0.07, sports 0.05, finance/politics/mentions/tech 0.04,
+    rate by category: crypto 0.07, sports 0.03, finance/politics/mentions/tech 0.04,
     economics/culture/weather/other 0.05, geopolitics/world events 0.00.
     (Polymarket US, a separate CFTC exchange, charges a flat 0.05 taker.)
+
+    Since 2026 Gamma publishes the schedule per market (`feeSchedule.rate`);
+    `polymarket_rate_for_event` uses that first and this table only as a fallback.
+    On 29 Sep 2026 the published sports rate was 0.03 and many "geopolitics" events
+    carried the 0.04 politics or 0.05 culture schedule, so trust the market field.
 
 Kalshi (fee schedule filed with the CFTC):
     taker fee = ceil(0.07 * multiplier * contracts * P * (1 - P) * 100) / 100
@@ -26,18 +31,18 @@ POLYMARKET_TAG_RATES: dict[str, float] = {
     "bitcoin": 0.07,
     "ethereum": 0.07,
     "solana": 0.07,
-    # sports (raised from 0.03 to 0.05 in July 2026)
-    "sports": 0.05,
-    "nfl": 0.05,
-    "nba": 0.05,
-    "mlb": 0.05,
-    "nhl": 0.05,
-    "soccer": 0.05,
-    "football": 0.05,
-    "tennis": 0.05,
-    "mma": 0.05,
-    "ufc": 0.05,
-    "esports": 0.05,
+    # sports and esports (Gamma `sports_fees_v2` / `v3` schedules show 0.03 on 29 Sep 2026)
+    "sports": 0.03,
+    "nfl": 0.03,
+    "nba": 0.03,
+    "mlb": 0.03,
+    "nhl": 0.03,
+    "soccer": 0.03,
+    "football": 0.03,
+    "tennis": 0.03,
+    "mma": 0.03,
+    "ufc": 0.03,
+    "esports": 0.03,
     # finance / politics / mentions / tech
     "finance": 0.04,
     "business": 0.04,
@@ -93,6 +98,22 @@ def polymarket_rate_for_tags(tags: Iterable[str], default: float = DEFAULT_POLYM
     if not matched:
         return default
     return max(matched)
+
+
+def polymarket_rate_for_event(event, override: float | None = None, default: float = DEFAULT_POLYMARKET_RATE) -> float:
+    """Taker rate for an event: the override, else Gamma's own `feeSchedule.rate` on its
+    markets (the highest if they differ), else the tag table above.
+
+    Gamma started publishing the schedule per market in 2026; it is authoritative and
+    catches cases the tag table gets wrong (sports are 0.03, and many "geopolitics"
+    events actually carry the 0.04 politics or 0.05 culture schedule).
+    """
+    if override is not None:
+        return override
+    rates = [m.fee_rate for m in getattr(event, "markets", []) if getattr(m, "fee_rate", None) is not None]
+    if rates:
+        return max(rates)
+    return polymarket_rate_for_tags(getattr(event, "tags", []), default)
 
 
 def polymarket_taker_fee(price: float, shares: float, rate: float) -> float:
