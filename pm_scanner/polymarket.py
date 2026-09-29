@@ -1,6 +1,7 @@
 """Read-only Polymarket clients: Gamma (market metadata) and CLOB (order books).
 
-Gamma:  GET https://gamma-api.polymarket.com/events?active=true&closed=false&limit=..&offset=..
+Gamma:  GET https://gamma-api.polymarket.com/events/keyset?active=true&closed=false&limit=..&after_cursor=..
+        (plain /events caps offset at 2000; keyset returns {"events": [..], "next_cursor": ..})
         Events carry `negRisk` (mutually exclusive multi-outcome), `tags`, and
         nested `markets`. Market fields that matter here: `clobTokenIds`,
         `outcomes`, `outcomePrices` (all JSON-encoded strings), `bestBid`,
@@ -224,31 +225,37 @@ class PolymarketClient:
         self.clob_url = clob_url.rstrip("/")
 
     def iter_events(self, page_size: int = 100, max_events: int = 3000) -> Iterator[PolyEvent]:
-        offset = 0
+        # /events rejects offset > 2000 (HTTP 422), so page with the keyset cursor instead.
+        cursor: str | None = None
         seen = 0
+        ids: set[str] = set()  # volumes move between requests, so an event can land on two pages
         while seen < max_events:
-            data = self.http.get_json(
-                f"{self.gamma_url}/events",
-                params={
-                    "active": "true",
-                    "closed": "false",
-                    "limit": page_size,
-                    "offset": offset,
-                    "order": "volume24hr",
-                    "ascending": "false",
-                },
-            )
-            if not isinstance(data, list) or not data:
+            params: dict[str, Any] = {
+                "active": "true",
+                "closed": "false",
+                "limit": page_size,
+                "order": "volume24hr",
+                "ascending": "false",
+            }
+            if cursor:
+                params["after_cursor"] = cursor
+            data = self.http.get_json(f"{self.gamma_url}/events/keyset", params=params)
+            items = data.get("events") if isinstance(data, dict) else None
+            if not items:
                 return
-            for item in data:
+            for item in items:
                 if isinstance(item, dict):
-                    yield parse_event(item)
+                    ev = parse_event(item)
+                    if ev.id in ids:
+                        continue
+                    ids.add(ev.id)
+                    yield ev
                     seen += 1
                     if seen >= max_events:
                         return
-            if len(data) < page_size:
+            cursor = data.get("next_cursor")
+            if not cursor or len(items) < page_size:
                 return
-            offset += page_size
 
     def get_book(self, token_id: str) -> Book:
         data = self.http.get_json(f"{self.clob_url}/book", params={"token_id": token_id})
