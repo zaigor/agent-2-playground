@@ -50,6 +50,16 @@ class Opportunity:
     notes: list[str] = field(default_factory=list)
     end_date: str | None = None
     min_order_size: float | None = None  # smallest ticket the venue accepts per leg, in shares
+    days_to_resolve: float | None = None  # from end_date at scan time; None if unknown
+    annualized: float | None = None  # edge_pct scaled to a year of locked capital
+
+    def set_horizon(self, now: datetime) -> None:
+        """Fill days_to_resolve / annualized from end_date. A day minimum stops tiny horizons exploding."""
+        if not self.end_date:
+            return
+        end = datetime.fromisoformat(self.end_date)
+        self.days_to_resolve = round((end - now).total_seconds() / 86400.0, 2)
+        self.annualized = round(self.edge_pct * 365.0 / max(self.days_to_resolve, 1.0), 4)
 
     @property
     def executable(self) -> bool:
@@ -167,7 +177,8 @@ def evaluate_negrisk(
         est_profit=round(budget_sets * edge, 2),
         legs=legs,
         notes=notes,
-        end_date=_iso(event.end_date),
+        # the set pays out only once every leg has settled, so use the latest date
+        end_date=_iso(max((d for d in [event.end_date, *(m.end_date for m in event.markets)] if d), default=None)),
         min_order_size=min_size,
     )
 

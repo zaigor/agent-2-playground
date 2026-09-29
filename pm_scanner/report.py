@@ -34,6 +34,8 @@ def render_text(opps: list[Opportunity], stats: dict, budget: float, min_edge: f
             )
             legs = " | ".join(f"{lg.side} '{lg.market[:28]}' @{lg.price:.3f} x{_fmt_size(lg.size)}" for lg in o.legs)
             lines.append(f"    legs: {legs}")
+            if o.days_to_resolve is not None:
+                lines.append(f"    pays: in ~{o.days_to_resolve:.1f} days, ~{(o.annualized or 0) * 100:.0f}% per year of locked capital")
             lines.append(f"    url:  {o.url}")
             for n in o.notes:
                 lines.append(f"    note: {n}")

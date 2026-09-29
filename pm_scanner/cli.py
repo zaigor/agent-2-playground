@@ -36,7 +36,13 @@ def run_scan(
     kalshi_multiplier: float,
     do_cross: bool,
     now: datetime,
+    max_days: float | None = None,
+    allow_augmented: bool = True,
+    min_annualized: float = 0.0,
 ) -> tuple[list[Opportunity], dict]:
+    """`max_days`, `allow_augmented` and `min_annualized` keep only arbitrage that pays
+    back soon and cannot have its payout changed later; near_certain keeps its own
+    `near_max_days` window."""
     stats: dict = {}
     opps: list[Opportunity] = []
     events = []
@@ -47,6 +53,8 @@ def run_scan(
         stats["poly_events"] = len(events)
         stats["poly_markets"] = sum(len(e.markets) for e in events)
         cands = find_negrisk_candidates(events, min_edge, poly_fee_rate)
+        if not allow_augmented:  # Polymarket may add outcomes later, so "buy every YES" can stop covering the winner
+            cands = [(ev, kind) for ev, kind in cands if not ev.neg_risk_augmented]
         stats["negrisk_candidates"] = len(cands)
         token_ids: list[str] = []
         for ev, kind in cands:
@@ -81,8 +89,22 @@ def run_scan(
                     if o.edge_per_set >= min_edge:
                         opps.append(o)
 
+    for o in opps:
+        o.set_horizon(now)
+    arb_found = [o for o in opps if o.kind in ARB_KINDS]
+    kept = [o for o in arb_found if _within_horizon(o, max_days, min_annualized)]
+    if len(kept) != len(arb_found):
+        stats["dropped_slow_or_unknown_date"] = len(arb_found) - len(kept)
+    opps = kept + [o for o in opps if o.kind not in ARB_KINDS]
     opps.sort(key=lambda o: (o.kind == "near_certain", -o.est_profit))
     return opps, stats
+
+
+def _within_horizon(o: Opportunity, max_days: float | None, min_annualized: float) -> bool:
+    if max_days is not None:
+        if o.days_to_resolve is None or not 0 <= o.days_to_resolve <= max_days:
+            return False
+    return min_annualized <= 0 or (o.annualized is not None and o.annualized >= min_annualized)
 
 
 def _add_scan_args(s: argparse.ArgumentParser) -> None:
@@ -94,6 +116,9 @@ def _add_scan_args(s: argparse.ArgumentParser) -> None:
     s.add_argument("--near-certain-max-days", type=int, default=14)
     s.add_argument("--poly-fee-rate", type=float, default=None, help="override Polymarket taker rate for all events")
     s.add_argument("--kalshi-fee-multiplier", type=float, default=1.0)
+    s.add_argument("--max-days", type=float, default=30.0, help="skip arbitrage resolving later than this (0 = no limit)")
+    s.add_argument("--min-annualized", type=float, default=0.0, help="skip arbitrage below this yearly return, e.g. 0.2 = 20%%/yr")
+    s.add_argument("--allow-augmented", action="store_true", help="keep events where Polymarket may add outcomes later")
     s.add_argument("--no-cross", action="store_true", help="skip Polymarket<->Kalshi matching")
     s.add_argument("--fixtures", type=Path, default=None, help="offline: read recorded API responses from DIR")
 
@@ -109,6 +134,9 @@ def _scan_kwargs(args: argparse.Namespace) -> dict:
         poly_fee_rate=args.poly_fee_rate,
         kalshi_multiplier=args.kalshi_fee_multiplier,
         do_cross=not args.no_cross,
+        max_days=args.max_days if args.max_days > 0 else None,
+        allow_augmented=args.allow_augmented,
+        min_annualized=args.min_annualized,
     )
 
 

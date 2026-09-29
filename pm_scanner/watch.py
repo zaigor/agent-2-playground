@@ -27,8 +27,12 @@ ARB_KINDS = {"negrisk_buy_all_yes", "negrisk_buy_all_no", "kalshi_buy_all_yes", 
 
 
 def opp_key(o: Opportunity) -> str:
-    """Identity of an opportunity across scans: same structure at the same prices."""
-    legs = ",".join(f"{lg.side}@{lg.price:.3f}" for lg in o.legs)
+    """Identity of an opportunity across scans: the same trade on the same event/markets.
+
+    Prices are left out on purpose: a one-cent tick is the same opportunity moving,
+    not a new one, and counting it twice inflates the rates in `summarize`.
+    """
+    legs = ",".join(f"{lg.side} {lg.market}" for lg in o.legs)
     return f"{o.kind}|{o.url}|{legs}"
 
 
@@ -104,8 +108,9 @@ def format_alert(s: Sighting) -> str:
     o = s.opp
     legs = "\n".join(f"  {lg.side} {lg.market[:40]} @{lg.price:.3f} x{'?' if lg.size is None else f'{lg.size:.0f}'}" for lg in o.legs)
     flag = "" if o.executable else "  [below venue minimum]"
+    horizon = "" if o.days_to_resolve is None else f"  pays in ~{o.days_to_resolve:.1f}d ({(o.annualized or 0) * 100:.0f}%/yr)"
     return (
-        f"{o.kind}  edge ${o.edge_per_set:.4f}/set ({o.edge_pct * 100:.1f}%)  "
+        f"{o.kind}  edge ${o.edge_per_set:.4f}/set ({o.edge_pct * 100:.1f}%){horizon}  "
         f"fill {'?' if o.fillable_sets is None else f'{o.fillable_sets:.0f}'}  profit@budget ${o.est_profit:.2f}{flag}\n"
         f"{o.title[:90]}\n{legs}\n{o.url}"
     )

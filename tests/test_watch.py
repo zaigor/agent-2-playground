@@ -20,9 +20,9 @@ def _opp(kind="negrisk_buy_all_yes", url="u1", price=0.40, profit=0.5, edge=0.02
     )
 
 
-def test_opp_key_changes_with_price_but_not_with_size():
-    a, b, c = _opp(price=0.40), _opp(price=0.40, profit=0.9), _opp(price=0.41)
-    assert opp_key(a) == opp_key(b)
+def test_opp_key_ignores_price_ticks_but_not_the_market():
+    a, b, c = _opp(price=0.40), _opp(price=0.41, profit=0.9), _opp(url="other")
+    assert opp_key(a) == opp_key(b)  # a one-cent move is the same opportunity
     assert opp_key(a) != opp_key(c)
 
 
@@ -94,3 +94,40 @@ def test_min_order_size_flags_unexecutable_tickets():
     assert o.budget_sets < 5 and not o.executable  # $3 buys ~3 sets, venue wants 5 per leg
     assert any("below the venue minimum" in n for n in o.notes)
     assert o.to_dict()["executable"] is False
+
+
+def _fixture_scan(**kw):
+    return run_scan(
+        FixtureSource(FIXTURES), budget=50.0, min_edge=0.005, max_events=100, platform="polymarket",
+        near_min_price=0.95, near_max_days=14, poly_fee_rate=None, kalshi_multiplier=1.0, do_cross=False, now=T0, **kw,
+    )
+
+
+def test_horizon_filter_keeps_only_fast_payouts():
+    arb = [o for o in _fixture_scan()[0] if o.kind == "negrisk_buy_all_yes"]
+    assert arb and all(o.days_to_resolve is not None and o.annualized is not None for o in arb)
+    days = max(o.days_to_resolve for o in arb)
+    assert [o for o in _fixture_scan(max_days=days + 1)[0] if o.kind == "negrisk_buy_all_yes"]
+    opps, stats = _fixture_scan(max_days=days - 1)
+    assert not [o for o in opps if o.kind == "negrisk_buy_all_yes"] and stats["dropped_slow_or_unknown_date"] >= 1
+
+
+def test_min_annualized_filter():
+    arb = [o for o in _fixture_scan()[0] if o.kind == "negrisk_buy_all_yes"]
+    best = max(o.annualized for o in arb)
+    assert not [o for o in _fixture_scan(min_annualized=best + 0.01)[0] if o.kind == "negrisk_buy_all_yes"]
+
+
+def test_set_horizon_annualizes_edge():
+    o = _opp()
+    o.end_date = (T0 + timedelta(days=36.5)).isoformat()
+    o.set_horizon(T0)
+    assert o.days_to_resolve == 36.5 and abs(o.annualized - 0.02 * 10) < 1e-9
+
+
+def test_augmented_events_skipped_unless_allowed():
+    def titles(opps):
+        return {o.title for o in opps if o.kind != "near_certain"}
+
+    assert "Which studio releases first?" in titles(_fixture_scan(allow_augmented=True)[0])
+    assert "Which studio releases first?" not in titles(_fixture_scan(allow_augmented=False)[0])
