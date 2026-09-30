@@ -147,6 +147,21 @@ def score_trades(trades: list[dict[str, Any]], y: int, fee_rate: float, horizon_
             acc.add(size, p_yes, fee, mo_exp, mo_h)
 
 
+def cluster_se_per_100(per_market: list[tuple[float, float]]) -> float | None:
+    """Standard error of the makers' edge per $100 treating each market as one observation
+    (ratio estimator: sum of maker P&L over sum of dollars). Trades within a market share the
+    outcome, so this is the honest error; the trade-level one is far too small."""
+    if len(per_market) < 2:
+        return None
+    dollars = sum(d for _, d in per_market)
+    if dollars <= 0:
+        return None
+    ratio = sum(p for p, _ in per_market) / dollars
+    n = len(per_market)
+    resid = sum((p - ratio * d) ** 2 for p, d in per_market)
+    return math.sqrt(resid * n / (n - 1)) / dollars * 100
+
+
 @dataclass
 class FamilyFlow:
     key: str
@@ -159,6 +174,10 @@ class FamilyFlow:
     total: dict[str, Any]
     by_hours: list[dict[str, Any]] = field(default_factory=list)
     by_band: list[dict[str, Any]] = field(default_factory=list)
+    n_markets_with_trades: int = 0
+    maker_pnl_per_100_se_cluster: float | None = None  # market-clustered se of total maker_pnl_per_100
+    top_market_share: float | None = None  # share of sampled dollars in the single biggest market
+    per_market: list[dict[str, Any]] = field(default_factory=list)  # question, dollars, maker_pnl
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -199,19 +218,29 @@ def family_flow(events: list[PolyEvent], trades_source, *, now: datetime, since:
         bands: dict[str, FlowAcc] = defaultdict(FlowAcc)
         total = FlowAcc()
         fee = max(polymarket_rate_for_event(e) for e, _ in pairs[:20])
+        per_market: list[dict[str, Any]] = []
         for e, m in sample:
             trades = trades_source.trades(m.condition_id or m.id)
-            score_trades(trades, int(m.resolved_yes), fee, horizon_min * 60, sinks, bands, [total], outcomes=m.outcomes)
+            one = FlowAcc()
+            score_trades(trades, int(m.resolved_yes), fee, horizon_min * 60, sinks, bands, [total, one], outcomes=m.outcomes)
+            if one.n:
+                r1 = one.row()
+                per_market.append({"question": m.question, "dollars": r1["dollars"], "maker_pnl": r1["maker_pnl"], "trades": one.n})
         if log:
             log(f"flow {i + 1}/{min(len(ranked), max_families)}: {key} ({len(sample)} markets, {total.n} trades)")
         if total.n == 0:
             continue
         order = {name: j for j, (name, _, _) in enumerate(HOURS_BUCKETS)} | {"after": 99}
+        tot_row = total.row()
         out.append(FamilyFlow(
             key=key, example=pairs[-1][0].title, sport=sport, fee_rate=fee, n_resolved=len(pairs), n_sampled=len(sample),
-            family_dollars_per_day=vol / window_days, total=total.row(),
+            family_dollars_per_day=vol / window_days, total=tot_row,
             by_hours=[acc.row(bucket=b) for b, acc in sorted(sinks.items(), key=lambda kv: order.get(kv[0], 98))],
             by_band=[acc.row(band=b) for b, acc in sorted(bands.items())],
+            n_markets_with_trades=len(per_market),
+            maker_pnl_per_100_se_cluster=cluster_se_per_100([(x["maker_pnl"], x["dollars"]) for x in per_market]),
+            top_market_share=(max(x["dollars"] for x in per_market) / tot_row["dollars"]) if tot_row["dollars"] else None,
+            per_market=per_market,
         ))
     return out
 
@@ -229,15 +258,17 @@ def render_family_flow(rows: list[FamilyFlow], *, top: int = 40, sort: str = "ma
         rows = sorted(rows, key=lambda r: -(r.total["maker_pnl_per_100"] or -1e9))
     elif sort == "volume":
         rows = sorted(rows, key=lambda r: -r.family_dollars_per_day)
-    L = ["Order flow by family: taker markout to expiry per share (positive = takers informed = makers lose) and the makers' edge per $100 filled, before rebates.", ""]
-    L.append(f"  {'family':34} {'sport':5} {'fee':>4} {'mkts':>5} {'trades':>7} {'$ sampled':>10} {'family $/day':>12} {'taker→expiry ±se':>18} {'maker/$100 ±se':>15} {'best bucket':>16} {'worst bucket':>16}")
+    L = ["Order flow by family: taker markout to expiry per share (positive = takers informed = makers lose) and the makers' edge per $100 filled, before rebates.",
+         "The ± on maker/$100 treats each market as one observation (outcomes are shared within a market); `top mkt` is the share of sampled $ in the biggest single market.", ""]
+    L.append(f"  {'family':34} {'sport':5} {'fee':>4} {'mkts':>5} {'trades':>7} {'$ sampled':>10} {'family $/day':>12} {'taker→expiry':>12} {'maker/$100 ±se(mkt)':>20} {'top mkt':>7} {'best bucket':>16} {'worst bucket':>16}")
     for r in rows[:top]:
         t = r.total
         hb = [b for b in r.by_hours if b["dollars"] >= 500 and b["maker_pnl_per_100"] is not None]
         best = max(hb, key=lambda b: b["maker_pnl_per_100"]) if hb else None
         worst = min(hb, key=lambda b: b["maker_pnl_per_100"]) if hb else None
         fmt_b = lambda b: f"{b['bucket']} {b['maker_pnl_per_100']:+.1f}" if b else "-"  # noqa: E731
-        L.append(f"  {r.key[:34]:34} {'yes' if r.sport else '':5} {r.fee_rate:4.2f} {r.n_sampled:5} {t['trades']:7} {t['dollars']:10,.0f} {r.family_dollars_per_day:12,.0f} {_pm(t['taker_markout_expiry'], t['taker_markout_expiry_se'], '+.3f'):>18} {_pm(t['maker_pnl_per_100'], t['maker_pnl_per_100_se'], '+.2f'):>15} {fmt_b(best):>16} {fmt_b(worst):>16}")
+        top_share = f"{r.top_market_share * 100:6.0f}%" if r.top_market_share is not None else f"{'-':>7}"
+        L.append(f"  {r.key[:34]:34} {'yes' if r.sport else '':5} {r.fee_rate:4.2f} {r.n_markets_with_trades:5} {t['trades']:7} {t['dollars']:10,.0f} {r.family_dollars_per_day:12,.0f} {t['taker_markout_expiry']:+12.3f} {_pm(t['maker_pnl_per_100'], r.maker_pnl_per_100_se_cluster, '+.2f'):>20} {top_share} {fmt_b(best):>16} {fmt_b(worst):>16}")
     L.append("")
     L.append("Hours-to-close detail (makers' edge per $100, with $ sampled) for the families above:")
     names = [n for n, _, _ in HOURS_BUCKETS]

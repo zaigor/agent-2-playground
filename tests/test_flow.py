@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from pm_scanner.cli import main
-from pm_scanner.flow import FlowAcc, family_flow, hours_bucket, is_first_outcome, price_band, render_family_flow, resolved_markets, score_trades
+from pm_scanner.flow import FlowAcc, cluster_se_per_100, family_flow, hours_bucket, is_first_outcome, price_band, render_family_flow, resolved_markets, score_trades
 from pm_scanner.sources import FixtureSource
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -83,6 +83,11 @@ def test_family_flow_separates_informed_from_noise_families():
     assert informed and noise
     assert informed[0].total["taker_markout_expiry"] > max(n.total["taker_markout_expiry"] for n in noise) - 0.05
     for r in rows:
+        assert r.n_markets_with_trades == len(r.per_market) and 0 < r.n_markets_with_trades <= 5
+        assert abs(sum(x["maker_pnl"] for x in r.per_market) - r.total["maker_pnl"]) < 1e-6
+        assert r.top_market_share is not None and 0 < r.top_market_share <= 1.0
+        if r.n_markets_with_trades >= 2:
+            assert r.maker_pnl_per_100_se_cluster is not None and r.maker_pnl_per_100_se_cluster >= 0
         assert abs(sum(b["trades"] for b in r.by_hours) - r.total["trades"]) == 0
         assert abs(sum(b["dollars"] for b in r.by_band) - r.total["dollars"]) < 1e-6
         assert r.family_dollars_per_day >= 0 and r.n_sampled <= 5
@@ -118,3 +123,11 @@ def test_team_named_outcomes_are_mapped_to_the_first_outcome():
     sinks2, bands2, tot2 = defaultdict(FlowAcc), defaultdict(FlowAcc), FlowAcc()
     score_trades(trades, 1, 0.05, 60, sinks2, bands2, [tot2])
     assert tot2.row()["taker_markout_expiry"] > 0.4
+
+
+def test_cluster_se_is_zero_when_every_market_has_the_same_edge_and_grows_with_dispersion():
+    same = [(-2.0, 100.0), (-4.0, 200.0), (-1.0, 50.0)]  # every market: makers earn 2 per 100
+    assert abs(cluster_se_per_100(same)) < 1e-9
+    spread = [(-10.0, 100.0), (+6.0, 100.0), (-2.0, 100.0)]
+    assert cluster_se_per_100(spread) > 3.0
+    assert cluster_se_per_100([(-1.0, 100.0)]) is None
