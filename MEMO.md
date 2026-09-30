@@ -835,6 +835,254 @@ operations (latency, uptime, capital) rather than on research. None of
 those is a $50 experiment, and I would not recommend funding an account
 on the strength of anything in sections 10-16.
 
+## 17. Two last checks (30 Sep): ladders and liquidity rewards; what was left unchecked, on purpose; and how to test your own data
+
+After section 16 the question was whether "too efficient for us" was the
+right claim. It is not quite: what the tests support is narrower, that with
+public data, a small stake and no infrastructure, every edge we could test
+was zero or negative. Two of the untested avenues were cheap enough to
+close, and you asked for them; the rest are listed below as consciously
+not pursued.
+
+### 17a. Ladder consistency (`ladder`)
+
+Nested outcomes must be priced in order: "above $76k" cannot be worth more
+than "above $74k", "launched by June" cannot be worth more than "launched by
+December", "ceasefire through November" cannot be worth more than "through
+October". When the bid on the harder rung exceeds the ask on the easier one,
+buying YES on the easier rung and NO on the harder one pays at least $1 per
+set for less than $1, whatever happens. The scanner finds ladders inside an
+event (numbers, dates, O/U lines, handicaps) and across events ("... by
+<date>?" questions with the same stem), reads Gamma's top of book, confirms
+each candidate on the CLOB books and nets both taker fees.
+
+Run on the 6,000 busiest open events, six snapshots over 45 minutes
+(`data/ladder_snapshots_2026-09-30.txt`):
+
+* about 7,000 ladders (5,400 O/U lines, 600 numeric, 600 date, 400
+  handicap), 32,000 rungs, 6,500 adjacent pairs live on both sides per
+  snapshot;
+* the adjacent gap (bid on the harder rung minus ask on the easier one) has
+  a median of −15c and a 90th percentile of −4c; about 340 pairs sit within
+  2c of an inversion at any moment;
+* 62-70 pairs per snapshot are inverted on Gamma's quotes, 27-36 of
+  them executable on the live books after both taker fees, all in the
+  same handful of illiquid ladders: the tails of "What will the Fed rate hit
+  before 2027", "How many Senators vote for the Clarity Act", token-launch
+  FDV ladders, the GTA VI Metacritic ladder, one Anthropic token-price
+  ladder;
+* the best single pair nets 2.2c per $1 set on about 100 sets (the top of
+  the book), $2.23 at a $100 budget, capital locked 92 days: 9% a year. The
+  rest net 0.1-1.6c per set on 5-100 sets. Taking every executable pair at
+  a $100 budget each earns $6-14 per snapshot, the median pair
+  locks its capital for three months, the median annualised return is
+  about 1%;
+* 40 distinct pairs appeared in the 45 minutes and 26 of them were there
+  in every snapshot, unchanged in price and size: nobody is arbitraging
+  them because they are not worth the gas and the three months of locked
+  capital.
+
+So ladders are checked, and the answer is the expected one. The structural
+gap exists only in pennies, in rungs nobody trades, on money that has to
+sit until the ladder resolves; the scanner will flag anything bigger in a
+one-liner, and in an hour of snapshots nothing bigger appeared.
+
+### 17b. Liquidity rewards (`rewards`)
+
+**The program.** Polymarket pays makers two ways. Maker rebates return
+15-25% of the taker fee on each fill against a resting order
+(docs.polymarket.com/programs/maker-rebates): at a 50c price that is about
+0.3c a share, against the 4-20c a share of adverse selection measured in
+section 16, so rebates change nothing. Liquidity rewards are the other way:
+18,600 markets carry a daily pot (`clob.polymarket.com/rewards/markets/
+current`), $238,000 a day in total, 182 markets at $100 a day or more, 3,441
+at $10-100, the rest at $1-10. Every minute the book is sampled; each
+resting order within the market's max spread of the midpoint (usually 4.5c)
+and at or above its minimum size (usually 20 shares) scores
+((v − s)/v)² × size, a maker's two sides are combined (min of the two,
+or the bigger one divided by 3 for one-sided quotes when the mid is
+between 10c and 90c), and the pot is split in proportion. So what a
+quote earns depends only on the pot and on who else is quoting inside the
+max spread, both of which are on the public book.
+
+**The survey** (`rewards`, `data/rewards_survey_2026-09-30.txt`): 264
+markets, the 60 biggest pots plus 150 random ones at $10-100 a day and 60
+at $1-10, each with its live book and its last 14 days of tape. For a
+two-sided quote at the minimum size, the book gives the share of the pot
+(a range, from "every competitor is one-sided" to "every competitor is
+balanced"), the tape gives fills a day and the loss per fill from the
+paper maker of section 16, marked to the last print.
+
+| pot | markets | quote | median share | median reward $/day | median net $/day | markets net > $0.5/day | sum net $/day (low..high) | capital |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ≥ $100 | 55 | at the touch | 0.2% | 1.45 | −0.33 | 25 | −101 .. +220 | $5,010 |
+| ≥ $100 | 60 | half max spread | 0.1% | 0.51 | +0.21 | 28 | +1,319 .. +1,525 | $5,110 |
+| $10-100 | 95 | at the touch | 5.5% | 1.73 | +0.88 | 51 | +194 .. +410 | $2,665 |
+| $10-100 | 147 | half max spread | 23% | 7.79 | +2.31 | 99 | +1,868 .. +2,024 | $3,865 |
+| $1-10 | 57 | half max spread | 12.5% | 0.23 | +0.06 | 18 | −1 .. +4 | $1,330 |
+
+The big pots are what the postmortem in the sources described: deep books
+(the Fed markets have $6,000-36,000 of score resting within 2.5c), a
+20-share quote takes 0.1-2% of the pot, and at the touch the adverse
+selection ($578 a day across the 55) exceeds the reward. The $1-10 tier is
+noise. The $10-100 tier is different: half the sampled markets have no
+qualifying order within the max spread at all, 38 of 147 had not traded in
+14 days, and a minimum-size quote sitting at half the max spread would
+take a median 23% of a median $35 pot, with nothing on the tape to pick it
+off. Summed over the 147, that is +$1,900 a day on $3,900 of capital; the
+sums are dominated by a few markets, so the medians are the honest
+numbers: $2.3 a day per market on $26 of capital, 99 of 147 positive.
+
+**Every rewarded market's book** (`rewards --books-only`; the survey above
+sampled, this reads all 3,554 two-sided books at $10 a day or more, $183,000
+a day of pots): 1,076 markets, carrying $42,800 a day, have no qualifying
+order within the max spread on either side. In 1,396 markets a minimum-size
+quote at half the max spread would take at least a quarter of the pot:
+$49,000 a day on $42,000 of capital, $36,500 of it in markets seven or more
+days from resolution. Restricted to markets 7+ days out, spread under 50c,
+minimum size at most 50 shares, there are 729 of them worth $31,000 a day on
+$15,600 of capital; the top of that list is a $200-a-day pot on "Cornell
+President out by October 31?" with a 7c/40c book, then Israel's next
+finance minister, Trump's AI czar, Colombia's central bank, October
+precipitation in New York, and hundreds of NFL season props at $50 a day
+each. A second pass 23 minutes later (the saved report,
+`data/rewards_pocket_2026-09-30.txt`, is this one) found 1,105 empty books
+carrying $43,200, 1,494 markets at a quarter or more of the pot ($51,800 a
+day on $44,400), 1,200 of them the same markets as the first pass; and the
+pots themselves move: 23% of the rates changed within the hour, typically
+by 10-40% either way (Jay Clayton's went from $70 to $149, Nir Barkat's
+from $77 to $40), with the total unchanged, so the pot you see is re-set
+by Polymarket at least hourly and a quote should be sized to the rate's
+average, not its reading.
+
+**Why this cannot be taken at face value.** Two hundred dollars a day for
+twenty dollars of capital, in a thousand markets, on a public formula,
+does not survive in a market with bots in it. Either an unwritten condition
+stops the pot being paid when nobody else is quoting (the help centre and
+the docs page state none: orders within the max spread, at or above the
+minimum size, both sides when the price is under 10c or over 90c, a $1
+minimum daily payout), or the pots are unclaimed because the risk that
+does not show on a 14-day tape is real: the only counterparties in a dead
+market are the ones who know something, a fill leaves you holding to
+resolution, and a bot that quotes a thousand of these needs capital,
+re-centring and a way to leave before the resolution day. Or Polymarket
+counts on most of the nominal $238,000 never being claimed. This is the
+one place in the whole research where the arithmetic came out positive
+and the reason is not obviously a bug or a sampling accident, and I could
+not settle it from documents.
+
+**The test that settles it** is the $50 test this memo has been holding
+back since section 3, and it is cheap because it needs no edge, only the
+program to pay what it advertises:
+
+1. Fund the dedicated wallet with $60-100 of USDC on Polygon (section 3).
+2. Pick 3-4 markets from the `--books-only` list that are 7+ days from
+   resolution, with a spread under 50c and a $50+ pot, and no news flow
+   (the Cornell, finance-minister and AI-czar markets are the type; not
+   weather, not anything resolving this week).
+3. Rest 20 shares on each side at half the max spread from the mid (about
+   2.25c each side when the max spread is 4.5c), re-centre when the mid moves, keep the orders
+   up for three days. Capital at risk per market is the 20 shares on each
+   side, about $20-30; the worst case is being filled on both sides by
+   someone who knows the answer, so at most the capital.
+4. Read the rewards page during day one (it shows the day's accrual) and
+   the portfolio history after the midnight UTC payout.
+
+On paper that is $50-200 a day per market, several hundred dollars a day
+on $100 of capital, which is exactly why the expected result is that the
+rewards page shows nothing and the unwritten rule is found. If instead the
+payout arrives, the next step is not to scale by ten but to run a week
+across twenty markets with a script that re-centres and pulls quotes 48
+hours before resolution, and to watch the share fall as others notice. If
+the payout is zero, this topic closes with the rest.
+
+What it is not: it is not the maker business of section 16 (those quotes
+were in markets that trade; these are in markets that do not), and it is
+not an edge over anyone; it is a subsidy that appears to be lying on the
+floor, and the test is whether it is really there.
+
+### 17c. Not pursued, by decision
+
+You decided to leave these as they are; they are recorded so nobody
+re-derives them later:
+
+* **Long-dated longshot selling.** Selling 2-5c contracts that expire months
+  out is a capital charge, not an edge; at this stake it is a few dollars a
+  quarter with tail risk. Not tested.
+* **Information processing on public feeds** (mention markets, tweet counts,
+  scheduled data releases). Section 15 showed their takers are informed, so
+  people with models already trade them; building one is months of work,
+  not a $50 experiment. Not tested.
+* **In-play sports and sub-minute crypto.** Latency games; structurally
+  against a laptop in Israel. Not tested.
+* **Resolution-rule misreadings.** A research edge that is manual and rare;
+  the weather rules were read carefully by the crowd. No scan built.
+* **Other venues.** Kalshi is closed to you; smaller venues were out of scope.
+
+### 17d. Can the framework test your own data? Yes: `signal`
+
+The Polymarket side of a backtest is already solved in this repo: the
+data-api trade tape gives the price of any market at any moment of its life
+(kept for months after resolution), Gamma gives the resolution, and the
+weather and flow work built the scoring (Brier against the market, markouts,
+paper trades net of fees, market-clustered errors). What was missing was a
+way in for data that is not a weather forecast. `signal` is that: a CSV of
+`market,time,p` (plus optional `outcome` and `note`) scored row by row
+against the price at that time. Offline example:
+
+```
+python -m pm_scanner signal --csv data/signal_example.csv --fixtures tests/fixtures
+python -m pm_scanner signal --csv my_signal.csv --json out.json          # live: any resolved market
+```
+
+It reports the Brier of your numbers and of the market at the same moments,
+their gap with a standard error that treats each market as one observation,
+the Brier of a 50/50 blend (if the blend beats the market, your data carries
+information the price lacked, even when your numbers alone lose), the price
+move in your direction 30 minutes later, a paper P&L for the rows that were
+more than 5c plus fee away from the price, and a reliability table. It drops
+rows dated after the market's last trade (look-ahead) and rows with no trade
+in the previous 24 hours (no price to compare against), and it prints the
+smallest gap the file could have detected, which is the number to read
+first with a small file.
+
+**What makes a dataset backtest-ready** (the questions to answer before
+collecting anything):
+
+1. **Point-in-time.** Each row needs the moment the number was available to
+   you, not the moment it describes. Revised series (economic data, box
+   office estimates, poll aggregates that get restated) need their original
+   vintages; a series that only exists in its revised form cannot be tested
+   honestly and will look better than it is.
+2. **A map to markets.** Each row must name a Polymarket market (condition
+   id, slug or Gamma id) that was open at that time and has since resolved.
+   Recurring families (weather, sports, crypto dailies, mention counts,
+   weekly economic prints) give hundreds of resolved markets; one-off
+   political markets give one.
+3. **A probability, not a hunch.** The value must be P(Yes) for that market,
+   produced by a rule fixed before looking at outcomes. If the data is a raw
+   number (a count, a reading), write the mapping to a probability down
+   first and test it on markets you have not looked at; fitting the mapping
+   on the same markets you score is how every false edge in sections 12-16
+   was made.
+4. **Enough independent markets.** A Brier gap is the square of the price
+   error you can exploit: a 10c edge is a gap of 0.01, a 5c edge 0.0025.
+   Scaling the weather runs (± 0.002 on about 1,400 bracket-markets), 200
+   resolved markets can show a gap of about 0.01, a 10c edge; a 5c edge
+   needs a few thousand markets, and the taker fee eats the first 1-2c of
+   it. Fifty markets can only show something large.
+5. **Timing that beats the tape.** The price you are scored against is the
+   last trade before your timestamp; the fill you would actually get is the
+   ask after it. Data that arrives on a schedule (a release at 12:30) must be
+   scored a realistic latency later, which is why `time` is yours to set.
+6. **Public and legal.** Section 14's rules still apply: nothing non-public,
+   nothing from inside the resolution source.
+
+If a file passes these six and the report shows a blend gap two standard
+errors above zero on markets you did not fit on, that is the first positive
+result this research would have produced, and the next step would be the
+$50 live test on those markets only.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
@@ -854,3 +1102,4 @@ on the strength of anything in sections 10-16.
 * Order flow (sections 15-16): Polymarket data-api `/trades?market=<conditionId>&limit=10000` (`side` read as the taker's side; outcome labels matched against the market's outcome list), 30 Sep 2026; full report in `data/flow_families_2026-09-30.txt`.
 * Weather (sections 11-13): Iowa Environmental Mesonet ASOS/METAR archive ([download form](https://mesonet.agron.iastate.edu/request/download.phtml), CGI `cgi-bin/request/asos.py`, routine reports = `report_type=3`); Open-Meteo [previous-runs API](https://open-meteo.com/en/docs/previous-runs-api), [ensemble API](https://open-meteo.com/en/docs/ensemble-api), model ids incl. `gfs_graphcast025` and `ecmwf_aifs025_single`; Polymarket data-api `/trades?market=<conditionId>&limit=10000` (full history of closed markets); station coordinates from published aerodrome data; IMS forecasts at [ims.gov.il](https://ims.gov.il/he) (no archive of past forecasts).
 * Niche survey (section 10): Gamma `/events` by tag with `start_date_min/max` windows and `exclude_tag_id=102127`, `/series`, CLOB `/books` and `/prices-history` (history is purged about a week after a market closes; `data-api.polymarket.com/trades` keeps trades longer), 29 Sep 2026. Weather market rules cite NOAA `weather.gov/wrh/timeseries?site=<ICAO>` (US stations and LLBG Tel Aviv) and Weather Underground daily history (other cities). Forecast data for the backtest: [Open-Meteo historical forecast API](https://open-meteo.com/en/docs/historical-forecast-api), [Open-Meteo ensemble API](https://open-meteo.com/en/docs/ensemble-api).
+* Section 17: Polymarket docs [Liquidity Rewards](https://docs.polymarket.com/programs/liquidity-rewards) (scoring formula, sampling, single-sided rule), [Maker Rebates](https://docs.polymarket.com/programs/maker-rebates), [Fees](https://docs.polymarket.com/trading/fees), [Market Details: liquidity reward settings](https://docs.polymarket.com/market-data/market-details#liquidity-reward-settings); CLOB `GET /rewards/markets/current` (paged, 18,600 markets on 30 Sep 2026); Gamma `/markets?condition_ids=` (20 per call; `closed=true` for resolved markets); help centre [Liquidity Rewards](https://help.polymarket.com/en/articles/13364466-liquidity-rewards) (payout at ~midnight UTC, $1 daily minimum, two-sided below 10c); reports in `data/ladder_snapshots_2026-09-30.txt`, `data/rewards_survey_2026-09-30.txt`, `data/rewards_survey_tiers_2026-09-30.txt`, `data/rewards_pocket_2026-09-30.txt`.

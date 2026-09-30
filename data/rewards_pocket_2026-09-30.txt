@@ -1,0 +1,54 @@
+Rewarded markets with a two-sided book: 3816, pots $196,370/day.
+  no qualifying order within the max spread on either side: 1105 markets, $43,206/day of pots
+  a minimum-size quote at half the max spread would take >= 25% of the pot in 1494 markets: $51,849/day on $44,445 of capital
+    of which resolving within 2 days: 294 ($10,461/day); 7+ days out: 1091 ($38,397/day)
+  top   5 by reward: $1,124..1,124/day on $100 capital
+  top  10 by reward: $1,825..1,892/day on $260 capital
+  top  20 by reward: $2,844..2,930/day on $540 capital
+  top  50 by reward: $4,920..5,051/day on $1,490 capital
+  top 100 by reward: $7,422..7,553/day on $2,490 capital
+
+  7+ days to resolution, spread <= 50c, mid in 5-95c (a live test would start here):
+   reward lo..hi  rate  min   mid  sprd     Q b/a   liq $  v24 $  days  question
+   192.0..192.0    192   20  0.68  0.28    0/0        122   2749    31  Will Google have the #1 AI model at the end of October 2026?
+   149.0..149.0    149   20  0.61  0.25    0/0      23451   1220    92  Will Jay Clayton be Trump's AI czar?
+   148.7..178.1    200   20  0.29  0.07    1/2       3100     66    31  Cornell President out by October 31?
+   116.0..116.0    116   80  0.59  0.12    0/0       5106   4878   457  Will the next Prime Minister of Romania be an Independent or
+   102.0..102.0    102   20  0.45  0.13    0/0        622    324    14  Will a dozen eggs cost between $2.10 and $2.20 in September?
+   100.0..100.0    100   20  0.12  0.17    0/0         22      0    31  Will Russia capture Bilytske by October 31, 2026?
+    79.7..88.7     100  100  0.32  0.04    0/19      9636   2787    31  Will WTI Crude Oil (WTI) hit (HIGH) $105 in October?
+    70.0..70.0      70   20  0.36  0.12    0/0         92     70    48  Will Abyss be the fewest played map at VALORANT Champions 20
+    62.0..62.0      62   20  0.52  0.34    0/0         55     63     9  Will Zelenskyy post 80-99 posts from October 2 to October 9,
+    61.0..61.0      61   20  0.35  0.41    0/0         88      0    99  Will NYC have less than 3 inches of precipitation in October
+    55.0..55.0      55   20  0.53  0.31    0/0        214   1373    15  Will Rachel peak at Category 3?
+    55.0..55.0      55   20  0.55  0.37    0/0        330     81     9  Will White House post 200+ posts from October 2 to October 9
+    54.0..54.0      54   20  0.35  0.24    0/0        122    159    30  Will Canada's GDP growth rate MoM in August 2026 be between 
+    53.0..53.0      53   20  0.32  0.17    0/0         41     40    99  Will Seattle have between 4.75 and 6 inches of precipitation
+    52.0..52.0      52   20  0.27  0.45    0/0        197      0   151  Will no next Israeli Minister of Foreign Affairs be appointe
+    52.0..52.0      52   20  0.36  0.47    0/0        571    414    34  Will Democrats sweep the Maine Senate and Governor elections
+    50.0..50.0      50   20  0.51  0.31    0/0         20     60   118  Will Ladd McConkey have 1,000+ receiving yards in the 2026-2
+    50.0..50.0      50   20  0.13  0.18    0/0         58     69    31  Will Canva's valuation hit (HIGH) $49B by October 31?
+    50.0..50.0      50   20  0.14  0.20    0/0         35      0    31  Will Glean's valuation hit (LOW) $5.5B by October 31?
+    50.0..50.0      50   20  0.72  0.49    0/0         13     58   118  Will George Pickens have 1,000+ receiving yards in the 2026-
+    50.0..50.0      50   20  0.25  0.24    0/0        101      0   548  Mortgage delinquency rate exceeds 3% by end of Q4 2027?
+    50.0..50.0      50   20  0.48  0.26    0/0         21      0   118  Will Juwan Johnson finish as a top-12 TE in the 2026-27 NFL 
+    50.0..50.0      50   20  0.14  0.15    0/0         83    621    31  Will Neuralink's valuation hit (HIGH) $60B by October 31?
+    50.0..50.0      50   20  0.26  0.42    0/0         45      0   118  Will Jalen Hurts finish as a top-5 QB in the 2026-27 NFL sea
+    50.0..50.0      50   20  0.28  0.44    0/0         20     80   118  Will Parker Washington finish as a top-12 WR in the 2026-27 
+    50.0..50.0      50   20  0.14  0.23    0/0         42      0   118  Will Rashee Rice finish as a top-12 WR in the 2026-27 NFL se
+    50.0..50.0      50   20  0.77  0.45    0/0         23     20   118  Will Garrett Wilson have 1,000+ receiving yards in the 2026-
+    50.0..50.0      50   20  0.47  0.33    0/0         17      0   118  Will Bijan Robinson finish as a top-5 FLEX in the 2026-27 NF
+    50.0..50.0      50   20  0.23  0.44    0/0         32      0   118  Will Jake Ferguson finish as a top-5 TE in the 2026-27 NFL s
+    50.0..50.0      50   20  0.66  0.18    0/0         54    120   273  Will the next Fable model (5.2+) debut with a Humanity's Las
+    50.0..50.0      50   20  0.90  0.19    0/0        978      0    31  Will Coinbase Global, Inc. (COIN) hit (LOW) $195 in October?
+    50.0..50.0      50   20  0.29  0.14    0/0        144    224   118  Will Josh Downs have 1,000+ receiving yards in the 2026-27 N
+    50.0..50.0      50   20  0.33  0.30    0/0         61      0   273  Will the next Fable model (5.2+) debut with a Humanity's Las
+    50.0..50.0      50   20  0.75  0.48    0/0         22     80   118  Will Josh Allen have 3,500+ passing yards in the 2026-27 NFL
+    50.0..50.0      50   20  0.69  0.15    0/0         25     40   123  Will Brann finish 9th-24th in UECL league phase?
+    50.0..50.0      50   20  0.55  0.28    0/0         78     81    31  Will Perplexity's valuation hit (HIGH) $22B by October 31?
+    50.0..50.0      50   20  0.53  0.31    0/0         27      0   118  Will Evan McPherson finish as a top-12 K in the 2026-27 NFL 
+    50.0..50.0      50   20  0.52  0.30    0/0         23      0   118  Will Will Reichard finish as a top-12 K in the 2026-27 NFL s
+    50.0..50.0      50   20  0.46  0.33    0/0         17     40   118  Will Omarion Hampton have 10+ rushing touchdowns in the 2026
+    50.0..50.0      50   20  0.13  0.24    0/0         27      0   118  Will Wil Lutz finish as a top-5 K in the 2026-27 NFL season?
+
+wrote /tmp/claude-0/-home-user-agent-2-playground/770d56de-33cb-5a4e-9f43-7a1c558adb65/scratchpad/rewards/pocket2.json

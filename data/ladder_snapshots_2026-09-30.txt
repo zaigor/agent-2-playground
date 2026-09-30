@@ -1,0 +1,466 @@
+Ladder consistency at 2026-09-30T21:04:33+00:00: 6000 events, 7042 ladders (date 613, number 617, ou 5400, spread 412), 32335 rungs, 6604 adjacent pairs live on both sides.
+  adjacent gap (subset bid - superset ask): median -0.150, 90th pct -0.040; 340 pairs within 2c of a violation.
+  soft violations (mids inverted on live quotes): 281; hard on Gamma: 64, confirmed on books net of fees: 31.
+
+  Executable (buy YES on the superset, NO on the subset; pays >= $1 per set):
+   net/set    gap    fee    sets  profit  days    /yr  ladder | subset -> superset
+    +0.022 +0.040  0.018   102.2    2.23    92     9%  What will Anthropic's frontier output token price  | ↑ $30 -> ↑ $25
+    +0.016 +0.017  0.001    40.0    0.63    92     6%  "GTA VI" Metacritic Score? | #+ | 92+ -> 90+
+    +0.010 +0.019  0.009    60.0    0.59   457     1%  3Jane FDV above ___ one day after launch? | # | $800M -> $600M
+    +0.005 +0.011  0.006   100.5    0.54    93     2%  How many Senators will vote for the Clarity Act? | | Above 62 -> Above 55
+    +0.004 +0.010  0.005   100.5    0.45    93     2%  How many Senators will vote for the Clarity Act? | | Above 58 -> Above 55
+    +0.007 +0.009  0.002    58.6    0.40    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 1.75%
+    +0.003 +0.004  0.001   100.3    0.33    92     1%  Ostium FDV above ___ one day after launch? | # | $700M -> $300M
+    +0.010 +0.012  0.002    20.0    0.19    91     4%  How low will 5-year Treasury yield get before 2027 | Below 4.10% -> Below 4.25%
+    +0.004 +0.004  0.000    50.0    0.18   123     1%  How high will US unemployment go in 2026? | # | 7.0% -> 6.0%
+    +0.009 +0.009  0.001    20.0    0.17     1   279%  'The Life of a Showgirl: The Encore' First Week Al | 400k+ -> 350k+
+    +0.003 +0.005  0.002    61.2    0.17    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.5%
+    +0.007 +0.009  0.002    18.1    0.13    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 1.75%
+    +0.002 +0.004  0.002    56.0    0.12    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% -> ↓ 1.75%
+    +0.005 +0.010  0.005    20.0    0.10   118     1%  Pro Football: Jayden Daniels 2026-27 Regular Seaso | 3,749.5+ passing yards -> 3,499.5+ passing yards
+    +0.002 +0.007  0.005    50.0    0.08    93     1%  How many Senators will vote for the Clarity Act? | | Above 64 -> Above 55
+    +0.001 +0.012  0.011   100.0    0.05   457     0%  Printr FDV above ___ one day after launch? | # | $150M -> $100M
+    +0.003 +0.005  0.002    18.1    0.05    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 2.5%
+    +0.001 +0.003  0.002    61.2    0.04    91     0%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.25%
+    +0.008 +0.009  0.001     5.0    0.04    92     3%  Ostium FDV above ___ one day after launch? | # | $500M -> $300M
+    +0.001 +0.001  0.000    33.8    0.03   123     0%  How high will US unemployment go in 2026? | # | 10.0% -> 6.0%
+    +0.002 +0.005  0.003    12.1    0.03    92     1%  Hyperbeat FDV above ___ one day after launch? | # | $400M -> $200M
+    +0.002 +0.002  0.000    12.1    0.02    31     2%  Republican Senate odds hit __ by October 31? | ↑ # | ↑ 60% -> ↑ 55%
+    +0.002 +0.004  0.002    11.0    0.02    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% -> ↓ 1.75%
+    +0.004 +0.006  0.002     6.0    0.02    91     2%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 0.75%
+    +0.002 +0.002  0.000     5.1    0.01     0    66%  WTI Crude Oil (WTI) closes above ___ on September  | $96 -> $94
+    +0.002 +0.003  0.001     5.0    0.01     5    14%  Ethereum above ___ on October 5? | # | 3,200 -> 3,100
+    +0.001 +0.002  0.001     5.0    0.01     4    12%  Ethereum above ___ on October 4? | # | 3,200 -> 3,100
+    +0.001 +0.003  0.002    18.1    0.01    91     0%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 2.25%
+    +0.001 +0.002  0.001    10.8    0.01    91     0%  How low will 10-year Treasury yield get before 202 | Below 3.5% -> Below 3.6%
+    +0.000 +0.003  0.003     8.0    0.00    91     0%  How low will 5-year Treasury yield get before 2027 | Below 4.10% -> Below 4.20%
+
+  Soft (mids inverted, not executable after the spread):
+  gap +0.000  US Virgin Islands vs. Saint-Martin - More Markets | us virgi | US Virgin Islands (-5.5) (0.01) -> US Virgin Islands (-2.5) (0.01)
+  gap +0.000  NBA to announce expansion team in Las Vegas by...? | 1106301 | October 5 (0.18) -> October 6 (0.18)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  Ethereal FDV above ___ one day after launch? | # | $200M (0.25) -> $100M (0.25)
+  gap +0.000  Will Ambient launch a token by ___? | 635623:@ | March 31, 2027 (0.54) -> June 30, 2027 (0.54)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 60 (0.07) -> Above 55 (0.07)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 58 (0.08) -> Above 50 (0.08)
+  gap +0.000  Will Glean's valuation hit __ by October 31? | ↑#.75b | ↑$9.75B (0.11) -> ↑$8.75B (0.11)
+  gap +0.000  StripChain FDV above ___ one day after launch? | # | $150M (0.15) -> $100M (0.15)
+  gap +0.000  Metamask FDV above ___ one day after launch? | # | $700M (0.06) -> $500M (0.06)
+  gap +0.000  What price will BNB hit in 2026? | ↑ # | ↑ 1400 (0.14) -> ↑ 1300 (0.14)
+  gap +0.000  Hotstuff FDV above ___ one day after launch? | # | $200M (0.20) -> $80M (0.20)
+  gap +0.000  Ventuals FDV above ___ one day after launch? | # | $800M (0.02) -> $500M (0.02)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $200M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $150M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $100M (0.17) -> $80M (0.17)
+  gap +0.000  Will Chaos Labs launch a token by ___? | 635600:@ | September 30, 2027 (0.18) -> December 31, 2027 (0.18)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥90 mph (1.00)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥85 mph (1.00)
+  gap +0.000  Will Pluralis launch a token by ___? | 635813:@ | March 31, 2027 (0.32) -> June 30, 2027 (0.32)
+  gap +0.000  Pro Football: Bo Nix 2026-27 Regular Season Passing Touchdow | 21.5+ passing TDs (0.69) -> 18.5+ passing TDs (0.69)
+  gap -0.001  WTI Crude Oil (WTI) closes above ___ on September 30? | # | $95 (0.00) -> $94 (0.00)
+  gap -0.001  Printr FDV above ___ one day after launch? | # | $150M (0.10) -> $50M (0.10)
+  gap -0.001  British Virgin Islands vs. Montserrat - More Markets | o/u # | O/U 8.5 (0.02) -> O/U 7.5 (0.02)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% (0.03) -> ↓ 1.5% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% (0.03) -> ↓ 3.0% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% (0.03) -> ↓ 3.0% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.5% (0.02) -> ↓ 1.75% (0.02)
+  gap -0.001  How many Senators will vote for the Clarity Act? | above # | Above 66 (0.07) -> Above 55 (0.07)
+
+  Sample ladders (hardest rung first, bid/ask):
+  [ou] Philadelphia Phillies vs. Atlanta Braves | o/u #: O/U 8.5 0.26/0.34; O/U 7.5 0.32/0.33; O/U 6.5 0.998/0.999; O/U 5.5 0.999/1.0; O/U 4.5 0.999/1.0; O/U 3.5 0.999/1.0
+  [ou] Philadelphia Phillies vs. Atlanta Braves | philadelphia phillies o/u #: Philadelphia Phillies O/U 5.5 -/1.0; Philadelphia Phillies O/U 4.5 0.05/1.0; Philadelphia Phillies O/U 3.5 0.95/1.0; Philadelphia Phillies O/U 2.5 0.93/1.0; Philadelphia Phillies O/U 1.5 0.93/1.0
+  [ou] Philadelphia Phillies vs. Atlanta Braves | atlanta braves o/u #: Atlanta Braves O/U 5.5 -/1.0; Atlanta Braves O/U 4.5 0.14/1.0; Atlanta Braves O/U 3.5 0.19/1.0; Atlanta Braves O/U 2.5 0.93/1.0; Atlanta Braves O/U 1.5 0.94/1.0
+  [ou] Chicago White Sox vs. Houston Astros | o/u #: O/U 8.5 0.4/0.42; O/U 7.5 0.49/0.5; O/U 6.5 0.61/0.63
+  [date] Israel x Iran ceasefire continues through...? | 711714:@: December 31 0.62/0.63; November 30 0.7/0.71; October 31 0.79/0.8; September 30 0.999/1.0; September 15 0.999/1.0; August 31 0.999/1.0; August 15 0.999/1.0; August 9 0.999/1.0
+
+... next snapshot in 600s
+
+Ladder consistency at 2026-09-30T21:15:11+00:00: 6000 events, 7047 ladders (date 614, number 616, ou 5405, spread 412), 32339 rungs, 6507 adjacent pairs live on both sides.
+  adjacent gap (subset bid - superset ask): median -0.150, 90th pct -0.040; 342 pairs within 2c of a violation.
+  soft violations (mids inverted on live quotes): 252; hard on Gamma: 70, confirmed on books net of fees: 36.
+
+  Executable (buy YES on the superset, NO on the subset; pays >= $1 per set):
+   net/set    gap    fee    sets  profit  days    /yr  ladder | subset -> superset
+    +0.108 +0.126  0.018    26.7    2.88     -      -  Next Google Gemini Pro Model: Arena Debut? | #+ | 1500+ -> 1480+
+    +0.088 +0.107  0.018    26.7    2.36    92    38%  Next Google Gemini Pro Model: Arena Debut? | #+ | 1490+ -> 1480+
+    +0.087 +0.106  0.018    26.7    2.33     -      -  Next Google Gemini Pro Model: Arena Debut? | #+ | 1495+ -> 1480+
+    +0.022 +0.040  0.018   102.2    2.23    92     9%  What will Anthropic's frontier output token price  | ↑ $30 -> ↑ $25
+    +0.016 +0.017  0.001    40.0    0.63    92     6%  "GTA VI" Metacritic Score? | #+ | 92+ -> 90+
+    +0.005 +0.011  0.006   100.5    0.54    93     2%  How many Senators will vote for the Clarity Act? | | Above 62 -> Above 55
+    +0.052 +0.070  0.018     9.0    0.47    92    22%  Next Google Gemini Pro Model: Humanity’s Last Exam | 50%+ -> 45%+
+    +0.004 +0.010  0.005   100.5    0.45    93     2%  How many Senators will vote for the Clarity Act? | | Above 58 -> Above 55
+    +0.007 +0.009  0.002    58.6    0.40    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 1.75%
+    +0.003 +0.004  0.001   100.3    0.33    92     1%  Ostium FDV above ___ one day after launch? | # | $700M -> $300M
+    +0.010 +0.019  0.009    30.0    0.30   457     1%  3Jane FDV above ___ one day after launch? | # | $800M -> $600M
+    +0.010 +0.012  0.002    20.0    0.19    91     4%  How low will 5-year Treasury yield get before 2027 | Below 4.10% -> Below 4.25%
+    +0.004 +0.004  0.000    50.0    0.18   123     1%  How high will US unemployment go in 2026? | # | 7.0% -> 6.0%
+    +0.009 +0.009  0.001    20.0    0.17     1   281%  'The Life of a Showgirl: The Encore' First Week Al | 400k+ -> 350k+
+    +0.003 +0.005  0.002    61.2    0.17    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.5%
+    +0.007 +0.009  0.002    18.1    0.13    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 1.75%
+    +0.002 +0.004  0.002    56.0    0.12    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% -> ↓ 1.75%
+    +0.005 +0.010  0.005    20.0    0.10   118     1%  Pro Football: Jayden Daniels 2026-27 Regular Seaso | 3,749.5+ passing yards -> 3,499.5+ passing yards
+    +0.002 +0.007  0.005    50.0    0.08    93     1%  How many Senators will vote for the Clarity Act? | | Above 64 -> Above 55
+    +0.001 +0.012  0.011   100.0    0.05   457     0%  Printr FDV above ___ one day after launch? | # | $150M -> $100M
+    +0.003 +0.005  0.002    18.1    0.05    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 2.5%
+    +0.001 +0.003  0.002    61.2    0.04    91     0%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.25%
+    +0.002 +0.003  0.001    25.1    0.04    91     1%  How low will 10-year Treasury yield get before 202 | Below 2.0% -> Below 3.6%
+    +0.008 +0.009  0.001     5.0    0.04    92     3%  Ostium FDV above ___ one day after launch? | # | $500M -> $300M
+    +0.001 +0.001  0.000    33.8    0.03   123     0%  How high will US unemployment go in 2026? | # | 10.0% -> 6.0%
+    +0.002 +0.005  0.003    12.1    0.03    92     1%  Hyperbeat FDV above ___ one day after launch? | # | $400M -> $200M
+    +0.002 +0.002  0.000    12.1    0.02    31     2%  Republican Senate odds hit __ by October 31? | ↑ # | ↑ 60% -> ↑ 55%
+    +0.002 +0.004  0.002    11.0    0.02    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% -> ↓ 1.75%
+    +0.004 +0.006  0.002     6.0    0.02    91     2%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 0.75%
+    +0.002 +0.002  0.000     5.1    0.01     0    66%  WTI Crude Oil (WTI) closes above ___ on September  | $96 -> $94
+
+  Soft (mids inverted, not executable after the spread):
+  gap +0.000  China PR vs. Turkmenistan - More Markets | o/u # | O/U 1.5 (0.50) -> O/U 0.5 (0.50)
+  gap +0.000  NBA to announce expansion team in Las Vegas by...? | 1106301 | October 5 (0.18) -> October 6 (0.18)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  Ethereal FDV above ___ one day after launch? | # | $200M (0.25) -> $100M (0.25)
+  gap +0.000  Will Ambient launch a token by ___? | 635623:@ | March 31, 2027 (0.54) -> June 30, 2027 (0.54)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 60 (0.07) -> Above 55 (0.07)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 58 (0.08) -> Above 50 (0.08)
+  gap +0.000  Will Catena launch a token by ___? | 635762:@ | March 31, 2027 (0.47) -> September 30, 2027 (0.47)
+  gap +0.000  Will Glean's valuation hit __ by October 31? | ↑#.75b | ↑$9.75B (0.11) -> ↑$8.75B (0.11)
+  gap +0.000  StripChain FDV above ___ one day after launch? | # | $150M (0.15) -> $100M (0.15)
+  gap +0.000  Will Anduril's valuation hit __ by October 31? | ↑#.5b | ↑$152.5B (0.18) -> ↑$112.5B (0.18)
+  gap +0.000  What price will BNB hit in 2026? | ↑ # | ↑ 1400 (0.14) -> ↑ 1300 (0.14)
+  gap +0.000  Hotstuff FDV above ___ one day after launch? | # | $200M (0.20) -> $80M (0.20)
+  gap +0.000  Ventuals FDV above ___ one day after launch? | # | $800M (0.02) -> $500M (0.02)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $200M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $150M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $100M (0.17) -> $80M (0.17)
+  gap +0.000  Will Chaos Labs launch a token by ___? | 635600:@ | September 30, 2027 (0.18) -> December 31, 2027 (0.18)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥90 mph (1.00)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥85 mph (1.00)
+  gap +0.000  Will Pluralis launch a token by ___? | 635813:@ | March 31, 2027 (0.32) -> June 30, 2027 (0.32)
+  gap +0.000  Pro Football: Bo Nix 2026-27 Regular Season Passing Touchdow | 21.5+ passing TDs (0.69) -> 18.5+ passing TDs (0.69)
+  gap -0.001  Printr FDV above ___ one day after launch? | # | $150M (0.10) -> $50M (0.10)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% (0.03) -> ↓ 1.5% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% (0.03) -> ↓ 3.0% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% (0.03) -> ↓ 3.0% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.5% (0.02) -> ↓ 1.75% (0.02)
+  gap -0.001  How many Senators will vote for the Clarity Act? | above # | Above 66 (0.07) -> Above 55 (0.07)
+  gap -0.002  Printr FDV above ___ one day after launch? | # | $800M (0.05) -> $500M (0.05)
+
+  Sample ladders (hardest rung first, bid/ask):
+  [ou] Philadelphia Phillies vs. Atlanta Braves | o/u #: O/U 8.5 0.13/0.5; O/U 7.5 0.3/0.75; O/U 6.5 0.999/1.0; O/U 5.5 0.999/1.0; O/U 4.5 0.999/1.0; O/U 3.5 0.999/1.0
+  [ou] Philadelphia Phillies vs. Atlanta Braves | philadelphia phillies o/u #: Philadelphia Phillies O/U 5.5 -/1.0; Philadelphia Phillies O/U 4.5 -/1.0; Philadelphia Phillies O/U 3.5 0.93/1.0; Philadelphia Phillies O/U 2.5 0.93/1.0; Philadelphia Phillies O/U 1.5 0.93/1.0
+  [ou] Philadelphia Phillies vs. Atlanta Braves | atlanta braves o/u #: Atlanta Braves O/U 5.5 -/1.0; Atlanta Braves O/U 4.5 0.15/1.0; Atlanta Braves O/U 3.5 0.21/1.0; Atlanta Braves O/U 2.5 0.93/1.0; Atlanta Braves O/U 1.5 0.94/1.0
+  [ou] Chicago White Sox vs. Houston Astros | o/u #: O/U 8.5 0.55/0.56; O/U 7.5 0.64/0.65; O/U 6.5 0.74/0.81
+  [ou] Adana: Cagla Buyukakcay vs Lucrezia Stefanini | adana: cagla buyukakcay vs lucrezia stefan: Adana: Cagla Buyukakcay vs Lucrezia Stefanini Set 1 O/U 10.5 0.99/1.0; Adana: Cagla Buyukakcay vs Lucrezia Stefanini Set 1 O/U 9.5 0.99/1.0; Adana: Cagla Buyukakcay vs Lucrezia Stefanini Set 1 O/U 8.5 0.99/1.0
+
+... next snapshot in 600s
+
+Ladder consistency at 2026-09-30T21:18:42+00:00: 6000 events, 7030 ladders (date 614, number 614, ou 5396, spread 406), 32265 rungs, 6422 adjacent pairs live on both sides.
+  adjacent gap (subset bid - superset ask): median -0.150, 90th pct -0.040; 325 pairs within 2c of a violation.
+  soft violations (mids inverted on live quotes): 243; hard on Gamma: 69, confirmed on books net of fees: 32.
+
+  Executable (buy YES on the superset, NO on the subset; pays >= $1 per set):
+   net/set    gap    fee    sets  profit  days    /yr  ladder | subset -> superset
+    +0.022 +0.040  0.018   102.2    2.23    92     9%  What will Anthropic's frontier output token price  | ↑ $30 -> ↑ $25
+    +0.016 +0.017  0.001    40.0    0.63    92     6%  "GTA VI" Metacritic Score? | #+ | 92+ -> 90+
+    +0.005 +0.011  0.006   100.5    0.54    93     2%  How many Senators will vote for the Clarity Act? | | Above 62 -> Above 55
+    +0.004 +0.010  0.005   100.5    0.45    93     2%  How many Senators will vote for the Clarity Act? | | Above 58 -> Above 55
+    +0.007 +0.009  0.002    58.6    0.40    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 1.75%
+    +0.003 +0.004  0.001   100.3    0.33    92     1%  Ostium FDV above ___ one day after launch? | # | $700M -> $300M
+    +0.010 +0.019  0.009    30.0    0.30   457     1%  3Jane FDV above ___ one day after launch? | # | $800M -> $600M
+    +0.010 +0.012  0.002    20.0    0.19    91     4%  How low will 5-year Treasury yield get before 2027 | Below 4.10% -> Below 4.25%
+    +0.004 +0.004  0.000    50.0    0.18   123     1%  How high will US unemployment go in 2026? | # | 7.0% -> 6.0%
+    +0.005 +0.006  0.001    40.0    0.18    91     2%  How low will 10-year Treasury yield get before 202 | Below 2.0% -> Below 3.6%
+    +0.009 +0.009  0.001    20.0    0.17     1   281%  'The Life of a Showgirl: The Encore' First Week Al | 400k+ -> 350k+
+    +0.003 +0.005  0.002    61.2    0.17    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.5%
+    +0.007 +0.009  0.002    18.1    0.13    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 1.75%
+    +0.002 +0.004  0.002    56.0    0.12    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% -> ↓ 1.75%
+    +0.005 +0.010  0.005    20.0    0.10   118     1%  Pro Football: Jayden Daniels 2026-27 Regular Seaso | 3,749.5+ passing yards -> 3,499.5+ passing yards
+    +0.002 +0.007  0.005    50.0    0.08    93     1%  How many Senators will vote for the Clarity Act? | | Above 64 -> Above 55
+    +0.001 +0.012  0.011   100.0    0.05   457     0%  Printr FDV above ___ one day after launch? | # | $150M -> $100M
+    +0.003 +0.005  0.002    18.1    0.05    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 2.5%
+    +0.001 +0.003  0.002    61.2    0.04    91     0%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.25%
+    +0.008 +0.009  0.001     5.0    0.04    92     3%  Ostium FDV above ___ one day after launch? | # | $500M -> $300M
+    +0.001 +0.001  0.000    33.8    0.03   123     0%  How high will US unemployment go in 2026? | # | 10.0% -> 6.0%
+    +0.002 +0.005  0.003    12.1    0.03    92     1%  Hyperbeat FDV above ___ one day after launch? | # | $400M -> $200M
+    +0.003 +0.004  0.001    11.2    0.03    91     1%  How low will 10-year Treasury yield get before 202 | Below 3.5% -> Below 3.6%
+    +0.002 +0.002  0.000    12.1    0.02    31     2%  Republican Senate odds hit __ by October 31? | ↑ # | ↑ 60% -> ↑ 55%
+    +0.002 +0.004  0.002    11.0    0.02    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% -> ↓ 1.75%
+    +0.004 +0.006  0.002     6.0    0.02    91     2%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 0.75%
+    +0.002 +0.002  0.000     5.1    0.01     0    66%  WTI Crude Oil (WTI) closes above ___ on September  | $96 -> $94
+    +0.002 +0.003  0.001     5.0    0.01     5    14%  Ethereum above ___ on October 5? | # | 3,200 -> 3,100
+    +0.001 +0.002  0.001     5.0    0.01     4    12%  Ethereum above ___ on October 4? | # | 3,200 -> 3,100
+    +0.001 +0.003  0.002    18.1    0.01    91     0%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 2.25%
+
+  Soft (mids inverted, not executable after the spread):
+  gap +0.000  China PR vs. Turkmenistan - More Markets | o/u # | O/U 1.5 (0.50) -> O/U 0.5 (0.50)
+  gap +0.000  NBA to announce expansion team in Las Vegas by...? | 1106301 | October 5 (0.18) -> October 6 (0.18)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  Ethereal FDV above ___ one day after launch? | # | $200M (0.25) -> $100M (0.25)
+  gap +0.000  Will Ambient launch a token by ___? | 635623:@ | March 31, 2027 (0.54) -> June 30, 2027 (0.54)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 60 (0.07) -> Above 55 (0.07)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 58 (0.08) -> Above 50 (0.08)
+  gap +0.000  Will Catena launch a token by ___? | 635762:@ | March 31, 2027 (0.48) -> June 30, 2027 (0.48)
+  gap +0.000  Will Glean's valuation hit __ by October 31? | ↑#.75b | ↑$9.75B (0.11) -> ↑$8.75B (0.11)
+  gap +0.000  StripChain FDV above ___ one day after launch? | # | $150M (0.15) -> $100M (0.15)
+  gap +0.000  Metamask FDV above ___ one day after launch? | # | $700M (0.06) -> $500M (0.06)
+  gap +0.000  What price will BNB hit in 2026? | ↑ # | ↑ 1400 (0.14) -> ↑ 1300 (0.14)
+  gap +0.000  Hotstuff FDV above ___ one day after launch? | # | $200M (0.20) -> $80M (0.20)
+  gap +0.000  Ventuals FDV above ___ one day after launch? | # | $800M (0.02) -> $500M (0.02)
+  gap +0.000  Manchester City punishment announced by...? | 1083788:@ | November 20 (0.28) -> December 18 (0.28)
+  gap +0.000  How low will 10-year Treasury yield get before 2027? | below | Below 2.0% (0.02) -> Below 3.8% (0.02)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $200M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $150M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $100M (0.17) -> $80M (0.17)
+  gap +0.000  Will Chaos Labs launch a token by ___? | 635600:@ | September 30, 2027 (0.18) -> December 31, 2027 (0.18)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥90 mph (1.00)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥85 mph (1.00)
+  gap +0.000  Will Pluralis launch a token by ___? | 635813:@ | March 31, 2027 (0.32) -> June 30, 2027 (0.32)
+  gap +0.000  Pro Football: Bo Nix 2026-27 Regular Season Passing Touchdow | 21.5+ passing TDs (0.69) -> 18.5+ passing TDs (0.69)
+  gap -0.001  Printr FDV above ___ one day after launch? | # | $150M (0.10) -> $50M (0.10)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% (0.03) -> ↓ 1.5% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% (0.03) -> ↓ 3.0% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% (0.03) -> ↓ 3.0% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.5% (0.02) -> ↓ 1.75% (0.02)
+
+  Sample ladders (hardest rung first, bid/ask):
+  [ou] Philadelphia Phillies vs. Atlanta Braves | o/u #: O/U 8.5 0.13/0.5; O/U 7.5 0.3/0.75; O/U 6.5 0.999/1.0; O/U 5.5 0.999/1.0; O/U 4.5 0.999/1.0; O/U 3.5 0.999/1.0
+  [ou] Philadelphia Phillies vs. Atlanta Braves | philadelphia phillies o/u #: Philadelphia Phillies O/U 5.5 -/1.0; Philadelphia Phillies O/U 4.5 -/1.0; Philadelphia Phillies O/U 3.5 0.93/1.0; Philadelphia Phillies O/U 2.5 0.93/1.0; Philadelphia Phillies O/U 1.5 0.93/1.0
+  [ou] Philadelphia Phillies vs. Atlanta Braves | atlanta braves o/u #: Atlanta Braves O/U 5.5 -/1.0; Atlanta Braves O/U 4.5 0.15/1.0; Atlanta Braves O/U 3.5 0.21/1.0; Atlanta Braves O/U 2.5 0.93/1.0; Atlanta Braves O/U 1.5 0.94/1.0
+  [ou] Chicago White Sox vs. Houston Astros | o/u #: O/U 8.5 0.55/0.56; O/U 7.5 0.64/0.65; O/U 6.5 0.74/0.81
+  [ou] Adana: Cagla Buyukakcay vs Lucrezia Stefanini | adana: cagla buyukakcay vs lucrezia stefan: Adana: Cagla Buyukakcay vs Lucrezia Stefanini Set 1 O/U 10.5 0.99/1.0; Adana: Cagla Buyukakcay vs Lucrezia Stefanini Set 1 O/U 9.5 0.99/1.0; Adana: Cagla Buyukakcay vs Lucrezia Stefanini Set 1 O/U 8.5 0.99/1.0
+
+... next snapshot in 600s
+
+Ladder consistency at 2026-09-30T21:29:01+00:00: 6000 events, 7042 ladders (date 617, number 617, ou 5400, spread 408), 32343 rungs, 6561 adjacent pairs live on both sides.
+  adjacent gap (subset bid - superset ask): median -0.150, 90th pct -0.040; 332 pairs within 2c of a violation.
+  soft violations (mids inverted on live quotes): 266; hard on Gamma: 68, confirmed on books net of fees: 32.
+
+  Executable (buy YES on the superset, NO on the subset; pays >= $1 per set):
+   net/set    gap    fee    sets  profit  days    /yr  ladder | subset -> superset
+    +0.022 +0.040  0.018   102.2    2.23    92     9%  What will Anthropic's frontier output token price  | ↑ $30 -> ↑ $25
+    +0.016 +0.017  0.001    40.0    0.63    92     6%  "GTA VI" Metacritic Score? | #+ | 92+ -> 90+
+    +0.005 +0.011  0.006   100.5    0.54    93     2%  How many Senators will vote for the Clarity Act? | | Above 62 -> Above 55
+    +0.004 +0.010  0.005   100.5    0.45    93     2%  How many Senators will vote for the Clarity Act? | | Above 58 -> Above 55
+    +0.007 +0.009  0.002    58.6    0.40    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 1.75%
+    +0.004 +0.004  0.000   100.4    0.36   123     1%  How high will US unemployment go in 2026? | # | 7.0% -> 6.0%
+    +0.003 +0.004  0.001   100.3    0.33    92     1%  Ostium FDV above ___ one day after launch? | # | $700M -> $300M
+    +0.010 +0.019  0.009    30.0    0.30   457     1%  3Jane FDV above ___ one day after launch? | # | $800M -> $600M
+    +0.010 +0.012  0.002    20.0    0.19    91     4%  How low will 5-year Treasury yield get before 2027 | Below 4.10% -> Below 4.25%
+    +0.009 +0.009  0.001    20.0    0.17     1   283%  'The Life of a Showgirl: The Encore' First Week Al | 400k+ -> 350k+
+    +0.003 +0.005  0.002    61.2    0.17    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.5%
+    +0.007 +0.009  0.002    18.1    0.13    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 1.75%
+    +0.002 +0.004  0.002    56.0    0.12    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% -> ↓ 1.75%
+    +0.005 +0.010  0.005    20.0    0.10   118     1%  Pro Football: Jayden Daniels 2026-27 Regular Seaso | 3,749.5+ passing yards -> 3,499.5+ passing yards
+    +0.004 +0.010  0.005    20.0    0.09    31     5%  What will Opendoor Technologies Inc. (OPEN) hit in | ↑ $4.50 -> ↑ $4.00
+    +0.002 +0.007  0.005    50.0    0.08    93     1%  How many Senators will vote for the Clarity Act? | | Above 64 -> Above 55
+    +0.004 +0.010  0.006    20.0    0.08    31     4%  What will Netflix, Inc. (NFLX) hit in October 2026 | ↑ $95 -> ↑ $90
+    +0.001 +0.012  0.011   100.0    0.05   457     0%  Printr FDV above ___ one day after launch? | # | $150M -> $100M
+    +0.003 +0.005  0.002    18.1    0.05    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 2.5%
+    +0.001 +0.003  0.002    61.2    0.04    91     0%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.25%
+    +0.008 +0.009  0.001     5.0    0.04    92     3%  Ostium FDV above ___ one day after launch? | # | $500M -> $300M
+    +0.001 +0.001  0.000    33.8    0.03   123     0%  How high will US unemployment go in 2026? | # | 10.0% -> 6.0%
+    +0.002 +0.005  0.003    12.1    0.03    92     1%  Hyperbeat FDV above ___ one day after launch? | # | $400M -> $200M
+    +0.003 +0.004  0.001    11.2    0.03    91     1%  How low will 10-year Treasury yield get before 202 | Below 3.5% -> Below 3.6%
+    +0.002 +0.002  0.000    12.1    0.02    31     2%  Republican Senate odds hit __ by October 31? | ↑ # | ↑ 60% -> ↑ 55%
+    +0.002 +0.004  0.002    11.0    0.02    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% -> ↓ 1.75%
+    +0.004 +0.006  0.002     6.0    0.02    91     2%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 0.75%
+    +0.002 +0.002  0.000     5.1    0.01     0    66%  WTI Crude Oil (WTI) closes above ___ on September  | $96 -> $94
+    +0.002 +0.003  0.001     5.0    0.01     5    14%  Ethereum above ___ on October 5? | # | 3,200 -> 3,100
+    +0.001 +0.003  0.002    18.1    0.01    91     0%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 2.25%
+
+  Soft (mids inverted, not executable after the spread):
+  gap +0.000  NBA to announce expansion team in Las Vegas by...? | 1106301 | October 5 (0.18) -> October 6 (0.18)
+  gap +0.000  Relay FDV above ___ one day after launch? | # | $500M (0.37) -> $300M (0.37)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  Ethereal FDV above ___ one day after launch? | # | $200M (0.25) -> $100M (0.25)
+  gap +0.000  Will Ambient launch a token by ___? | 635623:@ | March 31, 2027 (0.54) -> June 30, 2027 (0.54)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 60 (0.07) -> Above 55 (0.07)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 58 (0.08) -> Above 50 (0.08)
+  gap +0.000  Will Catena launch a token by ___? | 635762:@ | March 31, 2027 (0.48) -> June 30, 2027 (0.48)
+  gap +0.000  Will Glean's valuation hit __ by October 31? | ↑#.75b | ↑$9.75B (0.11) -> ↑$8.75B (0.11)
+  gap +0.000  StripChain FDV above ___ one day after launch? | # | $150M (0.15) -> $100M (0.15)
+  gap +0.000  Metamask FDV above ___ one day after launch? | # | $700M (0.06) -> $500M (0.06)
+  gap +0.000  What price will BNB hit in 2026? | ↑ # | ↑ 1400 (0.14) -> ↑ 1300 (0.14)
+  gap +0.000  Hotstuff FDV above ___ one day after launch? | # | $200M (0.20) -> $80M (0.20)
+  gap +0.000  Ventuals FDV above ___ one day after launch? | # | $800M (0.02) -> $500M (0.02)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $200M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $150M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $100M (0.17) -> $80M (0.17)
+  gap +0.000  Will Chaos Labs launch a token by ___? | 635600:@ | September 30, 2027 (0.18) -> December 31, 2027 (0.18)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥90 mph (1.00)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥85 mph (1.00)
+  gap +0.000  Will Pluralis launch a token by ___? | 635813:@ | March 31, 2027 (0.32) -> June 30, 2027 (0.32)
+  gap +0.000  Pro Football: Bo Nix 2026-27 Regular Season Passing Touchdow | 21.5+ passing TDs (0.69) -> 18.5+ passing TDs (0.69)
+  gap -0.001  Printr FDV above ___ one day after launch? | # | $150M (0.10) -> $50M (0.10)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% (0.03) -> ↓ 1.5% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% (0.03) -> ↓ 3.0% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% (0.03) -> ↓ 3.0% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.5% (0.02) -> ↓ 1.75% (0.02)
+  gap -0.001  How many Senators will vote for the Clarity Act? | above # | Above 66 (0.07) -> Above 55 (0.07)
+  gap -0.001  How low will 10-year Treasury yield get before 2027? | below | Below 2.0% (0.02) -> Below 3.5% (0.02)
+
+  Sample ladders (hardest rung first, bid/ask):
+  [ou] Philadelphia Phillies vs. Atlanta Braves | o/u #: O/U 8.5 -/0.001; O/U 7.5 -/0.001; O/U 6.5 0.999/1.0; O/U 5.5 0.999/1.0; O/U 4.5 0.999/1.0; O/U 3.5 0.999/1.0
+  [ou] Philadelphia Phillies vs. Atlanta Braves | philadelphia phillies o/u #: Philadelphia Phillies O/U 5.5 -/0.009; Philadelphia Phillies O/U 4.5 -/0.001; Philadelphia Phillies O/U 3.5 0.992/1.0; Philadelphia Phillies O/U 2.5 0.999/1.0; Philadelphia Phillies O/U 1.5 0.999/1.0
+  [ou] Philadelphia Phillies vs. Atlanta Braves | atlanta braves o/u #: Atlanta Braves O/U 5.5 -/0.009; Atlanta Braves O/U 4.5 -/0.009; Atlanta Braves O/U 3.5 -/0.001; Atlanta Braves O/U 2.5 0.999/1.0; Atlanta Braves O/U 1.5 0.999/1.0
+  [ou] Chicago White Sox vs. Houston Astros | o/u #: O/U 12.5 0.01/0.99; O/U 11.5 0.5/0.53; O/U 9.5 0.71/0.73; O/U 8.5 0.81/0.83; O/U 7.5 0.89/0.9; O/U 6.5 0.89/1.0
+  [ou] Chicago White Sox vs. Houston Astros | 1st 5 innings o/u #: 1st 5 Innings O/U 6.5 0.61/1.0; 1st 5 Innings O/U 5.5 0.78/1.0; 1st 5 Innings O/U 4.5 0.86/1.0; 1st 5 Innings O/U 3.5 0.999/1.0; 1st 5 Innings O/U 2.5 0.999/1.0
+
+... next snapshot in 600s
+
+Ladder consistency at 2026-09-30T21:39:28+00:00: 6000 events, 7013 ladders (date 615, number 617, ou 5373, spread 408), 32236 rungs, 6560 adjacent pairs live on both sides.
+  adjacent gap (subset bid - superset ask): median -0.150, 90th pct -0.040; 328 pairs within 2c of a violation.
+  soft violations (mids inverted on live quotes): 264; hard on Gamma: 65, confirmed on books net of fees: 30.
+
+  Executable (buy YES on the superset, NO on the subset; pays >= $1 per set):
+   net/set    gap    fee    sets  profit  days    /yr  ladder | subset -> superset
+    +0.022 +0.040  0.018   102.2    2.23    92     9%  What will Anthropic's frontier output token price  | ↑ $30 -> ↑ $25
+    +0.063 +0.067  0.004    10.3    0.65     0  2442%  will donald trump publicly insult zohran mamdani @ | Will Donald Trump publicly ins -> Will Donald Trump publicly ins
+    +0.005 +0.011  0.006   100.5    0.54    93     2%  How many Senators will vote for the Clarity Act? | | Above 62 -> Above 55
+    +0.004 +0.010  0.005   100.5    0.45    93     2%  How many Senators will vote for the Clarity Act? | | Above 58 -> Above 55
+    +0.007 +0.009  0.002    58.6    0.40    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 1.75%
+    +0.003 +0.004  0.001   100.3    0.33    92     1%  Ostium FDV above ___ one day after launch? | # | $700M -> $300M
+    +0.010 +0.019  0.009    30.0    0.30   457     1%  3Jane FDV above ___ one day after launch? | # | $800M -> $600M
+    +0.010 +0.012  0.002    20.0    0.19    91     4%  How low will 5-year Treasury yield get before 2027 | Below 4.10% -> Below 4.25%
+    +0.004 +0.004  0.000    50.0    0.18   123     1%  How high will US unemployment go in 2026? | # | 7.0% -> 6.0%
+    +0.009 +0.009  0.001    20.0    0.17     1   285%  'The Life of a Showgirl: The Encore' First Week Al | 400k+ -> 350k+
+    +0.003 +0.005  0.002    61.2    0.17    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.5%
+    +0.007 +0.009  0.002    18.1    0.13    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 1.75%
+    +0.002 +0.004  0.002    56.0    0.12    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% -> ↓ 1.75%
+    +0.005 +0.010  0.005    20.0    0.10   118     1%  Pro Football: Jayden Daniels 2026-27 Regular Seaso | 3,749.5+ passing yards -> 3,499.5+ passing yards
+    +0.004 +0.010  0.005    20.0    0.09    31     5%  What will Opendoor Technologies Inc. (OPEN) hit in | ↑ $4.50 -> ↑ $4.00
+    +0.002 +0.007  0.005    50.0    0.08    93     1%  How many Senators will vote for the Clarity Act? | | Above 64 -> Above 55
+    +0.001 +0.012  0.011   100.0    0.05   457     0%  Printr FDV above ___ one day after launch? | # | $150M -> $100M
+    +0.003 +0.005  0.002    18.1    0.05    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 2.5%
+    +0.001 +0.003  0.002    61.2    0.04    91     0%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.25%
+    +0.008 +0.009  0.001     5.0    0.04    92     3%  Ostium FDV above ___ one day after launch? | # | $500M -> $300M
+    +0.001 +0.001  0.000    33.8    0.03   123     0%  How high will US unemployment go in 2026? | # | 10.0% -> 6.0%
+    +0.002 +0.005  0.003    12.1    0.03    92     1%  Hyperbeat FDV above ___ one day after launch? | # | $400M -> $200M
+    +0.002 +0.002  0.000    12.1    0.02    31     2%  Republican Senate odds hit __ by October 31? | ↑ # | ↑ 60% -> ↑ 55%
+    +0.002 +0.004  0.002    11.0    0.02    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% -> ↓ 1.75%
+    +0.004 +0.006  0.002     6.0    0.02    91     2%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 0.75%
+    +0.003 +0.004  0.001     9.1    0.02    91     1%  How low will 10-year Treasury yield get before 202 | Below 3.5% -> Below 3.6%
+    +0.001 +0.003  0.002    18.1    0.01    91     0%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 2.25%
+    +0.001 +0.002  0.001     5.0    0.00     5     6%  Ethereum above ___ on October 5? | # | 3,200 -> 3,100
+    +0.000 +0.003  0.003     8.0    0.00    91     0%  How low will 5-year Treasury yield get before 2027 | Below 4.10% -> Below 4.20%
+    +0.000 +0.010  0.010    20.0    0.00    92     0%  will gavin newsom announce a presidential run @ | Will Gavin Newsom announce a P -> Will Gavin Newsom announce a P
+
+  Soft (mids inverted, not executable after the spread):
+  gap +0.000  NBA to announce expansion team in Las Vegas by...? | 1106301 | October 5 (0.18) -> October 6 (0.18)
+  gap +0.000  Relay FDV above ___ one day after launch? | # | $500M (0.37) -> $300M (0.37)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  Ethereal FDV above ___ one day after launch? | # | $200M (0.25) -> $100M (0.25)
+  gap +0.000  Will Ambient launch a token by ___? | 635623:@ | March 31, 2027 (0.54) -> June 30, 2027 (0.54)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 60 (0.07) -> Above 55 (0.07)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 58 (0.08) -> Above 50 (0.08)
+  gap +0.000  Will Catena launch a token by ___? | 635762:@ | March 31, 2027 (0.48) -> June 30, 2027 (0.48)
+  gap +0.000  Will Glean's valuation hit __ by October 31? | ↑#.75b | ↑$9.75B (0.11) -> ↑$8.75B (0.11)
+  gap +0.000  StripChain FDV above ___ one day after launch? | # | $150M (0.15) -> $100M (0.15)
+  gap +0.000  Metamask FDV above ___ one day after launch? | # | $700M (0.06) -> $500M (0.06)
+  gap +0.000  What price will BNB hit in 2026? | ↑ # | ↑ 1400 (0.14) -> ↑ 1300 (0.14)
+  gap +0.000  What price will BNB hit in 2026? | ↑ # | ↑ 1400 (0.14) -> ↑ 1100 (0.14)
+  gap +0.000  Hotstuff FDV above ___ one day after launch? | # | $200M (0.20) -> $80M (0.20)
+  gap +0.000  Ventuals FDV above ___ one day after launch? | # | $800M (0.02) -> $500M (0.02)
+  gap +0.000  Manchester City punishment announced by...? | 1083788:@ | November 20 (0.27) -> December 18 (0.27)
+  gap +0.000  How low will 10-year Treasury yield get before 2027? | below | Below 2.0% (0.01) -> Below 3.6% (0.01)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $200M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $150M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $100M (0.17) -> $80M (0.17)
+  gap +0.000  Will Chaos Labs launch a token by ___? | 635600:@ | September 30, 2027 (0.18) -> December 31, 2027 (0.18)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥90 mph (1.00)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥85 mph (1.00)
+  gap +0.000  Will Pluralis launch a token by ___? | 635813:@ | March 31, 2027 (0.32) -> June 30, 2027 (0.32)
+  gap +0.000  Pro Football: Bo Nix 2026-27 Regular Season Passing Touchdow | 21.5+ passing TDs (0.69) -> 18.5+ passing TDs (0.69)
+  gap +0.000  Reya FDV above ___ one day after launch? | # | $40M (0.69) -> $10M (0.69)
+  gap -0.001  Printr FDV above ___ one day after launch? | # | $150M (0.10) -> $50M (0.10)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% (0.03) -> ↓ 1.5% (0.03)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% (0.03) -> ↓ 3.0% (0.03)
+
+  Sample ladders (hardest rung first, bid/ask):
+  [ou] Philadelphia Phillies vs. Atlanta Braves | o/u #: O/U 8.5 -/0.001; O/U 7.5 -/0.001; O/U 6.5 0.999/1.0; O/U 5.5 0.999/1.0; O/U 4.5 0.999/1.0; O/U 3.5 0.999/1.0
+  [ou] Philadelphia Phillies vs. Atlanta Braves | philadelphia phillies o/u #: Philadelphia Phillies O/U 5.5 -/0.008; Philadelphia Phillies O/U 4.5 -/0.001; Philadelphia Phillies O/U 3.5 0.993/1.0; Philadelphia Phillies O/U 2.5 0.999/1.0; Philadelphia Phillies O/U 1.5 0.999/1.0
+  [ou] Philadelphia Phillies vs. Atlanta Braves | atlanta braves o/u #: Atlanta Braves O/U 5.5 -/0.008; Atlanta Braves O/U 4.5 -/0.008; Atlanta Braves O/U 3.5 -/0.001; Atlanta Braves O/U 2.5 0.999/1.0; Atlanta Braves O/U 1.5 0.999/1.0
+  [ou] Chicago White Sox vs. Houston Astros | o/u #: O/U 12.5 0.41/0.43; O/U 11.5 0.5/0.51; O/U 9.5 0.7/0.71; O/U 8.5 0.8/0.81; O/U 7.5 0.86/0.87; O/U 6.5 0.92/0.95
+  [ou] Chicago White Sox vs. Houston Astros | 1st 5 innings o/u #: 1st 5 Innings O/U 6.5 0.59/1.0; 1st 5 Innings O/U 5.5 0.74/1.0; 1st 5 Innings O/U 4.5 0.87/1.0; 1st 5 Innings O/U 3.5 0.999/1.0; 1st 5 Innings O/U 2.5 0.999/1.0
+
+... next snapshot in 600s
+
+Ladder consistency at 2026-09-30T21:49:44+00:00: 6000 events, 6987 ladders (date 616, number 619, ou 5350, spread 402), 32182 rungs, 6621 adjacent pairs live on both sides.
+  adjacent gap (subset bid - superset ask): median -0.150, 90th pct -0.040; 329 pairs within 2c of a violation.
+  soft violations (mids inverted on live quotes): 277; hard on Gamma: 62, confirmed on books net of fees: 27.
+
+  Executable (buy YES on the superset, NO on the subset; pays >= $1 per set):
+   net/set    gap    fee    sets  profit  days    /yr  ladder | subset -> superset
+    +0.022 +0.040  0.018   102.2    2.23    92     9%  What will Anthropic's frontier output token price  | ↑ $30 -> ↑ $25
+    +0.005 +0.011  0.006   100.5    0.54    93     2%  How many Senators will vote for the Clarity Act? | | Above 62 -> Above 55
+    +0.004 +0.010  0.005   100.5    0.45    93     2%  How many Senators will vote for the Clarity Act? | | Above 58 -> Above 55
+    +0.007 +0.009  0.002    58.6    0.40    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 1.75%
+    +0.003 +0.004  0.001   100.3    0.33    92     1%  Ostium FDV above ___ one day after launch? | # | $700M -> $300M
+    +0.015 +0.040  0.025    20.0    0.30   118     5%  Pro Football: Nico Collins 2026-27 Regular Season  | 6.5+ receiving TDs -> 4.5+ receiving TDs
+    +0.010 +0.019  0.009    30.0    0.30   457     1%  3Jane FDV above ___ one day after launch? | # | $800M -> $600M
+    +0.010 +0.012  0.002    20.0    0.19    91     4%  How low will 5-year Treasury yield get before 2027 | Below 4.10% -> Below 4.25%
+    +0.004 +0.004  0.000    50.0    0.18   123     1%  How high will US unemployment go in 2026? | # | 7.0% -> 6.0%
+    +0.009 +0.009  0.001    20.0    0.17     1   287%  'The Life of a Showgirl: The Encore' First Week Al | 400k+ -> 350k+
+    +0.003 +0.005  0.002    61.2    0.17    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.5%
+    +0.007 +0.009  0.002    18.1    0.13    91     3%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 1.75%
+    +0.002 +0.004  0.002    56.0    0.12    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% -> ↓ 1.75%
+    +0.002 +0.007  0.005    50.0    0.08    93     1%  How many Senators will vote for the Clarity Act? | | Above 64 -> Above 55
+    +0.001 +0.012  0.011   100.0    0.05   457     0%  Printr FDV above ___ one day after launch? | # | $150M -> $100M
+    +0.003 +0.005  0.002    18.1    0.05    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 2.5%
+    +0.001 +0.003  0.002    61.2    0.04    91     0%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 2.25%
+    +0.008 +0.009  0.001     5.0    0.04    92     3%  Ostium FDV above ___ one day after launch? | # | $500M -> $300M
+    +0.001 +0.001  0.000    33.8    0.03   123     0%  How high will US unemployment go in 2026? | # | 10.0% -> 6.0%
+    +0.002 +0.005  0.003    12.1    0.03    92     1%  Hyperbeat FDV above ___ one day after launch? | # | $400M -> $200M
+    +0.002 +0.002  0.000    12.1    0.02    31     2%  Republican Senate odds hit __ by October 31? | ↑ # | ↑ 60% -> ↑ 55%
+    +0.002 +0.004  0.002    11.0    0.02    91     1%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% -> ↓ 1.75%
+    +0.004 +0.006  0.002     6.0    0.02    91     2%  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% -> ↓ 0.75%
+    +0.002 +0.003  0.001     5.0    0.01     5    13%  Ethereum above ___ on October 5? | # | 3,200 -> 3,100
+    +0.001 +0.003  0.002    18.1    0.01    91     0%  What will Fed Rate hit before 2027? | ↓ # | ↓ 1.0% -> ↓ 2.25%
+    +0.000 +0.003  0.003     8.0    0.00    91     0%  How low will 5-year Treasury yield get before 2027 | Below 4.10% -> Below 4.20%
+    +0.000 +0.010  0.010    20.0    0.00    92     0%  will gavin newsom announce a presidential run @ | Will Gavin Newsom announce a P -> Will Gavin Newsom announce a P
+
+  Soft (mids inverted, not executable after the spread):
+  gap +0.000  Will Revolut's valuation hit __ by October 31? | ↑#.5b | ↑$137.5B (0.23) -> ↑$132.5B (0.23)
+  gap +0.000  NBA to announce expansion team in Las Vegas by...? | 1106301 | October 5 (0.18) -> October 6 (0.18)
+  gap +0.000  Relay FDV above ___ one day after launch? | # | $500M (0.37) -> $300M (0.37)
+  gap +0.000  What price will BNB hit in 2026? | ↑ # | ↑ 1400 (0.14) -> ↑ 1300 (0.14)
+  gap +0.000  What price will BNB hit in 2026? | ↑ # | ↑ 1400 (0.14) -> ↑ 1100 (0.14)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.5% (0.02) -> ↓ 2.5% (0.02)
+  gap +0.000  Ethereal FDV above ___ one day after launch? | # | $200M (0.25) -> $100M (0.25)
+  gap +0.000  Will Ambient launch a token by ___? | 635623:@ | March 31, 2027 (0.54) -> June 30, 2027 (0.54)
+  gap +0.000  Will Glean's valuation hit __ by October 31? | ↑#.75b | ↑$9.75B (0.11) -> ↑$8.75B (0.11)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 60 (0.07) -> Above 55 (0.07)
+  gap +0.000  How many Senators will vote for the Clarity Act? | above # | Above 58 (0.08) -> Above 50 (0.08)
+  gap +0.000  Will Catena launch a token by ___? | 635762:@ | March 31, 2027 (0.48) -> June 30, 2027 (0.48)
+  gap +0.000  StripChain FDV above ___ one day after launch? | # | $150M (0.15) -> $100M (0.15)
+  gap +0.000  Metamask FDV above ___ one day after launch? | # | $700M (0.06) -> $500M (0.06)
+  gap +0.000  Hotstuff FDV above ___ one day after launch? | # | $200M (0.20) -> $80M (0.20)
+  gap +0.000  Ventuals FDV above ___ one day after launch? | # | $800M (0.02) -> $500M (0.02)
+  gap +0.000  Manchester City punishment announced by...? | 1083788:@ | November 20 (0.27) -> December 18 (0.27)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $200M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $150M (0.17) -> $80M (0.17)
+  gap +0.000  Valantis FDV above ___ one day after launch? | # | $100M (0.17) -> $80M (0.17)
+  gap +0.000  Will Chaos Labs launch a token by ___? | 635600:@ | September 30, 2027 (0.18) -> December 31, 2027 (0.18)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥90 mph (1.00)
+  gap +0.000  Highest Mt. Washington wind speed in September? | ≥# mph | ≥95 mph (1.00) -> ≥85 mph (1.00)
+  gap +0.000  Will Pluralis launch a token by ___? | 635813:@ | March 31, 2027 (0.32) -> June 30, 2027 (0.32)
+  gap +0.000  Pro Football: Bo Nix 2026-27 Regular Season Passing Touchdow | 21.5+ passing TDs (0.69) -> 18.5+ passing TDs (0.69)
+  gap +0.000  Reya FDV above ___ one day after launch? | # | $40M (0.69) -> $10M (0.69)
+  gap -0.001  WTI Crude Oil (WTI) closes above ___ on September 30? | # | $96 (0.00) -> $94 (0.00)
+  gap -0.001  Printr FDV above ___ one day after launch? | # | $150M (0.10) -> $50M (0.10)
+  gap -0.001  What will Fed Rate hit before 2027? | ↓ # | ↓ 0.25% (0.03) -> ↓ 1.5% (0.03)
+
+  Sample ladders (hardest rung first, bid/ask):
+  [ou] Chicago White Sox vs. Houston Astros | o/u #: O/U 12.5 0.46/0.64; O/U 11.5 0.53/0.65; O/U 9.5 0.74/0.89; O/U 8.5 0.84/0.92; O/U 7.5 0.88/0.99; O/U 6.5 0.94/1.0
+  [ou] Chicago White Sox vs. Houston Astros | 1st 5 innings o/u #: 1st 5 Innings O/U 6.5 0.71/1.0; 1st 5 Innings O/U 5.5 0.86/1.0; 1st 5 Innings O/U 4.5 0.999/1.0; 1st 5 Innings O/U 3.5 0.999/1.0; 1st 5 Innings O/U 2.5 0.999/1.0
+  [ou] Chicago White Sox vs. Houston Astros | chicago white sox o/u #: Chicago White Sox O/U 5.5 0.68/1.0; Chicago White Sox O/U 4.5 0.84/1.0; Chicago White Sox O/U 3.5 0.93/1.0; Chicago White Sox O/U 2.5 0.93/1.0; Chicago White Sox O/U 1.5 0.93/1.0
+  [ou] Adana: Cagla Buyukakcay vs Lucrezia Stefanini | adana: cagla buyukakcay vs lucrezia stefan: Adana: Cagla Buyukakcay vs Lucrezia Stefanini Set 1 O/U 10.5 0.99/1.0; Adana: Cagla Buyukakcay vs Lucrezia Stefanini Set 1 O/U 9.5 0.99/1.0; Adana: Cagla Buyukakcay vs Lucrezia Stefanini Set 1 O/U 8.5 0.99/1.0
+  [date] Israel x Iran ceasefire continues through...? | 711714:@: December 31 0.62/0.63; November 30 0.7/0.71; October 31 0.79/0.8; September 30 0.998/0.999; September 15 0.999/1.0; August 31 0.999/1.0; August 15 0.999/1.0; August 9 0.999/1.0
+
+4 snapshots, 26164 live pair-checks, 264 hard on Gamma, 121 executable on books across 36 distinct pairs.
+  best: What will Anthropic's frontier output token price hit in 202 | ↑ $30 -> ↑ $25: net +0.022/set, 102.2 sets, $2.23 at the budget
+  total budget-sized profit if every one were taken: $25.67; median days to resolution 91
