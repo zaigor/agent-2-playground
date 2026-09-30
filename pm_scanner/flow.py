@@ -194,14 +194,29 @@ def resolved_markets(events: list[PolyEvent]) -> list[tuple[PolyEvent, PolyMarke
     return out
 
 
-def family_flow(events: list[PolyEvent], trades_source, *, now: datetime, since: datetime, per_family: int = 30, min_markets: int = 10, max_families: int = 60, horizon_min: int = 30, include_sport: bool = True, seed: int = 7, log=None) -> list[FamilyFlow]:
-    """Sample resolved markets per family, pull their trades and score the takers' markouts."""
+def sampled_market_ids(report_rows: list[dict[str, Any]]) -> set[str]:
+    """Market ids (or questions, for older reports) already used by a previous run, for out-of-sample re-sampling."""
+    out: set[str] = set()
+    for r in report_rows:
+        for x in r.get("per_market", []):
+            out.add(str(x.get("market_id") or x.get("question")))
+    return out
+
+
+def family_flow(events: list[PolyEvent], trades_source, *, now: datetime, since: datetime, per_family: int = 30, min_markets: int = 10, max_families: int = 60, horizon_min: int = 30, include_sport: bool = True, seed: int = 7, only_families: set[str] | None = None, exclude_markets: set[str] | None = None, log=None) -> list[FamilyFlow]:
+    """Sample resolved markets per family, pull their trades and score the takers' markouts.
+    `only_families` restricts the run to those keys; `exclude_markets` (ids or questions from a
+    previous report) keeps the sample out of sample."""
     fams: dict[str, list[tuple[PolyEvent, PolyMarket]]] = defaultdict(list)
     for e, m in resolved_markets(events):
+        if exclude_markets and (str(m.id) in exclude_markets or m.question in exclude_markets):
+            continue
         fams[family_key(e)].append((e, m))
     window_days = max(1.0, (now - since).total_seconds() / 86400)
     ranked = []
     for key, pairs in fams.items():
+        if only_families is not None and key not in only_families:
+            continue
         if len(pairs) < min_markets:
             continue
         sport = any(is_sport(e) for e, _ in pairs[:5])
@@ -225,7 +240,7 @@ def family_flow(events: list[PolyEvent], trades_source, *, now: datetime, since:
             score_trades(trades, int(m.resolved_yes), fee, horizon_min * 60, sinks, bands, [total, one], outcomes=m.outcomes)
             if one.n:
                 r1 = one.row()
-                per_market.append({"question": m.question, "dollars": r1["dollars"], "maker_pnl": r1["maker_pnl"], "trades": one.n})
+                per_market.append({"market_id": str(m.id), "condition_id": m.condition_id, "question": m.question, "end": m.end_date.isoformat() if m.end_date else None, "dollars": r1["dollars"], "maker_pnl": r1["maker_pnl"], "trades": one.n})
         if log:
             log(f"flow {i + 1}/{min(len(ranked), max_families)}: {key} ({len(sample)} markets, {total.n} trades)")
         if total.n == 0:

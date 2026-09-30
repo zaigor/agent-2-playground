@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from pm_scanner.cli import main
-from pm_scanner.flow import FlowAcc, cluster_se_per_100, family_flow, hours_bucket, is_first_outcome, price_band, render_family_flow, resolved_markets, score_trades
+from pm_scanner.flow import FlowAcc, cluster_se_per_100, family_flow, hours_bucket, is_first_outcome, price_band, render_family_flow, resolved_markets, sampled_market_ids, score_trades
 from pm_scanner.sources import FixtureSource
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -131,3 +131,16 @@ def test_cluster_se_is_zero_when_every_market_has_the_same_edge_and_grows_with_d
     spread = [(-10.0, 100.0), (+6.0, 100.0), (-2.0, 100.0)]
     assert cluster_se_per_100(spread) > 3.0
     assert cluster_se_per_100([(-1.0, 100.0)]) is None
+
+
+def test_out_of_sample_rerun_excludes_previous_markets_and_family_filter_works():
+    events = FixtureSource(FIXTURES).poly_events_survey((), SINCE, NOW)
+    src = SyntheticTrades(events, "zzz-none")
+    first = family_flow(events, src, now=NOW, since=SINCE, per_family=2, min_markets=3, max_families=50)
+    assert first
+    key = first[0].key
+    used = sampled_market_ids([r.to_dict() for r in first])
+    assert used and all(x["market_id"] in used for x in first[0].per_market)
+    second = family_flow(events, src, now=NOW, since=SINCE, per_family=2, min_markets=1, max_families=50, only_families={key}, exclude_markets=used)
+    assert [r.key for r in second] == [key]
+    assert not ({x["market_id"] for x in second[0].per_market} & {x["market_id"] for x in first[0].per_market})

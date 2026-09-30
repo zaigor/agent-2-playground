@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
 from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
-from .flow import family_flow, render_family_flow
+from .flow import family_flow, render_family_flow, sampled_market_ids
 from .niches import DEFAULT_SURVEY_TAGS, UP_OR_DOWN_TAG_ID, default_since, load_survey_tags, render_survey, survey
 from .report import render_text, write_json
 from .scans import (
@@ -335,6 +335,8 @@ def build_parser() -> argparse.ArgumentParser:
     fl.add_argument("--window-days", type=int, default=3, help="Gamma paging window for closed events (smaller = more requests, never truncated)")
     fl.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_trades"), help="where trade histories are cached")
     fl.add_argument("--fixtures", type=Path, default=None, help="offline: niche_events.json / weather_trades.json from DIR")
+    fl.add_argument("--families", default=None, help="only these family keys, comma-separated (e.g. miami-daily-weather,japan-j-league)")
+    fl.add_argument("--exclude-json", type=Path, default=None, help="a previous --json report: its sampled markets are excluded, so this run is out of sample")
     fl.add_argument("--json", type=Path, default=None, help="also write every family's flow stats to this JSON file")
 
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
@@ -419,7 +421,11 @@ def main(argv: list[str] | None = None) -> int:
                 events = source.poly_events_survey(tags, since, now, exclude_tag_id=UP_OR_DOWN_TAG_ID, window_days=args.window_days)
                 trades_src = LiveTrades(cache_dir=args.cache_dir)
             log(f"{len(events)} events loaded for {len(tags)} tags")
-            rows = family_flow(events, trades_src, now=now, since=since, per_family=args.per_family, min_markets=args.min_markets, max_families=args.max_families, horizon_min=args.horizon_min, include_sport=not args.no_sport, seed=args.seed, log=log)
+            only = {k.strip() for k in args.families.split(",") if k.strip()} if args.families else None
+            excl = sampled_market_ids(json.loads(args.exclude_json.read_text())) if args.exclude_json else None
+            if excl is not None:
+                log(f"{len(excl)} previously sampled markets excluded")
+            rows = family_flow(events, trades_src, now=now, since=since, per_family=args.per_family, min_markets=args.min_markets, max_families=args.max_families, horizon_min=args.horizon_min, include_sport=not args.no_sport, seed=args.seed, only_families=only, exclude_markets=excl, log=log)
         except Exception as exc:
             print(f"flow failed: {exc}", file=sys.stderr)
             return 2
