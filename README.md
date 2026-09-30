@@ -211,6 +211,31 @@ history can be scored; the report says how big a Brier gap the sample could
 have detected (two standard errors), which is the number to compare a small
 file against.
 
+## The one live command: `lp` (memo section 18)
+
+Everything above is read-only. `lp` is the test rig for the liquidity-reward
+question in memo section 17b: it rests a two-sided, minimum-size, post-only
+quote at half the max reward spread in a few rewarded markets that nobody
+else quotes, keeps it centred, and reads back from the CLOB whether the
+orders are scoring and what they earned that day. It never sends a market
+order, never crosses the spread, never adds to a side that has been filled,
+pulls quotes 48 hours before a market ends, and cancels everything on exit.
+
+```bash
+pip install -e ".[trade]"                       # the official polymarket-client SDK
+python -m pm_scanner lp                         # dry run: the plan, priced from public books, nothing sent
+python -m pm_scanner lp --check                 # with POLY_* set: wallet type, balance, approvals, the plan
+python -m pm_scanner lp --smoke --live          # one market, two hours, then cancel: does the CLOB score it?
+python -m pm_scanner lp --live --budget 50 --markets 3 --hours 72 --log lp.jsonl
+python -m pm_scanner lp --earnings 2026-10-01   # the day's reward accrual per market
+python -m pm_scanner lp --cancel-all
+```
+
+Credentials come from the environment only (`.env.example`): the signer key
+of a fresh wallet, the Polymarket account wallet address and a Relayer API
+key from polymarket.com settings. `--budget` above `MAX_BUDGET_USD` is
+refused.
+
 ## Fee models (change them when the venues do)
 
 * Polymarket, Fee Structure V2 (2026): taker fee per share = `rate * p * (1-p)`;
@@ -242,8 +267,9 @@ pm_scanner/
   ladder.py      ladder consistency: nested outcomes by number or date, violations net of fees, confirmed on books
   rewards.py     liquidity rewards: reward share of a small quote against the live book vs its adverse selection on the tape
   signal.py      generic backtest of a CSV of your own probabilities against the price at that time and the outcome
+  lp.py          the liquidity-reward test rig: minimum-size post-only quotes in unquoted rewarded markets, scoring and earnings read-back
   weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/flow/today
-  cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather`, `flow`, `ladder`, `rewards`, `signal` and `fee` commands
+  cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather`, `flow`, `ladder`, `rewards`, `signal`, `lp` and `fee` commands
 data/            israel_polls_2026.csv (hand-maintained poll table), saved reports, signal_example.csv
 tests/           pytest suite running entirely on fixtures (incl. a 29 Sep 2026
                  snapshot of the Israel election markets and their order books,
@@ -257,7 +283,8 @@ that is false when the budget- and depth-limited size is below that minimum.
 
 ## Not included on purpose
 
-No order placement. An executor needs funded accounts, API credentials held as
-environment secrets (never in this repo), egress to the trading endpoints, and
-a decision from the account owner after reading `MEMO.md`. The `.env.example`
-lists the secrets it would take.
+No trading strategy executes here. The only command that sends orders is
+`lp`, the liquidity-reward test rig above, capped by `MAX_BUDGET_USD`, and it
+exists because the account owner decided to run that test after reading
+`MEMO.md` section 17. Credentials live in the environment, never in this
+repository, and the wallet holds only the test budget.

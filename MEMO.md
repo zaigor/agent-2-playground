@@ -1083,6 +1083,130 @@ errors above zero on markets you did not fit on, that is the first positive
 result this research would have produced, and the next step would be the
 $50 live test on those markets only.
 
+## 18. The liquidity-reward test (30 Sep): protocol, smoke test first
+
+You decided to run the $50 test from section 17b. This section is the
+protocol, written before any money moves, so that the result is read against
+what was expected rather than the other way round. The rig is
+`python -m pm_scanner lp`; it is the only command in the repo that can send
+an order, and it is built to do nothing else than this test.
+
+### 18a. What the rig does and refuses to do
+
+`lp` reads every rewarded market's pot and book (`rewards --books-only`),
+keeps the long-dated ones with a spread under 50c and no news-driven family
+(no weather, earthquakes, video views, post counts), ranks them by the
+modelled reward for a minimum-size quote, and rests in each a **two-sided,
+minimum-size, post-only** quote at half the max reward spread from the mid
+(a YES bid at mid − 2.25c, and a NO bid at 1 − (mid + 2.25c), which the book
+shows as a YES ask). Every minute it re-reads the book and re-centres when
+the mid has moved a tick. It never sends a market order, never crosses the
+spread (post-only orders are rejected rather than matched), never adds to a
+side once it has been filled, pulls a market's quotes 48 hours before its
+end date, refuses a budget above `MAX_BUDGET_USD`, and cancels everything on
+exit or Ctrl-C. Every order, fill, scoring read and earnings read is
+appended to `lp.jsonl`.
+
+Two read-backs make the test fast. The CLOB answers, per resting order,
+whether it is **currently scoring** for rewards (`get_orders_scoring`), and
+it reports the account's **earnings so far today** per market
+(`list_user_earnings_for_day`); the rewards page on polymarket.com shows the
+same figure. So whether the program counts our quote is known within
+minutes, and whether it pays is known after the first midnight UTC.
+
+Two facts from the API worth knowing before reading results: Polymarket
+publishes a `market_competitiveness` number per rewarded market (0 for the
+"Jay Clayton AI czar" market, 0.22 for Cornell, 9.6 for the Fed decision)
+and offers makers a `no_competition` filter on their earnings endpoint, so
+unquoted pots are a known, intended feature of the program rather than an
+oversight; and the pots are re-set at least hourly (section 17b), so the
+rate you were quoting against may fall once you are there. The test
+measures both directly: the rig logs the pot and the competitiveness of
+each market at every earnings read.
+
+### 18b. Account setup (your side, once)
+
+1. **A fresh signer.** Create a new wallet in Rabby or MetaMask from a new
+   seed, holding nothing else. Its private key is the only secret the rig
+   needs and the loss if it leaks is the test budget.
+2. **The Polymarket account.** Sign in at polymarket.com with that wallet;
+   the account gets a Deposit Wallet whose address is in the profile menu.
+   No VPN: Israel is not geoblocked (section 2).
+3. **Deposit.** Use the site's deposit flow and send USDC on Polygon from
+   your exchange to the address it gives; it is credited as pUSD. The smoke
+   test needs about $25; the full test $60-100. Nothing else goes in.
+4. **Relayer API key.** Settings → API Keys → Relayer API Keys → create;
+   copy the API key and the Signer Address it shows.
+5. **Environment.** On the machine that will run the rig (your laptop is
+   fine; it needs to stay on for the test), set `POLY_PRIVATE_KEY`,
+   `POLY_WALLET`, `POLY_RELAYER_KEY`, `POLY_RELAYER_ADDRESS` and
+   `MAX_BUDGET_USD=100` as environment variables (never in a file in the
+   repo), `pip install -e ".[trade]"`, then `python -m pm_scanner lp
+   --check`: it prints the wallet type, the pUSD balance, whether the
+   trading approvals are in place, and the plan, and sends nothing.
+
+### 18c. The smoke test (a few dollars of risk, one afternoon)
+
+Purpose: prove the pipe, not the thesis. One market, the minimum size, two
+hours.
+
+```
+python -m pm_scanner lp                 # dry run: the plan from public books
+python -m pm_scanner lp --smoke --live  # one market, 2 hours, then cancel
+```
+
+What "the system plays as expected" means, in order:
+
+1. `--check` shows the pUSD balance you deposited and approvals in place.
+2. Two orders are accepted with status `live` (the log shows both `place`
+   lines with order ids), and they appear in the market's book on the site
+   at the planned prices.
+3. Within the first ten minutes the `scoring` line reports 2 of 2 orders
+   scoring. **This is the smoke test's verdict.** If the CLOB says the
+   orders do not score while they sit inside the max spread at the minimum
+   size, the unwritten rule exists and the topic closes; nothing more is
+   spent.
+4. The `earnings` line for today turns positive within an hour or two (the
+   accrual is continuous). Expected for a $100-200 pot at a 75-100% share:
+   $4-8 an hour.
+5. After two hours the rig cancels both orders; `--cancel-all` is the
+   manual fallback; the site shows no open orders.
+6. The next day, after midnight UTC, `lp --earnings <yesterday>` and the
+   portfolio history show the payout, if the day's total reached $1.
+
+Capital parked during the smoke test: about $19 (20 shares each side at
+prices summing to about 0.95). Risk: a fill on either side, at most that
+$19 held to resolution. Cost if everything works: nothing.
+
+### 18d. The $50 test (three days)
+
+Only after 18c passes on points 1-5:
+
+```
+python -m pm_scanner lp --live --budget 50 --markets 3 --hours 72 --log lp.jsonl
+python -m pm_scanner lp --earnings 2026-10-0X      # each morning
+```
+
+Pre-registered reading of the result, per day and per market:
+
+* **Pass:** the payout arriving at midnight UTC is at least half of
+  (the market's average pot that day × the share the rig logged), summed
+  over the markets, and fills cost less than the payout. Then the next
+  step is a week across twenty markets with the same rig (`--markets 20
+  --budget 400`), watching the share and the pots as others notice, and
+  not a step beyond that without a new memo section.
+* **Fail:** earnings accrue on the page but no payout arrives, or the
+  payout is under a quarter of the modelled figure, or the pot of every
+  quoted market collapses within a day of quoting. Each of those is the
+  missing rule, found; the account is emptied and the topic closes.
+* **Abort early:** two fills in one market (the rig stops that market by
+  itself), any fill in a market whose book was empty when quoting started
+  (someone is hunting the quotes), or the pUSD balance falling below the
+  parked collateral for a reason the log does not explain.
+
+Whatever happens, the log and the earnings readings go into section 19,
+with the same honesty as sections 12-16.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
@@ -1103,3 +1227,4 @@ $50 live test on those markets only.
 * Weather (sections 11-13): Iowa Environmental Mesonet ASOS/METAR archive ([download form](https://mesonet.agron.iastate.edu/request/download.phtml), CGI `cgi-bin/request/asos.py`, routine reports = `report_type=3`); Open-Meteo [previous-runs API](https://open-meteo.com/en/docs/previous-runs-api), [ensemble API](https://open-meteo.com/en/docs/ensemble-api), model ids incl. `gfs_graphcast025` and `ecmwf_aifs025_single`; Polymarket data-api `/trades?market=<conditionId>&limit=10000` (full history of closed markets); station coordinates from published aerodrome data; IMS forecasts at [ims.gov.il](https://ims.gov.il/he) (no archive of past forecasts).
 * Niche survey (section 10): Gamma `/events` by tag with `start_date_min/max` windows and `exclude_tag_id=102127`, `/series`, CLOB `/books` and `/prices-history` (history is purged about a week after a market closes; `data-api.polymarket.com/trades` keeps trades longer), 29 Sep 2026. Weather market rules cite NOAA `weather.gov/wrh/timeseries?site=<ICAO>` (US stations and LLBG Tel Aviv) and Weather Underground daily history (other cities). Forecast data for the backtest: [Open-Meteo historical forecast API](https://open-meteo.com/en/docs/historical-forecast-api), [Open-Meteo ensemble API](https://open-meteo.com/en/docs/ensemble-api).
 * Section 17: Polymarket docs [Liquidity Rewards](https://docs.polymarket.com/programs/liquidity-rewards) (scoring formula, sampling, single-sided rule), [Maker Rebates](https://docs.polymarket.com/programs/maker-rebates), [Fees](https://docs.polymarket.com/trading/fees), [Market Details: liquidity reward settings](https://docs.polymarket.com/market-data/market-details#liquidity-reward-settings); CLOB `GET /rewards/markets/current` (paged, 18,600 markets on 30 Sep 2026); Gamma `/markets?condition_ids=` (20 per call; `closed=true` for resolved markets); help centre [Liquidity Rewards](https://help.polymarket.com/en/articles/13364466-liquidity-rewards) (payout at ~midnight UTC, $1 daily minimum, two-sided below 10c); reports in `data/ladder_snapshots_2026-09-30.txt`, `data/rewards_survey_2026-09-30.txt`, `data/rewards_survey_tiers_2026-09-30.txt`, `data/rewards_pocket_2026-09-30.txt`.
+* Section 18: Polymarket docs [Wallets and Authentication](https://docs.polymarket.com/trading/wallets-auth) (Deposit Wallets, Relayer API keys, `SecureClient.create`), [Place Orders](https://docs.polymarket.com/trading/place-orders) (post-only limit orders), [Manage Orders](https://docs.polymarket.com/trading/manage-orders), [Deposit](https://docs.polymarket.com/trading/bridge/deposit) (USDC on Polygon wrapped to pUSD), [Python SDK](https://docs.polymarket.com/getting-started/python) (`polymarket-client` 0.11); CLOB `GET /rewards/markets/{condition_id}` (`market_competitiveness`), orders-scoring and user-earnings endpoints via the SDK.

@@ -11,6 +11,7 @@ dependencies = ["requests>=2.31"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+trade = ["polymarket-client>=0.11"]  # only for `lp --live`; every other command is read-only
 
 [project.scripts]
 pm-scanner = "pm_scanner.cli:main"

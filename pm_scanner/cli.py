@@ -10,7 +10,8 @@ from pathlib import Path
 from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
 from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
 from .ladder import render_ladder_report, scan_ladders, summarize_snapshots
-from .rewards import render_pocket, render_rewards, rewards_pocket, rewards_survey
+from .lp import LiveExchange, PaperExchange, Quoter, choose_markets, parse_only, render_plan
+from .rewards import gamma_markets_by_condition, render_pocket, render_rewards, rewards_pocket, rewards_survey
 from .signal import FixtureResolver, GammaResolver, load_signal_csv, render_signal, score_signal
 from .flow import MakerConfig, family_flow, maker_backtest, render_family_flow, render_maker, sampled_market_ids
 from .niches import DEFAULT_SURVEY_TAGS, UP_OR_DOWN_TAG_ID, default_since, load_survey_tags, render_survey, survey
@@ -244,6 +245,53 @@ def _run_weather(args, source) -> int:
         return 2
 
 
+def _run_lp(args, source) -> int:
+    log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
+    if args.budget > args.max_budget:
+        print(f"refusing: --budget {args.budget:g} is above the hard cap {args.max_budget:g} (MAX_BUDGET_USD)", file=sys.stderr)
+        return 2
+    exchange = None
+    if args.live or args.check or args.earnings or args.cancel_all:
+        try:
+            exchange = LiveExchange.from_env()
+        except Exception as exc:
+            print(f"cannot connect: {exc}", file=sys.stderr)
+            return 2
+        if args.cancel_all:
+            exchange.cancel_all()
+            print("all open orders cancelled")
+            return 0
+        if args.earnings:
+            e = exchange.earnings(args.earnings)
+            print(json.dumps({"date": args.earnings, "total": round(sum(e.values()), 4), "by_market": e}, indent=1))
+            return 0
+        print(json.dumps(exchange.describe(), indent=1))
+    now = utcnow()
+    try:
+        rows = rewards_pocket(source.http, source.poly_books, now=now, min_rate=args.min_rate, log=log)
+        only = parse_only(args.only)
+        cand = [r for r in rows if only is None or r.condition_id in only]
+        markets = gamma_markets_by_condition(source.http, [r.condition_id for r in cand[:400]])
+        plans = choose_markets(cand, markets, budget=args.budget, max_markets=1 if args.smoke else args.markets, min_days=args.min_days, max_spread=args.max_spread, min_reward=args.min_reward, only=only, per_market=args.per_market)
+    except Exception as exc:
+        print(f"lp failed: {exc}", file=sys.stderr)
+        return 2
+    print(render_plan(plans))
+    if not plans:
+        return 1
+    if not args.live:
+        print("\ndry run: nothing sent. Add --live (with POLY_* in the environment) to rest these quotes.")
+        return 0
+    hours = 2.0 if args.smoke and args.hours == 72.0 else args.hours
+    q = Quoter(exchange, plans, log_path=args.log, pull_before_end_hours=args.pull_before_end_hours)
+    print(f"\nquoting {len(plans)} market(s) for {hours:g}h, checking every {args.interval:g}s; Ctrl-C cancels everything and exits")
+    try:
+        q.run(hours=hours, interval=args.interval)
+    except KeyboardInterrupt:
+        print("\nstopped; open orders cancelled")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="pm_scanner", description="Read-only Polymarket/Kalshi opportunity scanner")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -385,6 +433,27 @@ def build_parser() -> argparse.ArgumentParser:
     sg.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_trades"), help="where trade histories are cached")
     sg.add_argument("--fixtures", type=Path, default=None, help="offline: markets and tapes from DIR")
     sg.add_argument("--json", type=Path, default=None, help="also write every scored row to this JSON file")
+
+    lp = sub.add_parser("lp", help="liquidity-reward test rig: rest minimum-size two-sided post-only quotes in a few unquoted rewarded markets (memo section 18)")
+    lp.add_argument("--live", action="store_true", help="actually send orders (default: dry run, public data only)")
+    lp.add_argument("--smoke", action="store_true", help="one market only, for the first hours of a fresh account")
+    lp.add_argument("--budget", type=float, default=50.0, help="total collateral to park across all quotes")
+    lp.add_argument("--markets", type=int, default=3, help="how many markets to quote")
+    lp.add_argument("--only", default=None, help="quote exactly these condition ids (comma-separated), skipping the filters")
+    lp.add_argument("--min-rate", type=float, default=20.0, help="candidate markets: pot per day at least this")
+    lp.add_argument("--min-reward", type=float, default=20.0, help="candidate markets: modelled reward for our quote at least this per day")
+    lp.add_argument("--min-days", type=float, default=7.0, help="candidate markets: at least this many days to resolution")
+    lp.add_argument("--max-spread", type=float, default=0.5, help="candidate markets: book spread at most this")
+    lp.add_argument("--per-market", type=float, default=0.0, help="collateral cap per market (0 = 1.6 x budget / markets)")
+    lp.add_argument("--hours", type=float, default=72.0, help="how long to keep quoting (the smoke test defaults to 2)")
+    lp.add_argument("--interval", type=float, default=60.0, help="seconds between book checks")
+    lp.add_argument("--pull-before-end-hours", type=float, default=48.0, help="cancel a market's quotes this long before its end date")
+    lp.add_argument("--log", type=Path, default=Path("lp.jsonl"), help="JSONL record of every order, fill, scoring read and earnings read")
+    lp.add_argument("--check", action="store_true", help="live credentials: print wallet, balance, approvals and the plan, send nothing")
+    lp.add_argument("--earnings", default=None, help="live: print the day's reward earnings (YYYY-MM-DD) and exit")
+    lp.add_argument("--cancel-all", action="store_true", help="live: cancel every open order on the account and exit")
+    lp.add_argument("--max-budget", type=float, default=float(os.environ.get("MAX_BUDGET_USD", "50")), help="hard cap; --budget above this is refused (env MAX_BUDGET_USD)")
+    lp.add_argument("--fixtures", type=Path, default=None, help="unused: this command needs live data")
 
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
     f.add_argument("--platform", choices=["polymarket", "kalshi"], required=True)
@@ -565,6 +634,9 @@ def main(argv: list[str] | None = None) -> int:
             args.json.write_text(json.dumps(report.to_dict(), indent=1, default=str))
             print(f"\nwrote {args.json}")
         return 0
+
+    if args.cmd == "lp":
+        return _run_lp(args, source)
 
     kwargs = _scan_kwargs(args)
 
