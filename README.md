@@ -172,6 +172,42 @@ offset cap is now about 2,000. `side` in the trade feed is read as the
 taker's side. The weather-specific version (`weather --mode flow`) buckets
 by local time of the target day instead of hours to close.
 
+## Ladders, liquidity rewards, and your own signal
+
+Three more read-only commands, added when the research was being closed
+(memo section 17):
+
+```bash
+# ladder consistency: nested outcomes ("above 74k / 76k / 78k", "by Sep 30 / Oct 31",
+# "continues through ...", O/U lines, handicaps) must be priced monotonically. Candidates
+# from Gamma's top of book, confirmed on CLOB books, net of both taker fees, sized to the
+# budget, with days to resolution and the annualised return of the locked capital
+python -m pm_scanner ladder --max-events 6000 --budget 100
+python -m pm_scanner ladder --repeat 6 --interval 600 --log ladder.jsonl   # six snapshots, ten minutes apart
+python -m pm_scanner ladder --fixtures tests/fixtures                       # offline
+
+# liquidity rewards: for 90 rewarded markets (the 30 biggest pots plus random $10-100 and
+# $1-10 ones) the share of the daily pot a two-sided quote at the minimum size would earn
+# against the live book, and what the same quote loses on the market's last 14 days of tape
+python -m pm_scanner rewards --days 14 --json rewards.json
+
+# your own probabilities: a CSV of market,time,p is scored against the price at that time
+# (Brier vs the market, a 50/50 blend, markout, paper P&L after fees, reliability), with
+# market-clustered errors and look-ahead rows dropped
+python -m pm_scanner signal --csv data/signal_example.csv --fixtures tests/fixtures   # offline example
+python -m pm_scanner signal --csv my_signal.csv --horizon-min 30 --edge 0.05 --json out.json
+```
+
+The signal CSV needs `market` (condition id `0x...`, market slug, or numeric
+Gamma id), `time` (ISO 8601, UTC unless an offset is given, or unix seconds:
+the moment the number was actually available to you, not the moment the data
+refers to) and `p` (your probability that the first outcome, usually Yes, wins);
+`outcome` says which outcome `p` refers to when it is not the first one, and
+`note` is carried through. Any resolved Polymarket market with a trade
+history can be scored; the report says how big a Brier gap the sample could
+have detected (two standard errors), which is the number to compare a small
+file against.
+
 ## Fee models (change them when the venues do)
 
 * Polymarket, Fee Structure V2 (2026): taker fee per share = `rate * p * (1-p)`;
@@ -199,10 +235,13 @@ pm_scanner/
   watch.py       polling loop, JSONL log, Telegram alerts, log summarizer
   israel.py      Knesset polls -> seat simulation -> bracket probabilities -> edges
   niches.py      recurring-family survey: cadence, depth, fees, day-before calibration
-  flow.py        order-flow screen: taker markouts and makers' edge per family, hours-to-close and price band
+  flow.py        order-flow screen: taker markouts and makers' edge per family, hours-to-close and price band; paper maker on the tape
+  ladder.py      ladder consistency: nested outcomes by number or date, violations net of fees, confirmed on books
+  rewards.py     liquidity rewards: reward share of a small quote against the live book vs its adverse selection on the tape
+  signal.py      generic backtest of a CSV of your own probabilities against the price at that time and the outcome
   weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/flow/today
-  cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather` and `fee` commands
-data/            israel_polls_2026.csv (hand-maintained poll table)
+  cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather`, `flow`, `ladder`, `rewards`, `signal` and `fee` commands
+data/            israel_polls_2026.csv (hand-maintained poll table), saved reports, signal_example.csv
 tests/           pytest suite running entirely on fixtures (incl. a 29 Sep 2026
                  snapshot of the Israel election markets and their order books,
                  a sample of weather / box-office / tweet-count events, and three

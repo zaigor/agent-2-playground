@@ -9,6 +9,9 @@ from pathlib import Path
 
 from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
 from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
+from .ladder import render_ladder_report, scan_ladders, summarize_snapshots
+from .rewards import render_rewards, rewards_survey
+from .signal import FixtureResolver, GammaResolver, load_signal_csv, render_signal, score_signal
 from .flow import MakerConfig, family_flow, maker_backtest, render_family_flow, render_maker, sampled_market_ids
 from .niches import DEFAULT_SURVEY_TAGS, UP_OR_DOWN_TAG_ID, default_since, load_survey_tags, render_survey, survey
 from .report import render_text, write_json
@@ -345,6 +348,41 @@ def build_parser() -> argparse.ArgumentParser:
     fl.add_argument("--fill", choices=["through", "at"], default="through", help="maker: fill on prints strictly through the quote, or at it too")
     fl.add_argument("--json", type=Path, default=None, help="also write every family's flow stats to this JSON file")
 
+    ld = sub.add_parser("ladder", help="ladder consistency: nested outcomes (by date, above a threshold) priced out of order")
+    ld.add_argument("--max-events", type=int, default=6000, help="open Polymarket events to pull, by 24h volume")
+    ld.add_argument("--budget", type=float, default=50.0, help="cash available, used to size each violation")
+    ld.add_argument("--min-edge", type=float, default=0.0, help="minimum net edge per $1 set after both taker fees")
+    ld.add_argument("--poly-fee-rate", type=float, default=None, help="override the taker rate for every market")
+    ld.add_argument("--no-cross", action="store_true", help="only ladders inside one event, not '... by <date>?' questions across events")
+    ld.add_argument("--repeat", type=int, default=1, help="take this many snapshots")
+    ld.add_argument("--interval", type=float, default=600.0, help="seconds between snapshots")
+    ld.add_argument("--top", type=int, default=15)
+    ld.add_argument("--log", type=Path, default=None, help="append each snapshot's JSON to this JSONL file")
+    ld.add_argument("--fixtures", type=Path, default=None, help="offline: gamma_events.json / clob_books.json from DIR")
+
+    rw = sub.add_parser("rewards", help="liquidity rewards: what a small two-sided quote earns per day vs what it loses to adverse selection")
+    rw.add_argument("--days", type=float, default=14.0, help="replay the last N days of each market's tape")
+    rw.add_argument("--top", type=int, default=30, help="biggest pots to sample")
+    rw.add_argument("--mid", type=int, default=30, help="random markets with $10-100/day")
+    rw.add_argument("--low", type=int, default=30, help="random markets with $1-10/day")
+    rw.add_argument("--seed", type=int, default=7)
+    rw.add_argument("--case", default="touch x1", help="quote case to list the best markets for (touch x1, touch x5, half-max x1, half-max x5)")
+    rw.add_argument("--list", type=int, default=25, help="best markets to list")
+    rw.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_rewards_trades"), help="where the (open-market) tapes are cached for this run")
+    rw.add_argument("--configs", type=Path, default=None, help="offline: a saved JSON list from /rewards/markets/current")
+    rw.add_argument("--fixtures", type=Path, default=None, help="unused: the survey needs live books and tapes")
+    rw.add_argument("--json", type=Path, default=None, help="also write every sampled market's numbers to this JSON file")
+
+    sg = sub.add_parser("signal", help="backtest your own probabilities (a CSV of market,time,p) against the market price at that time and the outcome")
+    sg.add_argument("--csv", type=Path, required=True, help="columns: market (condition id, slug or Gamma id), time (ISO 8601 or unix), p (0-1), optional outcome, note")
+    sg.add_argument("--horizon-min", type=int, default=30, help="minutes after each row for the markout")
+    sg.add_argument("--edge", type=float, default=0.05, help="paper-trade only when |p - price| exceeds this plus the taker fee")
+    sg.add_argument("--fee", type=float, default=None, help="override the taker rate (default: the market's own schedule, else 0.05)")
+    sg.add_argument("--max-stale", type=float, default=24.0, help="drop rows whose last trade before `time` is older than this many hours")
+    sg.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_trades"), help="where trade histories are cached")
+    sg.add_argument("--fixtures", type=Path, default=None, help="offline: markets and tapes from DIR")
+    sg.add_argument("--json", type=Path, default=None, help="also write every scored row to this JSON file")
+
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
     f.add_argument("--platform", choices=["polymarket", "kalshi"], required=True)
     f.add_argument("--price", type=float, required=True)
@@ -451,6 +489,70 @@ def main(argv: list[str] | None = None) -> int:
             payload["maker_detail"] = detail
         if args.json:
             args.json.write_text(json.dumps(payload, indent=1, default=str))
+            print(f"\nwrote {args.json}")
+        return 0
+
+    if args.cmd == "ladder":
+        import time as _time
+
+        reports = []
+        for i in range(max(1, args.repeat)):
+            now = utcnow()
+            try:
+                events = source.poly_events(args.max_events)
+                rep = scan_ladders(events, source.poly_books, now=now, budget=args.budget, min_edge=args.min_edge, fee_override=args.poly_fee_rate, cross_event=not args.no_cross)
+            except Exception as exc:
+                print(f"ladder failed: {exc}", file=sys.stderr)
+                return 2
+            print(render_ladder_report(rep, top=args.top), flush=True)
+            reports.append(rep)
+            if args.log:
+                with args.log.open("a") as fh:
+                    fh.write(json.dumps(rep.to_dict(), default=str) + "\n")
+            if i + 1 < args.repeat:
+                print(f"\n... next snapshot in {args.interval:g}s\n", flush=True)
+                _time.sleep(args.interval)
+        if len(reports) > 1:
+            print()
+            print(summarize_snapshots(reports))
+        return 0
+
+    if args.cmd == "rewards":
+        now = utcnow()
+        log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
+        try:
+            configs = json.loads(args.configs.read_text()) if args.configs else None
+            report = rewards_survey(source.http, LiveTrades(cache_dir=args.cache_dir), source.poly_books, now=now, days=args.days, top=args.top, mid_n=args.mid, low_n=args.low, seed=args.seed, configs=configs, log=log)
+        except Exception as exc:
+            print(f"rewards failed: {exc}", file=sys.stderr)
+            return 2
+        print(render_rewards(report, case=args.case, top=args.list))
+        if args.json:
+            args.json.write_text(json.dumps(report.to_dict(), indent=1, default=str))
+            print(f"\nwrote {args.json}")
+        return 0
+
+    if args.cmd == "signal":
+        log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
+        rows, problems = load_signal_csv(args.csv)
+        for pr in problems:
+            print(f"csv: {pr}", file=sys.stderr)
+        if not rows:
+            print("no usable rows", file=sys.stderr)
+            return 2
+        try:
+            if args.fixtures:
+                resolver, trades_src = FixtureResolver(args.fixtures), FixtureTrades(args.fixtures)
+            else:
+                resolver, trades_src = GammaResolver(source.http), LiveTrades(cache_dir=args.cache_dir)
+            markets = resolver.resolve([r.market for r in rows])
+            report = score_signal(rows, markets, trades_src, horizon_min=args.horizon_min, edge=args.edge, fee_rate=args.fee, max_stale_hours=args.max_stale, log=log)
+        except Exception as exc:
+            print(f"signal failed: {exc}", file=sys.stderr)
+            return 2
+        print(render_signal(report, args.horizon_min, args.edge))
+        if args.json:
+            args.json.write_text(json.dumps(report.to_dict(), indent=1, default=str))
             print(f"\nwrote {args.json}")
         return 0
 

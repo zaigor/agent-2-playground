@@ -278,18 +278,19 @@ class MakerConfig:
         return f"h={self.half_spread:.2f} size={self.size:g} min_h={self.min_hours:g} cap={self.max_position:g} {self.fill}"
 
 
-def simulate_maker(trades: list[dict[str, Any]], y: int, outcomes: list[str] | None, cfg: MakerConfig) -> dict[str, Any]:
+def simulate_maker(trades: list[dict[str, Any]], y: float, outcomes: list[str] | None, cfg: MakerConfig) -> dict[str, Any]:
     """Replay one market's tape with a naive two-sided maker.
 
     After every print at YES price p we rest a bid at p - h and an ask at p + h (clipped to
     1c..99c). A later print at q fills the bid when q < bid (or q <= bid with fill="at") and the
     ask when q > ask, for min(cfg.size, trade size) shares; the quote is then re-centred on q.
-    Fills are held to expiry. This is conservative on price (we never get filled by prints at
-    the touch unless asked) and optimistic on queue position (a print through our level is
-    assumed to reach us), which is the usual paper-maker bound."""
+    Fills are held to expiry (`y` is the resolution, or a mark-to-market price for an open
+    market). This is conservative on price (we never get filled by prints at the touch unless
+    asked) and optimistic on queue position (a print through our level is assumed to reach
+    us), which is the usual paper-maker bound."""
     series = yes_price_series(trades, outcomes)
     if len(series) < 2:
-        return {"fills": 0, "dollars": 0.0, "pnl": 0.0, "position": 0.0, "buys": 0, "sells": 0}
+        return {"fills": 0, "dollars": 0.0, "pnl": 0.0, "position": 0.0, "buys": 0, "sells": 0, "shares": 0.0, "fee_equiv": 0.0, "first_ts": None, "last_ts": None}
     close_ts = series[-1][0]
     sizes = {}
     for t in trades:  # size by (ts, yes-price) so the series and sizes line up
@@ -302,7 +303,7 @@ def simulate_maker(trades: list[dict[str, Any]], y: int, outcomes: list[str] | N
     bid = ask = None
     position = 0.0
     fills = buys = sells = 0
-    dollars = pnl = 0.0
+    dollars = pnl = shares = fee_equiv = 0.0  # fee_equiv = sum of shares * p * (1-p): what the maker-rebate pool is shared by
     for ts, q in series:
         hours_left = (close_ts - ts) / 3600.0
         size = min(cfg.size, sizes.get((ts, round(q, 4)), cfg.size))
@@ -315,15 +316,19 @@ def simulate_maker(trades: list[dict[str, Any]], y: int, outcomes: list[str] | N
                 buys += 1
                 dollars += size * bid
                 pnl += size * (y - bid)
+                shares += size
+                fee_equiv += size * bid * (1.0 - bid)
             elif hit_ask and position - size >= -cfg.max_position:
                 position -= size
                 fills += 1
                 sells += 1
                 dollars += size * (1.0 - ask)
                 pnl += size * (ask - y)
+                shares += size
+                fee_equiv += size * ask * (1.0 - ask)
         bid = max(0.01, round(q - cfg.half_spread, 2))
         ask = min(0.99, round(q + cfg.half_spread, 2))
-    return {"fills": fills, "dollars": dollars, "pnl": pnl, "position": position, "buys": buys, "sells": sells}
+    return {"fills": fills, "dollars": dollars, "pnl": pnl, "position": position, "buys": buys, "sells": sells, "shares": shares, "fee_equiv": fee_equiv, "first_ts": series[0][0], "last_ts": close_ts}
 
 
 @dataclass
