@@ -453,6 +453,7 @@ class TrendRow:
     skill: float
     band_n: int
     band_bias: float  # hit rate minus price, 0.10 <= p < 0.60
+    band_se: float  # standard error of band_bias; a bias inside +-2 se is noise
     band_net_per_share: float  # selling every band contract, after the taker fee
     longshot_bias: float | None  # 0.03 <= p < 0.20
     favourite_bias: float | None  # 0.60 <= p < 0.90
@@ -477,6 +478,7 @@ def summarise_pairs(month: str, events: int, pairs: list[tuple[float, int]], fee
         skill=1 - brier / clim if clim > 0 else 0.0,
         band_n=len(band),
         band_bias=statistics.mean(y - p for p, y in band) if band else float("nan"),
+        band_se=(statistics.pstdev([y - p for p, y in band]) / math.sqrt(len(band))) if len(band) > 1 else float("nan"),
         band_net_per_share=statistics.mean(p - y - fee_rate * p * (1 - p) for p, y in band) if band else float("nan"),
         longshot_bias=statistics.mean(y - p for p, y in ls) if len(ls) >= 10 else None,
         favourite_bias=statistics.mean(y - p for p, y in fav) if len(fav) >= 10 else None,
@@ -525,12 +527,12 @@ def trend(rows: list[BracketMarket], trades_source, *, cutoff_hour: int = 0, eve
 def render_trend(rows: list[TrendRow], cutoff_hour: int) -> str:
     L = [
         f"Mispricing of daily-temperature brackets at {cutoff_hour:02d}:00 local on the target day, by month",
-        "  band = contracts priced 10-60c; bias = hit rate minus price (negative: overpriced); net = P&L per share of selling all of them after the 5% fee",
-        f"{'month':8} {'events':>6} {'mkts':>5} {'base':>5} {'Brier':>6} {'skill':>5} | {'band n':>6} {'bias':>7} {'net/sh':>7} | {'3-20c bias':>10} {'60-90c bias':>11}",
+        "  band = contracts priced 10-60c; bias = hit rate minus price (negative: overpriced), with its standard error; net = P&L per share of selling all of them after the 5% fee",
+        f"{'month':8} {'events':>6} {'mkts':>5} {'base':>5} {'Brier':>6} {'skill':>5} | {'band n':>6} {'bias':>7} {'+-se':>5} {'net/sh':>7} | {'3-20c bias':>10} {'60-90c bias':>11}",
     ]
     for r in rows:
         f = lambda v: f"{v:+.3f}" if v is not None else "   -  "  # noqa: E731
-        L.append(f"{r.month:8} {r.events:6} {r.markets:5} {r.base_rate:5.2f} {r.brier:6.3f} {r.skill:5.2f} | {r.band_n:6} {r.band_bias:+7.3f} {r.band_net_per_share:+7.3f} | {f(r.longshot_bias):>10} {f(r.favourite_bias):>11}")
+        L.append(f"{r.month:8} {r.events:6} {r.markets:5} {r.base_rate:5.2f} {r.brier:6.3f} {r.skill:5.2f} | {r.band_n:6} {r.band_bias:+7.3f} {r.band_se:5.3f} {r.band_net_per_share:+7.3f} | {f(r.longshot_bias):>10} {f(r.favourite_bias):>11}")
     return "\n".join(L)
 
 
@@ -572,7 +574,7 @@ class BacktestReport:
         return d
 
 
-def backtest(rows: list[BracketMarket], trades_source, forecast_source, *, cutoff_hour: int = 0, lead_days: int = 1, models: tuple[str, ...] = DEFAULT_MODELS, edge: float = 0.05, fee_rate: float = 0.05, min_calib_days: int = 8, log=None) -> BacktestReport:
+def backtest(rows: list[BracketMarket], trades_source, forecast_source, *, cutoff_hour: int = 0, lead_days: int = 1, models: tuple[str, ...] = DEFAULT_MODELS, edge: float = 0.05, fee_rate: float = 0.05, min_calib_days: int = 8, extra: dict[tuple[str, date], dict[str, float]] | None = None, log=None) -> BacktestReport:
     by_event = group_by_event([r for r in rows if r.event.closed])
     # forecasts per city over the span of days seen
     per_city_days: dict[str, list[date]] = defaultdict(list)
@@ -583,7 +585,7 @@ def backtest(rows: list[BracketMarket], trades_source, forecast_source, *, cutof
     for city, days in per_city_days.items():
         st = STATIONS[city]
         kind = "high"
-        fc = forecast_source.previous_runs(st, min(days), max(days), models, lead_days, kind)
+        fc = merge_extra(forecast_source.previous_runs(st, min(days), max(days), models, lead_days, kind), extra or {}, city)
         for d, vals in fc.items():
             forecasts[(city, d)] = vals
         if log:
@@ -703,7 +705,7 @@ class Quote:
     url: str
 
 
-def today(rows: list[BracketMarket], books: dict[str, Book], forecast_source, *, calib: dict[str, Calib] | None = None, models: tuple[str, ...] = DEFAULT_MODELS, ensemble: bool = False, budget: float = 300.0, edge: float = 0.04, maker_margin: float = 0.05, fee_rate: float | None = None, max_fraction: float = 0.10, log=None) -> tuple[list[Quote], list[dict[str, Any]]]:
+def today(rows: list[BracketMarket], books: dict[str, Book], forecast_source, *, calib: dict[str, Calib] | None = None, models: tuple[str, ...] = DEFAULT_MODELS, ensemble: bool = False, budget: float = 300.0, edge: float = 0.04, maker_margin: float = 0.05, fee_rate: float | None = None, max_fraction: float = 0.10, extra: dict[tuple[str, date], dict[str, float]] | None = None, log=None) -> tuple[list[Quote], list[dict[str, Any]]]:
     """Forecast distribution for each open event vs. the live book. Takers first, then resting quotes."""
     open_rows = [r for r in rows if not r.event.closed and r.market.accepting_orders]
     by_event = group_by_event(open_rows)
@@ -717,7 +719,7 @@ def today(rows: list[BracketMarket], books: dict[str, Book], forecast_source, *,
         if st is None:
             continue
         if city not in cache:
-            cache[city] = forecast_source.forecast(st, 4, models, "high")
+            cache[city] = merge_extra(forecast_source.forecast(st, 4, models, "high"), extra or {}, city)
             if ensemble:
                 try:
                     ens_cache[city] = forecast_source.ensemble(st, 4, "ecmwf_ifs025", "high")
@@ -782,6 +784,32 @@ def render_today(quotes: list[Quote], summaries: list[dict[str, Any]], budget: f
         fb = lambda v: f"{v:6.3f}" if v is not None else "     -"  # noqa: E731
         L.append(f"{q.city:12} {q.day} {q.label:10} {q.p_model:6.3f} {fb(q.bid)} {fb(q.ask)} {q.action:22} {q.price:6.3f} {q.edge_per_share:+6.3f} {q.size:6.0f}  {q.url}")
     return "\n".join(L)
+
+
+def load_extra_forecasts(path: Path | None) -> dict[tuple[str, date], dict[str, float]]:
+    """CSV of hand-logged forecasts: city,date,source,value (header optional). Values are in the
+    city's unit. Lets a source with no archive (IMS for Tel Aviv, HKO, KMA...) be scored
+    forward: log one number a day and it joins the model table on the same days."""
+    out: dict[tuple[str, date], dict[str, float]] = defaultdict(dict)
+    if not path or not Path(path).exists():
+        return out
+    for line in Path(path).read_text().splitlines():
+        parts = [x.strip() for x in line.split(",")]
+        if len(parts) < 4 or parts[0].lower() in ("city", "#", "") or parts[0].startswith("#"):
+            continue
+        try:
+            out[(parts[0], date.fromisoformat(parts[1]))][parts[2]] = float(parts[3])
+        except ValueError:
+            continue
+    return out
+
+
+def merge_extra(forecasts: dict[date, dict[str, float]], extra: dict[tuple[str, date], dict[str, float]], city: str) -> dict[date, dict[str, float]]:
+    merged: dict[date, dict[str, float]] = {d: dict(v) for d, v in forecasts.items()}
+    for (c, d), vals in extra.items():
+        if c == city:
+            merged.setdefault(d, {}).update(vals)
+    return merged
 
 
 def parse_station_overrides(spec: str) -> None:

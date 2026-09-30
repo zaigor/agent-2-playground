@@ -281,6 +281,17 @@ a few dozen families produce an event a day or a week:
 Post-mortem on my earlier "weather: no" line in section 9: I wrote it from a
 blog post, not data. The data say otherwise.
 
+> **Correction (30 Sep).** The "5-7 points overpriced, +4.2c a share" claim
+> below did not survive a proper measurement. It came from Gamma's frozen
+> price fields, which drop a changing share of losing contracts, and from a
+> twelve-day window. Re-measured from full trade histories on 251 sampled
+> event-days across Dec 2025 - Sep 2026, the 10-60c brackets are priced fairly
+> at local midnight (bias +0.4 +- 2.0 points) and selling them all loses about
+> a cent a share after fees. Section 11 has the table. The ranking stands
+> (steadiest family, mechanical resolution, free forecast data), but the edge
+> has to come from forecasting better than the crowd, not from selling a
+> premium that is not there.
+
 **Weather is the niche.** Reasons, in order of weight:
 
 1. Steadiest family on the site: ~1,000 new bracket markets a day across 52
@@ -339,6 +350,111 @@ economic releases (priced off futures), and anything narrative.
    paper log shows fills at the quoted prices. Scale by adding cities.
 
 
+## 11. Weather, second look (30 Sep): the one-liner, which forecasts, and is the gap still there
+
+**1. The one-liner.** Everything is in the `weather` command; on a laptop with Python 3.10+:
+
+```bash
+git clone https://github.com/zaigor/agent-2-playground.git && cd agent-2-playground && git checkout claude/prediction-market-monetization-kq8bj4 && pip install -r requirements.txt && python -m pm_scanner weather --mode backtest --cities nyc,london,tel-aviv --days 45
+```
+
+It loads every daily-temperature event of the last 45 days from Gamma, pulls each
+bracket's trade history from data-api (cached under `.cache/pm_trades/`, ~1,500
+requests the first time, about 20 minutes), takes the price at local midnight of
+the target day, pulls the forecast issued the day before from Open-Meteo's
+previous-runs archive (ECMWF, GFS, ICON by default), fits a per-station bias and
+error sd on the days already seen, prices every bracket, and prints: forecast MAE
+and bias per model, Brier of forecast vs market on the same brackets, and the
+paper P&L of trading only where they disagree by more than 5c, net of the 5% fee.
+`--mode trend --cities all --days 270` reproduces the month-by-month table below
+with as many sampled event-days as you have patience for; `--mode today` prices
+the open books from the current forecast (add `--ensemble` for the ECMWF spread).
+The container this was built in cannot reach Open-Meteo or IMS, so the forecast
+path ran only against synthetic responses in the tests; the first real run is
+yours, and if it fails the error prints the exact request.
+
+**2. Is this arbitrage, and would local or Google forecasts help?**
+
+It is not arbitrage. Nothing here is riskless; you are selling contracts the
+crowd overprices and buying the ones it underprices, and single days will lose.
+The edge is statistical: on a good day the sum of your fair prices is 1.00 and
+the market's asks sum to 1.10-1.15, and you get paid the difference only on
+average. Two ways to tilt it:
+
+* *Better distribution, not just a better point forecast.* The market prices
+  brackets; what matters is the whole curve. Multi-model blends with a
+  station-specific bias correction beat any single source by a wide margin at
+  day-1 lead, which is why the tool blends and calibrates rather than trusting
+  one model. The ECMWF ensemble (51 members, free on Open-Meteo) gives the
+  spread directly and `--ensemble` uses it.
+* *Which sources.* Open-Meteo already carries the machine-learning models:
+  Google DeepMind's GraphCast as run by NOAA (`gfs_graphcast025`) and ECMWF's
+  AIFS (`ecmwf_aifs025_single`), next to the physics models. Google's newer
+  WeatherNext 2 is not on Open-Meteo; it sits behind Google Cloud (BigQuery and
+  Earth Engine), usable later if the cheap sources are not enough. Do not
+  assume any of them wins at a specific airport: pass
+  `--models ecmwf_ifs025,ecmwf_aifs025_single,gfs_graphcast025,icon_seamless,gfs_seamless`
+  and read the MAE table; the answer differs by station and season.
+* *IMS (ims.gov.il) and other national services.* For Ben Gurion a human-edited
+  IMS forecast is worth testing, but it cannot be backtested: IMS does not
+  archive past forecasts. Log it forward instead (one number a day, the
+  forecast high for Ben Gurion, into `data/extra_forecasts.csv`) and after a
+  month compare its MAE to the models' on the same days. Same for the HKO in
+  Hong Kong or the KMA in Seoul. Expect them to be close to the blend, not
+  better; the real local edge is elsewhere: knowing that LLBG sits on the coastal
+  plain where sea breeze caps afternoon highs, or that KLGA reads warmer than
+  Central Park, is what the bias term learns from data anyway.
+
+**3. Is the gap still there?**
+
+Measured from full trade histories (data-api keeps them; CLOB price history is
+purged after a week), 251 randomly sampled event-days across 39 cities, every
+bracket of each event priced at a fixed local hour of the target day. "Band" is
+the 10-60c contracts; bias is hit rate minus price (negative = overpriced) with
+its standard error; net is the P&L per share of selling every band contract
+after the 5% fee. `python -m pm_scanner weather --mode trend --cities all
+--days 300 --events-per-month 60` reruns this with more data.
+
+| quarter | brackets | band n | bias at 00:00 local | net/share | bias at 08:00 local | net/share |
+| --- | --- | --- | --- | --- | --- | --- |
+| Q4 2025 (Dec, 7-9 brackets per event) | 82 | 31 | +10.7 +- 8.7 pts | -11.7c | +0.3 +- 8.7 | -1.4c |
+| Q1 2026 | 375 | 178 | +0.6 +- 3.3 | -1.5c | -2.8 +- 3.4 | +1.9c |
+| Q2 2026 | 369 | 198 | -0.4 +- 3.1 | -0.5c | +0.5 +- 3.3 | -1.5c |
+| Q3 2026 (to 29 Sep) | 373 | 202 | +0.0 +- 3.1 | -1.0c | -0.1 +- 3.3 | -0.8c |
+| **all of 2026** | 1,117 | 578 | **+0.1 +- 1.8** | **-1.0c** | **-0.8 +- 1.9** | **-0.1c** |
+
+By hour of the target day, pooled: the band bias is within +-1 point from
+midnight to noon; Brier skill of the price rises from 0.22 at midnight to 0.30
+at noon and 0.56 at 15:00 as hourly observations arrive; 3-20c contracts are
+priced fairly too (-0.3 pts). Month by month the bias wanders between -4 and
++5 points with standard errors of 5-9, i.e. noise. No trend, up or down, is
+visible in 2026.
+
+What this means:
+
+* There is no premium to harvest by selling brackets blind. The 5-7 point gap I
+  reported yesterday was a measurement artifact plus a twelve-day window; the
+  late-September CLOB sample (400 band contracts, -5 pts) and the September
+  trade sample (62, +0 pts) are not even inconsistent given their errors. The
+  overround you see live (asks summing to 1.10-1.15 two days out) is a spread,
+  not a bias: bids sum to 0.92-0.98, and the mid is fair.
+* So the whole case rests on the forecast beating the crowd's implicit
+  forecast, and the backtest is the decision. A day-ahead ECMWF/ICON/GFS blend
+  with station bias correction has a MAE of roughly 1-1.5°C on airport maxima
+  in the literature; if the market's implicit distribution is wider or
+  mis-centred by even half a degree, that shows up as a Brier gap and a
+  positive paper P&L in the report. If the report shows the market's Brier
+  at or below the forecast's, stop: the bots already run the same models.
+* The intraday leg is still worth testing separately: skill jumps between noon
+  and 15:00 local, which is when the running maximum settles the outcome.
+  `--cutoff-hour 12` and `--cutoff-hour 14` in trend mode show how much of
+  that the price already reflects; a METAR reader that acts within minutes of
+  each hourly reading is a speed edge, not a forecast edge, and it competes
+  with bots.
+* Keep the money where it was: nothing funded until a real backtest on your
+  machine shows forecast Brier below market Brier by more than the fee, and a
+  week of `--mode today` paper quotes fills at the quoted prices.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
@@ -355,4 +471,5 @@ economic releases (priced off futures), and anything narrative.
 * Who wins on Polymarket: [CEPR DP21615, Who Wins and Who Loses in Prediction Markets](https://cepr.org/publications/dp21615) (limit-order traders and election/sports directional traders; top 1% take 76.5% of profits).
 * Rules: [Polymarket market-integrity rules, March 2026](https://www.businesswire.com/news/home/20260320997513/en/Polymarket-Publishes-Enhanced-Market-Integrity-Rules-Across-Its-DeFi-Platform-and-CFTC-Regulated-U.S.-Exchange), [Debevoise on the April 2026 insider-trading charges](https://www.debevoise.com/insights/publications/2026/04/polymarket-insider-trading-charges-illustrate-doj).
 * Other niches checked: [weather bots and edge compression](https://laikalabs.ai/prediction-markets/trade-polymarket-weather-markets), [The Ankler on entertainment markets](https://theankler.com/gamblers-prediction-markets-entertainment-rotten-tomatoes-box-office-polymarket/).
+* Weather (section 11): Open-Meteo [previous-runs API](https://open-meteo.com/en/docs/previous-runs-api), [ensemble API](https://open-meteo.com/en/docs/ensemble-api), model ids incl. `gfs_graphcast025` and `ecmwf_aifs025_single`; Polymarket data-api `/trades?market=<conditionId>&limit=10000` (full history of closed markets); station coordinates from published aerodrome data; IMS forecasts at [ims.gov.il](https://ims.gov.il/he) (no archive of past forecasts).
 * Niche survey (section 10): Gamma `/events` by tag with `start_date_min/max` windows and `exclude_tag_id=102127`, `/series`, CLOB `/books` and `/prices-history` (history is purged about a week after a market closes; `data-api.polymarket.com/trades` keeps trades longer), 29 Sep 2026. Weather market rules cite NOAA `weather.gov/wrh/timeseries?site=<ICAO>` (US stations and LLBG Tel Aviv) and Weather Underground daily history (other cities). Forecast data for the backtest: [Open-Meteo historical forecast API](https://open-meteo.com/en/docs/historical-forecast-api), [Open-Meteo ensemble API](https://open-meteo.com/en/docs/ensemble-api).

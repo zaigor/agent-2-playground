@@ -185,6 +185,23 @@ def test_today_quotes_only_edges_and_respects_depth(monkeypatch):
     assert quotes[0].action.endswith("(taker)")  # takers rank first
 
 
+def test_extra_forecasts_join_the_model_table(tmp_path):
+    from pm_scanner.weather import load_extra_forecasts, merge_extra
+
+    csv = tmp_path / "x.csv"
+    csv.write_text("city,date,source,value\n# comment\ntel-aviv,2026-09-27,ims,29\nnyc,2026-09-26,nws,71\nbad,line\n")
+    extra = load_extra_forecasts(csv)
+    assert extra[("tel-aviv", date(2026, 9, 27))] == {"ims": 29.0} and extra[("nyc", date(2026, 9, 26))] == {"nws": 71.0}
+    merged = merge_extra({date(2026, 9, 27): {"ecmwf_ifs025": 28.0}}, extra, "tel-aviv")
+    assert merged[date(2026, 9, 27)] == {"ecmwf_ifs025": 28.0, "ims": 29.0}
+    assert load_extra_forecasts(tmp_path / "missing.csv") == {}
+    events = FixtureSource(FIXTURES).poly_weather_events(SINCE, NOW)
+    rows = bracket_markets(events)
+    fc = FakeForecast(_truth(rows), {"ecmwf_ifs025": 0.0})
+    r = backtest(rows, FixtureTrades(FIXTURES), fc, models=("ecmwf_ifs025",), min_calib_days=0, extra=extra)
+    assert "ims" in r.model_errors and r.model_errors["ims"]["n"] == 1
+
+
 def test_station_override_and_cli_trend(tmp_path):
     parse_station_overrides("nyc=40.78,-73.87")
     assert STATIONS["nyc"].lat == 40.78 and STATIONS["nyc"].icao == "KLGA"

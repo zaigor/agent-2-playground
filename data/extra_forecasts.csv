@@ -1,0 +1,3 @@
+# Hand-logged forecasts with no public archive, scored alongside the models by `weather --mode backtest/today`.
+# city,date,source,value   (value in the city's unit: F for US cities, C elsewhere; the forecast HIGH for that local date)
+# Example (delete): tel-aviv,2026-10-01,ims,29

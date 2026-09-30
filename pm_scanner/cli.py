@@ -31,6 +31,7 @@ from .weather import (
     OpenMeteo,
     backtest,
     bracket_markets,
+    load_extra_forecasts,
     parse_station_overrides,
     render_backtest,
     render_today,
@@ -186,8 +187,11 @@ def _run_weather(args, source) -> int:
                 print(f"\nwrote {args.json}")
             return 0
         forecast_src = OpenMeteo()
+        extra = load_extra_forecasts(args.extra_forecasts)
+        if extra:
+            log(f"{sum(len(v) for v in extra.values())} hand-logged forecasts loaded from {args.extra_forecasts}")
         if args.mode == "backtest":
-            report = backtest(rows, trades_src, forecast_src, cutoff_hour=args.cutoff_hour, lead_days=args.lead, models=models, edge=args.edge, fee_rate=args.fee, log=log)
+            report = backtest(rows, trades_src, forecast_src, cutoff_hour=args.cutoff_hour, lead_days=args.lead, models=models, edge=args.edge, fee_rate=args.fee, extra=extra, log=log)
             print(render_backtest(report))
             if args.json:
                 args.json.write_text(json.dumps(report.to_dict(), indent=1, default=str))
@@ -201,7 +205,7 @@ def _run_weather(args, source) -> int:
                 c = d.get("calib") or {}
                 calib[d["city"]] = Calib(c.get("bias", 0.0), c.get("sd", 2.0), c.get("n", 0))  # last day wins
         books = source.poly_books([r.market.yes_token for r in rows if not r.event.closed and r.market.yes_token])
-        quotes, summaries = today(rows, books, forecast_src, calib=calib, models=models, ensemble=args.ensemble, budget=args.budget, edge=args.edge, maker_margin=args.maker_margin, fee_rate=None, log=log)
+        quotes, summaries = today(rows, books, forecast_src, calib=calib, models=models, ensemble=args.ensemble, budget=args.budget, edge=args.edge, maker_margin=args.maker_margin, fee_rate=None, extra=extra, log=log)
         print(render_today(quotes, summaries, args.budget))
         if args.json:
             args.json.write_text(json.dumps({"quotes": [q.__dict__ for q in quotes], "forecasts": summaries}, indent=1, default=str))
@@ -281,6 +285,7 @@ def build_parser() -> argparse.ArgumentParser:
     wx.add_argument("--ensemble", action="store_true", help="today: also pull the ECMWF ensemble for the spread")
     wx.add_argument("--calib", type=Path, default=None, help="today: JSON from a backtest run to reuse per-city bias/sd")
     wx.add_argument("--station", default="", help="override coordinates, e.g. 'nyc=40.78,-73.87;tel-aviv=32.01,34.89'")
+    wx.add_argument("--extra-forecasts", type=Path, default=Path("data/extra_forecasts.csv"), help="CSV city,date,source,value of hand-logged forecasts (IMS etc.) scored alongside the models")
     wx.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_trades"), help="where trade histories are cached")
     wx.add_argument("--fixtures", type=Path, default=None, help="offline: weather_events.json / weather_trades.json from DIR")
     wx.add_argument("--json", type=Path, default=None, help="also write the report to this JSON file")
