@@ -101,8 +101,12 @@ station's hourly readings. Three modes:
 python -m pm_scanner weather --mode trend --cities all --days 270 --events-per-month 25
 
 # 2. do previous-day forecasts beat those prices? Open-Meteo previous-runs (ECMWF, GFS, ICON),
-#    rolling per-station bias/sd, Brier vs the market, paper P&L net of the 5% fee
+#    rolling per-station bias/sd, Brier vs the market with standard errors, a reliability
+#    table, paper P&L net of the 5% fee, all per station and pooled
 python -m pm_scanner weather --mode backtest --cities nyc,london,tel-aviv --days 45
+#    ... with the AI models too and the station bias fitted on the last 21 days only
+python -m pm_scanner weather --mode backtest --cities nyc,london,tel-aviv --days 45 --calib-window 21 \
+    --models ecmwf_ifs025,ecmwf_aifs025_single,gfs_graphcast025,icon_seamless,gfs_seamless
 
 # 3. today's forecast distribution vs the open books: takers with edge, then resting quotes
 python -m pm_scanner weather --mode today --cities nyc,london,tel-aviv --budget 300 --ensemble
@@ -115,7 +119,10 @@ about 0.7s each; a 30-day, 3-city backtest is ~1,000 requests the first time
 and instant afterwards). Open-Meteo needs no key. Coordinates for every
 station are in `weather.py`; fix one with `--station nyc=40.78,-73.87`. The
 forecast is the mean of the requested models plus a per-station bias, with an
-error sd fitted on the days already seen (prior 1.8°C / 3.2°F), and each
+error sd fitted on the days already seen (all of them, or the last N with
+`--calib-window N`; the prior 1.8°C / 3.2°F applies until 8 days exist). The
+settled value is an integer, so the fitted residuals carry rounding noise;
+that is removed before the sd is used, with a floor of 0.3 degrees. Each
 bracket's probability is the normal mass on `[lo-0.5, hi+0.5)` because the
 rules round to whole degrees.
 

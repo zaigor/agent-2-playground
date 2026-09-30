@@ -349,12 +349,22 @@ class Calib:
     n: int = 0
 
     @classmethod
-    def fit(cls, residuals: list[float], prior_sd: float, min_n: int = 8, bracket_width: float = 1.0) -> "Calib":
+    def fit(cls, residuals: list[float], prior_sd: float, min_n: int = 8, bracket_width: float = 1.0, window: int = 0) -> "Calib":
+        """Fit bias and sd from past residuals (rounded actual minus continuous forecast).
+
+        `window` > 0 uses only the most recent residuals, so a seasonal drift in the station
+        bias does not linger. The residuals already contain the rounding noise of the settled
+        integer (variance width^2/12), so that is removed to recover the spread of the
+        underlying temperature that `bracket_probability` integrates; the floor keeps a run
+        of lucky days from collapsing the distribution onto one bracket."""
+        if window > 0:
+            residuals = residuals[-window:]
         if len(residuals) < max(min_n, 2):
             return cls(0.0, prior_sd, len(residuals))
         bias = statistics.mean(residuals)
-        var = statistics.pvariance(residuals) + bracket_width**2 / 12.0  # the actual is only known to a bracket
-        return cls(bias, max(math.sqrt(var), 0.4 * prior_sd), len(residuals))
+        var = statistics.variance(residuals) - bracket_width**2 / 12.0
+        sd = math.sqrt(max(var, (0.3 * bracket_width) ** 2))
+        return cls(bias, sd, len(residuals))
 
 
 def blend(values: dict[str, float]) -> float | None:
@@ -551,6 +561,32 @@ class BacktestDay:
     markets: list[dict[str, Any]] = field(default_factory=list)  # per bracket: label, p_market, p_model, y, action, pnl
 
 
+RELIABILITY_BINS = (0.0, 0.05, 0.15, 0.30, 0.50, 0.70, 0.85, 0.95, 1.0001)
+
+
+def reliability_table(pairs: list[tuple[float, int]]) -> list[dict[str, float]]:
+    """Bin predicted probabilities and report how often the bracket actually won in each bin."""
+    out = []
+    for lo, hi in zip(RELIABILITY_BINS, RELIABILITY_BINS[1:]):
+        inbin = [(p, y) for p, y in pairs if lo <= p < hi]
+        if not inbin:
+            continue
+        out.append({"lo": lo, "hi": min(hi, 1.0), "n": len(inbin), "mean_p": statistics.mean(p for p, _ in inbin), "freq": statistics.mean(y for _, y in inbin)})
+    return out
+
+
+def _errors(res: list[float]) -> dict[str, float]:
+    return {"n": len(res), "mae": statistics.mean(abs(x) for x in res), "bias": statistics.mean(res)}
+
+
+def _se_of_sum(xs: list[float]) -> float | None:
+    return statistics.pstdev(xs) * math.sqrt(len(xs)) if len(xs) >= 2 else None
+
+
+def _se_of_mean(xs: list[float]) -> float | None:
+    return statistics.pstdev(xs) / math.sqrt(len(xs)) if len(xs) >= 2 else None
+
+
 @dataclass
 class BacktestReport:
     cutoff_hour: int
@@ -559,7 +595,7 @@ class BacktestReport:
     edge: float
     fee_rate: float
     days: list[BacktestDay]
-    model_errors: dict[str, dict[str, float]]  # per model: n, mae, bias
+    model_errors: dict[str, dict[str, float]]  # per model, all stations pooled (mixed units): n, mae, bias
     market_brier: float | None
     model_brier: float | None
     n_scored: int
@@ -567,6 +603,11 @@ class BacktestReport:
     pnl: float
     pnl_sell_band: float
     by_month: dict[str, dict[str, float]]
+    calib_window: int = 0
+    by_city: dict[str, dict[str, Any]] = field(default_factory=dict)  # unit, days, model_errors, brier, pnl, se
+    reliability: dict[str, list[dict[str, float]]] = field(default_factory=dict)  # "model" / "market" bins
+    pnl_se: float | None = None
+    brier_diff_se: float | None = None  # se of mean(forecast_sq - market_sq); brackets of one day are correlated, so optimistic
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -574,7 +615,7 @@ class BacktestReport:
         return d
 
 
-def backtest(rows: list[BracketMarket], trades_source, forecast_source, *, cutoff_hour: int = 0, lead_days: int = 1, models: tuple[str, ...] = DEFAULT_MODELS, edge: float = 0.05, fee_rate: float = 0.05, min_calib_days: int = 8, extra: dict[tuple[str, date], dict[str, float]] | None = None, log=None) -> BacktestReport:
+def backtest(rows: list[BracketMarket], trades_source, forecast_source, *, cutoff_hour: int = 0, lead_days: int = 1, models: tuple[str, ...] = DEFAULT_MODELS, edge: float = 0.05, fee_rate: float = 0.05, min_calib_days: int = 8, calib_window: int = 0, extra: dict[tuple[str, date], dict[str, float]] | None = None, log=None) -> BacktestReport:
     by_event = group_by_event([r for r in rows if r.event.closed])
     # forecasts per city over the span of days seen
     per_city_days: dict[str, list[date]] = defaultdict(list)
@@ -596,10 +637,18 @@ def backtest(rows: list[BracketMarket], trades_source, forecast_source, *, cutof
     model_res: dict[str, list[float]] = defaultdict(list)
     market_sq: list[float] = []
     model_sq: list[float] = []
-    pnl = 0.0
+    trade_pnls: list[float] = []
+    rel_model: list[tuple[float, int]] = []
+    rel_market: list[tuple[float, int]] = []
     pnl_band = 0.0
-    trades = 0
     by_month: dict[str, dict[str, float]] = defaultdict(lambda: {"trades": 0, "pnl": 0.0, "sell_band": 0.0, "scored": 0})
+    # per-station accumulators (units differ between stations, so errors are never pooled across them in the report)
+    c_model_res: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    c_blend_res: dict[str, list[float]] = defaultdict(list)
+    c_market_sq: dict[str, list[float]] = defaultdict(list)
+    c_model_sq: dict[str, list[float]] = defaultdict(list)
+    c_pnls: dict[str, list[float]] = defaultdict(list)
+    c_band: dict[str, float] = defaultdict(float)
     events_sorted = sorted((evrows for evrows in by_event.values() if actual_temperature(evrows) is not None and evrows[0].city in STATIONS), key=lambda e: (e[0].city, e[0].day))
     for evrows in events_sorted:
         city, day = evrows[0].city, evrows[0].day
@@ -611,7 +660,7 @@ def backtest(rows: list[BracketMarket], trades_source, forecast_source, *, cutof
         mu0 = blend(fvals)
         if mu0 is None:
             continue
-        calib = Calib.fit(residuals[city], st.default_sd, min_calib_days)
+        calib = Calib.fit(residuals[city], st.default_sd, min_calib_days, window=calib_window)
         mu = mu0 + calib.bias
         when = cutoff_utc(st, day, cutoff_hour)
         bd = BacktestDay(city, day, actual, dict(fvals), mu0, calib)
@@ -625,6 +674,10 @@ def backtest(rows: list[BracketMarket], trades_source, forecast_source, *, cutof
             if p_market is not None and y is not None and calib.n >= min_calib_days:
                 market_sq.append((p_market - y) ** 2)
                 model_sq.append((p_model - y) ** 2)
+                c_market_sq[city].append((p_market - y) ** 2)
+                c_model_sq[city].append((p_model - y) ** 2)
+                rel_model.append((p_model, y))
+                rel_market.append((p_market, y))
                 by_month[month]["scored"] += 1
                 fee = fee_rate * p_market * (1 - p_market)
                 if p_market - p_model > edge and p_market >= 0.05:
@@ -634,44 +687,91 @@ def backtest(rows: list[BracketMarket], trades_source, forecast_source, *, cutof
                     rec["action"] = "buy"
                     rec["pnl"] = y - p_market - fee
                 if rec["action"]:
-                    trades += 1
-                    pnl += rec["pnl"]
+                    trade_pnls.append(rec["pnl"])
+                    c_pnls[city].append(rec["pnl"])
                     by_month[month]["trades"] += 1
                     by_month[month]["pnl"] += rec["pnl"]
                 if 0.10 <= p_market < 0.60:
                     band = p_market - y - fee
                     pnl_band += band
+                    c_band[city] += band
                     by_month[month]["sell_band"] += band
             bd.markets.append(rec)
         days_out.append(bd)
         residuals[city].append(actual - mu0)
+        c_blend_res[city].append(actual - mu0)
         for mname, v in fvals.items():
             model_res[mname].append(actual - v)
-    model_errors = {m: {"n": len(v), "mae": statistics.mean(abs(x) for x in v), "bias": statistics.mean(v)} for m, v in model_res.items() if v}
+            c_model_res[city][mname].append(actual - v)
+    model_errors = {m: _errors(v) for m, v in model_res.items() if v}
     if len(model_res) > 1:
         bl = [d.actual - d.blend for d in days_out]
         if bl:
-            model_errors["blend"] = {"n": len(bl), "mae": statistics.mean(abs(x) for x in bl), "bias": statistics.mean(bl)}
+            model_errors["blend"] = _errors(bl)
+    by_city: dict[str, dict[str, Any]] = {}
+    for city in sorted(c_blend_res):
+        errs = {m: _errors(v) for m, v in c_model_res[city].items() if v}
+        if len(errs) > 1:
+            errs["blend"] = _errors(c_blend_res[city])
+        msq, fsq = c_market_sq[city], c_model_sq[city]
+        by_city[city] = {
+            "unit": STATIONS[city].unit, "days": len(c_blend_res[city]), "model_errors": errs,
+            "n_scored": len(msq),
+            "market_brier": statistics.mean(msq) if msq else None,
+            "model_brier": statistics.mean(fsq) if fsq else None,
+            "brier_diff_se": _se_of_mean([f - m for f, m in zip(fsq, msq)]),
+            "trades": len(c_pnls[city]), "pnl": sum(c_pnls[city]), "pnl_se": _se_of_sum(c_pnls[city]),
+            "sell_band": c_band[city],
+        }
     return BacktestReport(
         cutoff_hour=cutoff_hour, lead_days=lead_days, models=models, edge=edge, fee_rate=fee_rate, days=days_out,
         model_errors=model_errors,
         market_brier=statistics.mean(market_sq) if market_sq else None,
         model_brier=statistics.mean(model_sq) if model_sq else None,
-        n_scored=len(market_sq), trades=trades, pnl=pnl, pnl_sell_band=pnl_band, by_month=dict(by_month),
+        n_scored=len(market_sq), trades=len(trade_pnls), pnl=sum(trade_pnls), pnl_sell_band=pnl_band, by_month=dict(by_month),
+        calib_window=calib_window, by_city=by_city,
+        reliability={"model": reliability_table(rel_model), "market": reliability_table(rel_market)},
+        pnl_se=_se_of_sum(trade_pnls),
+        brier_diff_se=_se_of_mean([f - m for f, m in zip(model_sq, market_sq)]),
     )
 
 
+def _pm(x: float | None, se: float | None, fmt: str) -> str:
+    if x is None:
+        return "-"
+    return f"{x:{fmt}}" + (f"±{se:{fmt.lstrip('+')}}" if se is not None else "")
+
+
 def render_backtest(r: BacktestReport) -> str:
-    L = [f"Weather backtest  cutoff {r.cutoff_hour:02d}:00 local, forecasts issued {r.lead_days} day(s) earlier, models {', '.join(r.models)}", ""]
-    L.append("Forecast error of the daily extreme (degrees in the station's unit), all days with a resolved bracket:")
-    for m, e in r.model_errors.items():
-        L.append(f"  {m:16} n={e['n']:4}  MAE={e['mae']:.2f}  bias={e['bias']:+.2f}")
+    win = f", calibration window {r.calib_window} days" if r.calib_window else ", expanding calibration window"
+    L = [f"Weather backtest  cutoff {r.cutoff_hour:02d}:00 local, forecasts issued {r.lead_days} day(s) earlier, models {', '.join(r.models)}{win}", ""]
+    L.append("Forecast error of the daily high per station (degrees in the station's own unit; never pooled across F and C):")
+    for city, c in r.by_city.items():
+        for m, e in c["model_errors"].items():
+            L.append(f"  {city:12} {c['unit']}  {m:18} n={e['n']:4}  MAE={e['mae']:.2f}  bias={e['bias']:+.2f}")
     L.append("")
+    L.append("Brier (lower is better) and paper P&L per station, after the first 8 calibration days:")
+    L.append(f"  {'city':12} {'scored':>6} {'market':>7} {'forecast':>8} {'fc-mkt ±se':>16} {'trades':>6} {'pnl ±se':>14} {'sell band':>9}")
+    for city, c in r.by_city.items():
+        if c["market_brier"] is None:
+            continue
+        diff = c["model_brier"] - c["market_brier"]
+        L.append(f"  {city:12} {c['n_scored']:6} {c['market_brier']:7.4f} {c['model_brier']:8.4f} {_pm(diff, c['brier_diff_se'], '+.4f'):>16} {c['trades']:6} {_pm(c['pnl'], c['pnl_se'], '+.2f'):>14} {c['sell_band']:+9.2f}")
     if r.market_brier is not None and r.model_brier is not None:
-        verdict = "forecast beats market" if r.model_brier < r.market_brier else "market beats forecast"
-        L.append(f"Brier over {r.n_scored} brackets (after {min(8, r.n_scored)}+ calibration days per city): market {r.market_brier:.4f}  forecast {r.model_brier:.4f}  -> {verdict}")
-    L.append(f"Paper P&L per 1 share, edge threshold {r.edge:.2f}, fee {r.fee_rate:.2f}: {r.trades} trades, net {r.pnl:+.2f}  (sell-every-band baseline {r.pnl_sell_band:+.2f})")
+        diff = r.model_brier - r.market_brier
+        verdict = "forecast beats market" if diff < 0 else "market beats forecast"
+        L.append(f"  {'all':12} {r.n_scored:6} {r.market_brier:7.4f} {r.model_brier:8.4f} {_pm(diff, r.brier_diff_se, '+.4f'):>16} {r.trades:6} {_pm(r.pnl, r.pnl_se, '+.2f'):>14} {r.pnl_sell_band:+9.2f}   -> {verdict}")
+    L.append(f"  (edge threshold {r.edge:.2f}, fee {r.fee_rate:.2f}; the se treats brackets as independent, so it is optimistic)")
     L.append("")
+    if r.reliability.get("model"):
+        L.append("Reliability: how often a bracket won when the forecast (left) or the market (right) gave it this probability:")
+        L.append(f"  {'bin':>11} {'n':>5} {'mean p':>7} {'won':>6}   | {'n':>5} {'mean p':>7} {'won':>6}")
+        mk = {(b["lo"], b["hi"]): b for b in r.reliability.get("market", [])}
+        for b in r.reliability["model"]:
+            m = mk.get((b["lo"], b["hi"]))
+            right = f"{m['n']:5} {m['mean_p']:7.2f} {m['freq']:6.2f}" if m else f"{'-':>5} {'-':>7} {'-':>6}"
+            L.append(f"  {b['lo']:.2f}-{b['hi']:.2f} {b['n']:5} {b['mean_p']:7.2f} {b['freq']:6.2f}   | {right}")
+        L.append("")
     L.append(f"{'month':8} {'scored':>6} {'trades':>6} {'pnl':>8} {'sell band':>9}")
     for m in sorted(r.by_month):
         v = r.by_month[m]

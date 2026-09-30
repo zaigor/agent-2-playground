@@ -191,7 +191,7 @@ def _run_weather(args, source) -> int:
         if extra:
             log(f"{sum(len(v) for v in extra.values())} hand-logged forecasts loaded from {args.extra_forecasts}")
         if args.mode == "backtest":
-            report = backtest(rows, trades_src, forecast_src, cutoff_hour=args.cutoff_hour, lead_days=args.lead, models=models, edge=args.edge, fee_rate=args.fee, extra=extra, log=log)
+            report = backtest(rows, trades_src, forecast_src, cutoff_hour=args.cutoff_hour, lead_days=args.lead, models=models, edge=args.edge, fee_rate=args.fee, calib_window=args.calib_window, extra=extra, log=log)
             print(render_backtest(report))
             if args.json:
                 args.json.write_text(json.dumps(report.to_dict(), indent=1, default=str))
@@ -276,6 +276,7 @@ def build_parser() -> argparse.ArgumentParser:
     wx.add_argument("--days", type=int, default=30, help="how many days back to load events for (trend/backtest)")
     wx.add_argument("--cutoff-hour", type=int, default=0, help="local hour on the target day whose price is scored (0 = as the day starts)")
     wx.add_argument("--lead", type=int, default=1, help="use the forecast issued this many days before the target day")
+    wx.add_argument("--calib-window", type=int, default=0, help="backtest: fit the station bias/sd on only the last N days (0 = all days so far)")
     wx.add_argument("--models", default=",".join(DEFAULT_MODELS), help="Open-Meteo model ids, comma-separated")
     wx.add_argument("--edge", type=float, default=0.05, help="minimum model-vs-market gap to trade, per share, before fees for backtest / after fees for today")
     wx.add_argument("--fee", type=float, default=0.05, help="taker rate (weather markets pay 0.05)")

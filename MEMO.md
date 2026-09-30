@@ -455,6 +455,74 @@ What this means:
   machine shows forecast Brier below market Brier by more than the fee, and a
   week of `--mode today` paper quotes fills at the quoted prices.
 
+## 12. Backtest #1 (30 Sep, your laptop): the forecast does not beat the market
+
+You ran `weather --mode backtest --cities nyc,london,tel-aviv --days 45`
+(ECMWF, GFS, ICON; price at local midnight; forecast issued the day before).
+The numbers, then what they mean, then what I changed.
+
+| what | result |
+| --- | --- |
+| station-days with a resolved bracket | 127 (NYC 43, London 42, Tel Aviv 42) |
+| forecast error of the daily high, pooled (mixed °F/°C, so only the ranking counts) | ECMWF 1.37, GFS 1.14, ICON 1.01, blend 0.88 |
+| Brier over 1,133 brackets | market 0.0506, forecast 0.0565 |
+| paper P&L, 269 trades at the 5-point threshold | +2.87 per share-unit, i.e. about +1c a share |
+| by month | Aug −4.30 (36 trades), Sep +7.17 (233) |
+| sell-every-10-60c-bracket baseline | −0.60 |
+
+**Verdict under the rule set in section 11: fail.** The market's Brier is
+lower than the blend's by about 12%. The crowd's implicit forecast at
+midnight is better than an equal-weight ECMWF/GFS/ICON mean with a rolling
+station bias. The positive paper P&L does not rescue it: 269 trades with a
+per-trade spread of roughly 0.35 give a standard error near ±6, so +2.87 is
+zero, and the August/September split is the same noise.
+
+**What the Tel Aviv rows show, and the bug behind them.** In the last eight
+days the market put 0.62-0.75 on the centre bracket and it won six times out
+of eight; the model put 0.37-0.51 on it and sold it every day, losing the
+fee and the spread each time. Two reasons, both ours:
+
+* The error sd was pinned at 0.7°C, which is the floor of 0.4 × the 1.8°C
+  prior, not a fitted value. A late-September Ben Gurion high is predictable
+  to a few tenths of a degree, and the fit also double-counted rounding
+  noise: the residuals are (settled integer − continuous forecast) and
+  already contain the ±0.5 rounding, yet another width²/12 was added. The
+  model was too wide, so it always under-priced the favourite.
+* The bias was −0.5°C from the earlier part of the window, while the raw
+  blend residuals of the last eight days average +0.05. The station offset
+  drifts with the season, and an expanding window keeps stale values.
+
+Both are fixed in `weather.py`: the rounding variance is removed rather
+than added, the floor is 0.3 degrees, and `--calib-window N` fits the bias
+and sd on the last N days only. The report now shows every number per
+station in its own unit (the pooled MAE mixed °F and °C), the Brier gap and
+the P&L with standard errors, and a reliability table (when the model or
+the market says 30%, how often does the bracket win?) that makes an
+over-wide or over-narrow distribution visible without reading the days.
+
+**Run #2, one line, and the decision rule.**
+
+```
+python -m pm_scanner weather --mode backtest --cities nyc,london,tel-aviv --days 45 --calib-window 21 \
+    --models ecmwf_ifs025,ecmwf_aifs025_single,gfs_graphcast025,icon_seamless,gfs_seamless
+```
+
+The forecast leg goes ahead only if the `all` row shows the Brier gap
+(forecast − market) negative by more than twice its standard error **and**
+the paper P&L positive by more than twice its standard error. Anything
+short of that, in either column, and the day-ahead forecast leg is closed:
+the bots already price these markets at least as well as the free models.
+My expectation is that run #2 narrows the gap but does not flip it.
+
+**What is left if it fails.** Not a forecast edge but the other two:
+posting resting quotes at fair value and collecting the 10-15% overround
+from takers (a liquidity edge, only measurable by a week of paper quotes
+from `--mode today` and checking whether they would have filled), and the
+intraday leg that reprices from each hourly observation between noon and
+15:00 (a speed edge, competing with bots). Both are cheap to test and
+neither needs money in the account. If neither works, weather is closed
+too and the next candidate family from section 10 comes up.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)

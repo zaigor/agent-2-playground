@@ -15,6 +15,7 @@ from pm_scanner.weather import (
     OpenMeteo,
     actual_temperature,
     backtest,
+    render_backtest,
     bracket_markets,
     bracket_probability,
     city_of,
@@ -84,7 +85,24 @@ def test_bracket_probability_partitions_and_handles_open_ends():
 def test_calib_fit_uses_prior_until_enough_days():
     assert Calib.fit([1.0, -1.0], prior_sd=3.2).sd == 3.2
     c = Calib.fit([1.0, 1.5, 0.5, 1.0, 1.2, 0.8, 1.1, 0.9], prior_sd=3.2)
-    assert abs(c.bias - 1.0) < 1e-9 and 0.4 * 3.2 <= c.sd < 1.6 and c.n == 8
+    # residual variance 0.086 minus the rounding noise 1/12 leaves ~0, so the 0.3-degree floor binds
+    assert abs(c.bias - 1.0) < 1e-9 and abs(c.sd - 0.3) < 1e-9 and c.n == 8
+
+
+def test_calib_fit_removes_rounding_noise_and_honours_window():
+    import random
+    rng = random.Random(3)
+    truth_sd = 1.0
+    # residual = round(actual) - forecast where actual - forecast ~ N(0.4, 1.0): the settled integer adds 1/12 variance
+    res = [round(0.4 + rng.gauss(0, truth_sd)) for _ in range(4000)]
+    c = Calib.fit([float(x) for x in res], prior_sd=1.8)
+    assert abs(c.bias - 0.4) < 0.06 and abs(c.sd - truth_sd) < 0.06
+    # a window keeps only the last N residuals, so an old bias does not linger
+    old = [-2.0] * 30
+    recent = [0.5] * 10
+    w = Calib.fit(old + recent, prior_sd=1.8, window=10)
+    assert w.n == 10 and abs(w.bias - 0.5) < 1e-9 and abs(w.sd - 0.3) < 1e-9
+    assert Calib.fit(old + recent, prior_sd=1.8).n == 40
 
 
 def test_openmeteo_daily_extreme_parses_multi_model_hourly():
@@ -155,8 +173,17 @@ def test_backtest_with_a_perfect_forecast_beats_the_market():
     assert r.n_scored == 33 and r.model_brier < r.market_brier
     assert r.trades > 0 and r.pnl > 0
     assert set(r.by_month) == {"2026-09"}
+    assert set(r.by_city) == {"nyc", "tel-aviv"} and r.by_city["nyc"]["unit"] == "F" and r.by_city["tel-aviv"]["unit"] == "C"
+    assert r.by_city["nyc"]["model_errors"]["ecmwf_ifs025"]["mae"] == 0.0 and "blend" in r.by_city["nyc"]["model_errors"]
+    assert sum(c["n_scored"] for c in r.by_city.values()) == r.n_scored
+    assert abs(sum(c["pnl"] for c in r.by_city.values()) - r.pnl) < 1e-9 and r.pnl_se is not None
+    assert r.reliability["model"] and r.reliability["market"] and sum(b["n"] for b in r.reliability["market"]) == r.n_scored
+    text = render_backtest(r)
+    assert "Reliability" in text and "tel-aviv     C" in text and "market beats forecast" not in text
     d = r.to_dict()
-    assert d["days"][0]["day"].startswith("2026-09")
+    assert d["days"][0]["day"].startswith("2026-09") and d["by_city"]["nyc"]["days"] == 2
+    w = backtest(rows, FixtureTrades(FIXTURES), fc, models=("ecmwf_ifs025", "gfs_seamless"), min_calib_days=0, calib_window=1)
+    assert w.calib_window == 1 and "calibration window 1 days" in render_backtest(w)
 
 
 def test_today_quotes_only_edges_and_respects_depth(monkeypatch):
