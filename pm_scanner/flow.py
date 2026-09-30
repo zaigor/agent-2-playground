@@ -194,10 +194,11 @@ def resolved_markets(events: list[PolyEvent]) -> list[tuple[PolyEvent, PolyMarke
     return out
 
 
-def sampled_market_ids(report_rows: list[dict[str, Any]]) -> set[str]:
+def sampled_market_ids(report: list[dict[str, Any]] | dict[str, Any]) -> set[str]:
     """Market ids (or questions, for older reports) already used by a previous run, for out-of-sample re-sampling."""
     out: set[str] = set()
-    for r in report_rows:
+    rows = report.get("families", []) if isinstance(report, dict) else report
+    for r in rows:
         for x in r.get("per_market", []):
             out.add(str(x.get("market_id") or x.get("question")))
     return out
@@ -258,6 +259,136 @@ def family_flow(events: list[PolyEvent], trades_source, *, now: datetime, since:
             per_market=per_market,
         ))
     return out
+
+
+# --------------------------------------------------------------------------- #
+# Maker paper test on the tape
+# --------------------------------------------------------------------------- #
+
+@dataclass
+class MakerConfig:
+    half_spread: float = 0.03  # quote at last trade +/- this
+    size: float = 20.0  # shares per side per fill
+    min_hours: float = 0.0  # quote only while at least this many hours remain before the market's last trade
+    max_position: float = 100.0  # net shares cap per market, either side
+    fill: str = "through"  # "through": a trade strictly beyond our price fills us; "at": at our price too
+
+    @property
+    def label(self) -> str:
+        return f"h={self.half_spread:.2f} size={self.size:g} min_h={self.min_hours:g} cap={self.max_position:g} {self.fill}"
+
+
+def simulate_maker(trades: list[dict[str, Any]], y: int, outcomes: list[str] | None, cfg: MakerConfig) -> dict[str, Any]:
+    """Replay one market's tape with a naive two-sided maker.
+
+    After every print at YES price p we rest a bid at p - h and an ask at p + h (clipped to
+    1c..99c). A later print at q fills the bid when q < bid (or q <= bid with fill="at") and the
+    ask when q > ask, for min(cfg.size, trade size) shares; the quote is then re-centred on q.
+    Fills are held to expiry. This is conservative on price (we never get filled by prints at
+    the touch unless asked) and optimistic on queue position (a print through our level is
+    assumed to reach us), which is the usual paper-maker bound."""
+    series = yes_price_series(trades, outcomes)
+    if len(series) < 2:
+        return {"fills": 0, "dollars": 0.0, "pnl": 0.0, "position": 0.0, "buys": 0, "sells": 0}
+    close_ts = series[-1][0]
+    sizes = {}
+    for t in trades:  # size by (ts, yes-price) so the series and sizes line up
+        try:
+            ts, price, size = int(t["timestamp"]), float(t["price"]), float(t.get("size") or 0)
+        except (KeyError, TypeError, ValueError):
+            continue
+        p_yes = price if is_first_outcome(t, outcomes) else 1.0 - price
+        sizes[(ts, round(p_yes, 4))] = sizes.get((ts, round(p_yes, 4)), 0.0) + size
+    bid = ask = None
+    position = 0.0
+    fills = buys = sells = 0
+    dollars = pnl = 0.0
+    for ts, q in series:
+        hours_left = (close_ts - ts) / 3600.0
+        size = min(cfg.size, sizes.get((ts, round(q, 4)), cfg.size))
+        if bid is not None and hours_left >= cfg.min_hours and size > 0:
+            hit_bid = q < bid or (cfg.fill == "at" and q <= bid)
+            hit_ask = q > ask or (cfg.fill == "at" and q >= ask)
+            if hit_bid and position + size <= cfg.max_position:
+                position += size
+                fills += 1
+                buys += 1
+                dollars += size * bid
+                pnl += size * (y - bid)
+            elif hit_ask and position - size >= -cfg.max_position:
+                position -= size
+                fills += 1
+                sells += 1
+                dollars += size * (1.0 - ask)
+                pnl += size * (ask - y)
+        bid = max(0.01, round(q - cfg.half_spread, 2))
+        ask = min(0.99, round(q + cfg.half_spread, 2))
+    return {"fills": fills, "dollars": dollars, "pnl": pnl, "position": position, "buys": buys, "sells": sells}
+
+
+@dataclass
+class MakerResult:
+    family: str
+    config: str
+    markets: int
+    markets_with_fills: int
+    fills: int
+    dollars: float
+    pnl: float
+    per_100: float | None
+    per_100_se: float | None  # market-clustered
+    dollars_per_day: float  # filled notional per calendar day of the window, for the sampled markets
+    markets_positive: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def maker_backtest(events: list[PolyEvent], trades_source, *, now: datetime, since: datetime, families: set[str], configs: list[MakerConfig], per_family: int = 200, seed: int = 7, log=None) -> tuple[list[MakerResult], list[dict[str, Any]]]:
+    """Run the paper maker over every resolved market of the given families (up to per_family)."""
+    fams: dict[str, list[tuple[PolyEvent, PolyMarket]]] = defaultdict(list)
+    for e, m in resolved_markets(events):
+        k = family_key(e)
+        if k in families:
+            fams[k].append((e, m))
+    window_days = max(1.0, (now - since).total_seconds() / 86400)
+    rng = random.Random(seed)
+    results: list[MakerResult] = []
+    detail: list[dict[str, Any]] = []
+    for key in sorted(fams):
+        pairs = fams[key]
+        sample = pairs if len(pairs) <= per_family else rng.sample(pairs, per_family)
+        tapes = [(m, trades_source.trades(m.condition_id or m.id)) for _, m in sample]
+        if log:
+            log(f"maker {key}: {len(sample)} markets, {sum(len(t) for _, t in tapes)} trades")
+        for cfg in configs:
+            per_market = []
+            for m, trades in tapes:
+                r = simulate_maker(trades, int(m.resolved_yes), m.outcomes, cfg)
+                per_market.append((r["pnl"], r["dollars"]))
+                detail.append({"family": key, "config": cfg.label, "question": m.question, **r})
+            dollars = sum(d for _, d in per_market)
+            pnl = sum(p for p, _ in per_market)
+            with_fills = [(p, d) for p, d in per_market if d > 0]
+            results.append(MakerResult(
+                family=key, config=cfg.label, markets=len(sample), markets_with_fills=len(with_fills),
+                fills=sum(int(x["fills"]) for x in detail if x["family"] == key and x["config"] == cfg.label),
+                dollars=dollars, pnl=pnl, per_100=(pnl / dollars * 100) if dollars else None,
+                per_100_se=cluster_se_per_100(with_fills) if len(with_fills) >= 2 else None,
+                dollars_per_day=dollars / window_days, markets_positive=sum(1 for p, _ in with_fills if p > 0),
+            ))
+    return results, detail
+
+
+def render_maker(results: list[MakerResult]) -> str:
+    if not results:
+        return "maker paper test: no markets"
+    L = ["Maker paper test on the tape: two-sided quotes re-centred on every print, filled only by prints through them, held to expiry.",
+         "`per $100` is P&L per $100 of filled notional (± treats each market as one observation); `$/day` is filled notional per day over the sampled markets.", ""]
+    L.append(f"  {'family':24} {'config':44} {'mkts':>5} {'filled':>6} {'fills':>6} {'$ filled':>9} {'$/day':>7} {'pnl $':>8} {'per $100 ±se':>16} {'mkts>0':>7}")
+    for r in results:
+        L.append(f"  {r.family[:24]:24} {r.config[:44]:44} {r.markets:5} {r.markets_with_fills:6} {r.fills:6} {r.dollars:9,.0f} {r.dollars_per_day:7,.0f} {r.pnl:+8,.0f} {_pm(r.per_100, r.per_100_se, '+.2f'):>16} {r.markets_positive:3}/{r.markets_with_fills:<3}")
+    return "\n".join(L)
 
 
 def _pm(x: float | None, se: float | None, f: str) -> str:

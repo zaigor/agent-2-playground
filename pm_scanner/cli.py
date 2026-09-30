@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
 from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
-from .flow import family_flow, render_family_flow, sampled_market_ids
+from .flow import MakerConfig, family_flow, maker_backtest, render_family_flow, render_maker, sampled_market_ids
 from .niches import DEFAULT_SURVEY_TAGS, UP_OR_DOWN_TAG_ID, default_since, load_survey_tags, render_survey, survey
 from .report import render_text, write_json
 from .scans import (
@@ -337,6 +337,12 @@ def build_parser() -> argparse.ArgumentParser:
     fl.add_argument("--fixtures", type=Path, default=None, help="offline: niche_events.json / weather_trades.json from DIR")
     fl.add_argument("--families", default=None, help="only these family keys, comma-separated (e.g. miami-daily-weather,japan-j-league)")
     fl.add_argument("--exclude-json", type=Path, default=None, help="a previous --json report: its sampled markets are excluded, so this run is out of sample")
+    fl.add_argument("--maker", action="store_true", help="also run the paper maker on the tape of the --families (all their resolved markets)")
+    fl.add_argument("--half-spreads", default="0.02,0.03,0.05", help="maker: quote distances from the last print, comma-separated")
+    fl.add_argument("--quote-size", type=float, default=20.0, help="maker: shares per side per fill")
+    fl.add_argument("--min-hours", default="0,1,6", help="maker: only quote while at least this many hours remain, comma-separated variants")
+    fl.add_argument("--max-position", type=float, default=100.0, help="maker: net position cap per market, shares")
+    fl.add_argument("--fill", choices=["through", "at"], default="through", help="maker: fill on prints strictly through the quote, or at it too")
     fl.add_argument("--json", type=Path, default=None, help="also write every family's flow stats to this JSON file")
 
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
@@ -430,8 +436,21 @@ def main(argv: list[str] | None = None) -> int:
             print(f"flow failed: {exc}", file=sys.stderr)
             return 2
         print(render_family_flow(rows, top=args.top, sort=args.sort))
+        payload: dict = {"families": [r.to_dict() for r in rows]}
+        if args.maker and only:
+            configs = [MakerConfig(half_spread=float(h), size=args.quote_size, min_hours=float(mh), max_position=args.max_position, fill=args.fill)
+                       for h in args.half_spreads.split(",") if h.strip() for mh in args.min_hours.split(",") if mh.strip()]
+            try:
+                results, detail = maker_backtest(events, trades_src, now=now, since=since, families=only, configs=configs, per_family=max(args.per_family, 200), seed=args.seed, log=log)
+            except Exception as exc:
+                print(f"maker test failed: {exc}", file=sys.stderr)
+                return 2
+            print()
+            print(render_maker(results))
+            payload["maker"] = [r.to_dict() for r in results]
+            payload["maker_detail"] = detail
         if args.json:
-            args.json.write_text(json.dumps([r.to_dict() for r in rows], indent=1, default=str))
+            args.json.write_text(json.dumps(payload, indent=1, default=str))
             print(f"\nwrote {args.json}")
         return 0
 

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from pm_scanner.cli import main
-from pm_scanner.flow import FlowAcc, cluster_se_per_100, family_flow, hours_bucket, is_first_outcome, price_band, render_family_flow, resolved_markets, sampled_market_ids, score_trades
+from pm_scanner.flow import FlowAcc, MakerConfig, cluster_se_per_100, family_flow, maker_backtest, render_maker, simulate_maker, hours_bucket, is_first_outcome, price_band, render_family_flow, resolved_markets, sampled_market_ids, score_trades
 from pm_scanner.sources import FixtureSource
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -144,3 +144,29 @@ def test_out_of_sample_rerun_excludes_previous_markets_and_family_filter_works()
     second = family_flow(events, src, now=NOW, since=SINCE, per_family=2, min_markets=1, max_families=50, only_families={key}, exclude_markets=used)
     assert [r.key for r in second] == [key]
     assert not ({x["market_id"] for x in second[0].per_market} & {x["market_id"] for x in first[0].per_market})
+
+
+def test_simulate_maker_fills_only_through_the_quote_and_holds_to_expiry():
+    # prints: 0.50, 0.44 (through the 0.47 bid -> buy 20 @0.47), 0.46 (inside), 0.52 (through the 0.49 ask -> sell 20 @0.49)
+    trades = [{"timestamp": t, "price": p, "size": 50, "side": "BUY", "outcome": "Yes"} for t, p in ((0, 0.50), (60, 0.44), (120, 0.46), (180, 0.52), (240, 0.52))]
+    r = simulate_maker(trades, 1, ["Yes", "No"], MakerConfig(half_spread=0.03, size=20))
+    assert r["fills"] == 2 and r["buys"] == 1 and r["sells"] == 1 and abs(r["position"]) < 1e-9
+    # buy 20 @0.47 on a winner: +0.53*20 = 10.6 ; sell 20 @0.49 on a winner: -0.51*20 = -10.2
+    assert abs(r["pnl"] - (10.6 - 10.2)) < 1e-9 and abs(r["dollars"] - (20 * 0.47 + 20 * 0.51)) < 1e-9
+    at = simulate_maker(trades, 1, ["Yes", "No"], MakerConfig(half_spread=0.03, size=20, fill="at"))
+    assert at["fills"] >= r["fills"]
+    late = simulate_maker(trades, 1, ["Yes", "No"], MakerConfig(half_spread=0.03, size=20, min_hours=1))
+    assert late["fills"] == 0  # the whole tape is inside the last hour
+
+
+def test_maker_backtest_aggregates_per_family():
+    events = FixtureSource(FIXTURES).poly_events_survey((), SINCE, NOW)
+    src = SyntheticTrades(events, "zzz-none")
+    from pm_scanner.niches import family_key
+    keys = {family_key(e) for e, _ in resolved_markets(events)}
+    key = sorted(keys)[0]
+    results, detail = maker_backtest(events, src, now=NOW, since=SINCE, families={key}, configs=[MakerConfig(0.03, 20), MakerConfig(0.05, 20, min_hours=1)], per_family=10)
+    assert len(results) == 2 and all(r.family == key for r in results) and results[0].markets <= 10
+    assert detail and {d["config"] for d in detail} == {r.config for r in results}
+    text = render_maker(results)
+    assert "Maker paper test" in text and key[:10] in text
