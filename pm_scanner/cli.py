@@ -9,7 +9,8 @@ from pathlib import Path
 
 from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
 from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
-from .niches import UP_OR_DOWN_TAG_ID, default_since, load_survey_tags, render_survey, survey
+from .flow import family_flow, render_family_flow
+from .niches import DEFAULT_SURVEY_TAGS, UP_OR_DOWN_TAG_ID, default_since, load_survey_tags, render_survey, survey
 from .report import render_text, write_json
 from .scans import (
     Opportunity,
@@ -46,6 +47,8 @@ from .weather import (
     trend,
 )
 from .watch import ARB_KINDS, JsonlLog, TelegramNotifier, render_summary, summarize, watch
+
+DEFAULT_FLOW_TAGS = DEFAULT_SURVEY_TAGS + ("sports", "esports", "crypto")
 
 
 def run_scan(
@@ -318,6 +321,22 @@ def build_parser() -> argparse.ArgumentParser:
     wx.add_argument("--fixtures", type=Path, default=None, help="offline: weather_events.json / weather_trades.json from DIR")
     wx.add_argument("--json", type=Path, default=None, help="also write the report to this JSON file")
 
+    fl = sub.add_parser("flow", help="order-flow screen: per family, do takers or makers win? (trade tape + outcomes only)")
+    fl.add_argument("--days", type=int, default=45, help="window: events started in the last N days")
+    fl.add_argument("--tags", default=None, help="comma-separated Gamma tag slugs (default: the survey tags plus sports, esports, crypto)")
+    fl.add_argument("--per-family", type=int, default=30, help="resolved markets sampled per family (one trade-history request each)")
+    fl.add_argument("--min-markets", type=int, default=10, help="skip families with fewer resolved markets in the window")
+    fl.add_argument("--max-families", type=int, default=60, help="only the N biggest families by volume are sampled")
+    fl.add_argument("--horizon-min", type=int, default=30, help="minutes after each trade for the second markout")
+    fl.add_argument("--no-sport", action="store_true", help="skip sports and esports families")
+    fl.add_argument("--seed", type=int, default=7)
+    fl.add_argument("--top", type=int, default=40)
+    fl.add_argument("--sort", choices=["maker", "volume"], default="maker")
+    fl.add_argument("--window-days", type=int, default=3, help="Gamma paging window for closed events (smaller = more requests, never truncated)")
+    fl.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_trades"), help="where trade histories are cached")
+    fl.add_argument("--fixtures", type=Path, default=None, help="offline: niche_events.json / weather_trades.json from DIR")
+    fl.add_argument("--json", type=Path, default=None, help="also write every family's flow stats to this JSON file")
+
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
     f.add_argument("--platform", choices=["polymarket", "kalshi"], required=True)
     f.add_argument("--price", type=float, required=True)
@@ -384,6 +403,29 @@ def main(argv: list[str] | None = None) -> int:
         print(render_survey(rows, now=now, since=since, top=args.top, include_sport=args.include_sport, sort=args.sort))
         if args.json:
             args.json.write_text(json.dumps([r.to_dict() for r in rows], indent=2, default=str))
+            print(f"\nwrote {args.json}")
+        return 0
+
+    if args.cmd == "flow":
+        now = utcnow()
+        since = default_since(now, args.days)
+        log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
+        try:
+            tags = load_survey_tags(args.tags) if args.tags else DEFAULT_FLOW_TAGS
+            if args.fixtures:
+                events = source.poly_events_survey(tags, since, now)
+                trades_src = FixtureTrades(args.fixtures)
+            else:
+                events = source.poly_events_survey(tags, since, now, exclude_tag_id=UP_OR_DOWN_TAG_ID, window_days=args.window_days)
+                trades_src = LiveTrades(cache_dir=args.cache_dir)
+            log(f"{len(events)} events loaded for {len(tags)} tags")
+            rows = family_flow(events, trades_src, now=now, since=since, per_family=args.per_family, min_markets=args.min_markets, max_families=args.max_families, horizon_min=args.horizon_min, include_sport=not args.no_sport, seed=args.seed, log=log)
+        except Exception as exc:
+            print(f"flow failed: {exc}", file=sys.stderr)
+            return 2
+        print(render_family_flow(rows, top=args.top, sort=args.sort))
+        if args.json:
+            args.json.write_text(json.dumps([r.to_dict() for r in rows], indent=1, default=str))
             print(f"\nwrote {args.json}")
         return 0
 

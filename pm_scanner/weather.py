@@ -30,6 +30,7 @@ from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
 from .fees import polymarket_rate_for_event, polymarket_taker_fee
+from .flow import FlowAcc
 from .http import HttpClient, HttpError
 from .polymarket import Book, PolyEvent, PolyMarket
 
@@ -1084,43 +1085,7 @@ def _price_band(p: float) -> str:
     return "?"
 
 
-class _FlowAcc:
-    def __init__(self) -> None:
-        self.n = 0
-        self.shares = 0.0
-        self.dollars = 0.0
-        self.fees = 0.0
-        self.w_exp: list[tuple[float, float]] = []  # (size, taker markout to expiry per share)
-        self.w_h: list[tuple[float, float]] = []  # (size, taker markout at the horizon per share)
-
-    def add(self, size: float, p: float, fee: float, mo_exp: float, mo_h: float | None) -> None:
-        self.n += 1
-        self.shares += size
-        self.dollars += size * p
-        self.fees += size * fee
-        self.w_exp.append((size, mo_exp))
-        if mo_h is not None:
-            self.w_h.append((size, mo_h))
-
-    @staticmethod
-    def _wmean_se(pairs: list[tuple[float, float]]) -> tuple[float | None, float | None]:
-        tot = sum(w for w, _ in pairs)
-        if not pairs or tot <= 0:
-            return None, None
-        mean = sum(w * x for w, x in pairs) / tot
-        if len(pairs) < 2:
-            return mean, None
-        se = math.sqrt(sum((w * (x - mean)) ** 2 for w, x in pairs)) / tot
-        return mean, se
-
-    def row(self, **keys) -> dict[str, Any]:
-        m_exp, se_exp = self._wmean_se(self.w_exp)
-        m_h, se_h = self._wmean_se(self.w_h)
-        return {**keys, "trades": self.n, "shares": self.shares, "dollars": self.dollars, "taker_fees": self.fees,
-                "taker_markout_expiry": m_exp, "taker_markout_expiry_se": se_exp,
-                "taker_markout_horizon": m_h, "taker_markout_horizon_se": se_h,
-                "maker_pnl": -sum(w * x for w, x in self.w_exp),
-                "maker_pnl_per_100": (-sum(w * x for w, x in self.w_exp) / self.dollars * 100) if self.dollars else None}
+_FlowAcc = FlowAcc  # shared with the family screen in flow.py
 
 
 @dataclass

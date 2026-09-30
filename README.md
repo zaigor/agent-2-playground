@@ -149,6 +149,29 @@ supplies that forecast's mean and spread.
 before any money moves. Nothing in this package calls an LLM; it runs fine on
 a laptop or a small VPS and costs nothing to leave running.
 
+## Order flow by family (`flow`)
+
+The question a small trader should ask first: where are the takers noise, so
+that a resting quote gets paid rather than picked off? This needs only the
+trade tape and the outcome, both on Polymarket's own API.
+
+```bash
+# every recurring family with >=10 resolved markets in the last 45 days, the 60 biggest by
+# volume, 30 markets sampled each: taker markout to expiry (positive = takers informed),
+# the makers' edge per $100 filled before rebates, by hours-to-close and by price band
+python -m pm_scanner flow --days 45 --per-family 30 --max-families 60 --json flow.json
+
+python -m pm_scanner flow --no-sport --sort volume     # non-sport families, biggest first
+python -m pm_scanner flow --fixtures tests/fixtures --days 400 --min-markets 1   # offline sample
+```
+
+Each sampled market is one trade-history request (cached under
+`.cache/pm_trades/`), so 60 families take about 30 minutes the first time.
+Closed events are paged from Gamma in 3-day windows because the `/events`
+offset cap is now about 2,000. `side` in the trade feed is read as the
+taker's side. The weather-specific version (`weather --mode flow`) buckets
+by local time of the target day instead of hours to close.
+
 ## Fee models (change them when the venues do)
 
 * Polymarket, Fee Structure V2 (2026): taker fee per share = `rate * p * (1-p)`;
@@ -176,6 +199,7 @@ pm_scanner/
   watch.py       polling loop, JSONL log, Telegram alerts, log summarizer
   israel.py      Knesset polls -> seat simulation -> bracket probabilities -> edges
   niches.py      recurring-family survey: cadence, depth, fees, day-before calibration
+  flow.py        order-flow screen: taker markouts and makers' edge per family, hours-to-close and price band
   weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/flow/today
   cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather` and `fee` commands
 data/            israel_polls_2026.csv (hand-maintained poll table)
