@@ -706,6 +706,69 @@ likeliest; whether it survives the makers already there is what the
 numbers would show.
 
 
+## 15. Site-wide order flow (30 Sep): nobody is collecting the spread
+
+The `flow` command, run from here over the last 45 days: 47,011 events across
+19 tags, the 60 biggest recurring families with at least ten resolved
+markets, 30 resolved markets sampled per family, 1,784 markets and about
+$21M of trades scored from the taker's side. The full report is in
+`data/flow_families_2026-09-30.txt`. Two corrections were needed on the way
+and both are in the code: sports markets name their sides after the teams
+or Over/Under, not Yes/No, and the first pass read every such trade as a
+first-outcome trade (which produced makers "earning" 60-80% of notional;
+nonsense); and the standard error has to treat each market as one
+observation, because every trade in a market shares its outcome.
+
+| group | families | with makers > 0 | markets | $ sampled | family $/day, summed | makers, per $100 filled ± se |
+| --- | --- | --- | --- | --- | --- | --- |
+| sports and esports | 38 | 18 | 1,140 | 14.1M | 46.5M | **−1.1 ± 4.4** |
+| crypto (hit-price, strikes) | 8 | 5 | 224 | 6.7M | 2.6M | +1.8 ± 2.1 |
+| weather cities | 12 | 6 | 360 | 0.46M | 0.93M | +1.8 ± 1.5 |
+| other (Elon tweets, token FDV) | 2 | 0 | 60 | 0.70M | 0.84M | −5.6 ± 1.5 |
+
+**The finding is a null, and it is the important one.** In every group the
+makers' edge is within two standard errors of zero, and the share of
+families where makers come out ahead is a coin flip. Takers as a group are
+not the dumb retail the market-making story needs: to expiry they break
+even before the fee, everywhere, so the makers keep nothing and the
+platform keeps the fee. Sports in-play (the last hour, $2.8M) and the
+1-6h bucket ($9.6M) run slightly against makers; pre-game 6-24h runs
+slightly for them (+2.2 per $100 on $1.4M), and sports longshot buyers
+below 30c actually win (makers −10 to −28 per $100 there). Weather makers
+earn a little on quotes placed more than a day out (+6 on $122K) and lose
+a little in the last six hours, which is section 14 again in miniature.
+
+**The tempting rows are artifacts.** Counter-Strike (+34 ± 10) and the
+Premier League (+28 ± 11) each have 70% of their sampled dollars in one
+match where the favourite lost; re-sampling Counter-Strike with a different
+set of 30 markets moved it from +16 to +34, which is what a one-market
+estimate does. Five of sixty families clear two standard errors, which is
+about what sixty draws from zero produce (expect one or two, more with the
+concentration). Miami daily weather (+14.6 ± 4.4, 22% concentration,
+$73K a day) and the Japanese J-League (+13.6 ± 4.5, 49%) are the only two
+that are not obviously one match, and they are exactly the shape of a
+multiple-comparisons winner.
+
+**Where this leaves the project.** Five pre-registered tests since the
+niche survey: day-ahead forecast, intraday forecast, speed, the weather
+maker leg, and now the site-wide maker screen. Every one came back at
+zero or negative for us, and the last one says the spread-collection
+business is not available to anyone at the family level, not just to us.
+What is left on Polymarket at a $50-500 stake is (a) operational edges we
+have not tested and that a laptop in Israel is badly placed for (in-play
+sports with a faster video feed than the quote updaters; sub-minute
+crypto reaction), and (b) information edges, which we ruled out on
+compliance grounds at the start. I do not see a research path from here
+that I would fund with your money.
+
+Two cheap things remain honest to do, neither of which I would call a
+plan: re-sample Miami and the J-League out of sample (60 fresh markets
+each, one command, ten minutes) to see whether the two survivors are real
+or the expected flukes; and, if they are real, a one-week maker paper test
+at the mid in that one family. If they are flukes, the recommendation is
+to stop spending credits on Polymarket research and put the memo away
+until the fee schedule or the market structure changes.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
@@ -722,5 +785,6 @@ numbers would show.
 * Who wins on Polymarket: [CEPR DP21615, Who Wins and Who Loses in Prediction Markets](https://cepr.org/publications/dp21615) (limit-order traders and election/sports directional traders; top 1% take 76.5% of profits).
 * Rules: [Polymarket market-integrity rules, March 2026](https://www.businesswire.com/news/home/20260320997513/en/Polymarket-Publishes-Enhanced-Market-Integrity-Rules-Across-Its-DeFi-Platform-and-CFTC-Regulated-U.S.-Exchange), [Debevoise on the April 2026 insider-trading charges](https://www.debevoise.com/insights/publications/2026/04/polymarket-insider-trading-charges-illustrate-doj).
 * Other niches checked: [weather bots and edge compression](https://laikalabs.ai/prediction-markets/trade-polymarket-weather-markets), [The Ankler on entertainment markets](https://theankler.com/gamblers-prediction-markets-entertainment-rotten-tomatoes-box-office-polymarket/).
+* Order flow (section 15): Polymarket data-api `/trades?market=<conditionId>&limit=10000` (`side` read as the taker's side; outcome labels matched against the market's outcome list), 30 Sep 2026; full report in `data/flow_families_2026-09-30.txt`.
 * Weather (sections 11-13): Iowa Environmental Mesonet ASOS/METAR archive ([download form](https://mesonet.agron.iastate.edu/request/download.phtml), CGI `cgi-bin/request/asos.py`, routine reports = `report_type=3`); Open-Meteo [previous-runs API](https://open-meteo.com/en/docs/previous-runs-api), [ensemble API](https://open-meteo.com/en/docs/ensemble-api), model ids incl. `gfs_graphcast025` and `ecmwf_aifs025_single`; Polymarket data-api `/trades?market=<conditionId>&limit=10000` (full history of closed markets); station coordinates from published aerodrome data; IMS forecasts at [ims.gov.il](https://ims.gov.il/he) (no archive of past forecasts).
 * Niche survey (section 10): Gamma `/events` by tag with `start_date_min/max` windows and `exclude_tag_id=102127`, `/series`, CLOB `/books` and `/prices-history` (history is purged about a week after a market closes; `data-api.polymarket.com/trades` keeps trades longer), 29 Sep 2026. Weather market rules cite NOAA `weather.gov/wrh/timeseries?site=<ICAO>` (US stations and LLBG Tel Aviv) and Weather Underground daily history (other cities). Forecast data for the backtest: [Open-Meteo historical forecast API](https://open-meteo.com/en/docs/historical-forecast-api), [Open-Meteo ensemble API](https://open-meteo.com/en/docs/ensemble-api).
