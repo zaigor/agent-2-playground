@@ -802,18 +802,24 @@ the queue) are the upper bound. Both are below.
 
 | family | quotes | fills through the quote: P&L per $100 ± se | filled $/day | fills at the quote: P&L per $100 ± se | filled $/day |
 | --- | --- | --- | --- | --- | --- |
-| J-League | ±2c, any hour | −19.8 ± 4.1 | 49 | pending | pending |
-| J-League | ±2c, ≥1h to close | −14.7 ± 5.5 | 19 | pending | pending |
-| Premier League | ±2c, any hour | −13.9 ± 2.9 | 100 | pending | pending |
-| Premier League | ±2c, ≥1h to close | −8.8 ± 2.8 | 56 | pending | pending |
-| Miami weather | ±2c, any hour | −3.9 ± 0.6 | 526 | pending | pending |
-| Miami weather | ±2c, ≥1h to close | −3.9 ± 0.6 | 525 | pending | pending |
+| J-League | ±2c, any hour | −19.8 ± 4.1 | 49 | −16.2 ± 4.4 | 56 |
+| J-League | ±2c, ≥1h to close | −14.7 ± 5.5 | 19 | −13.5 ± 5.5 | 23 |
+| Premier League | ±2c, any hour | −13.9 ± 2.9 | 100 | −11.7 ± 2.5 | 120 |
+| Premier League | ±2c, ≥1h to close | −8.8 ± 2.8 | 56 | −5.5 ± 2.5 | 71 |
+| Miami weather | ±2c, any hour | −3.9 ± 0.6 | 526 | −3.6 ± 0.6 | 623 |
+| Miami weather | ±2c, ≥1h to close | −3.9 ± 0.6 | 525 | −3.6 ± 0.6 | 623 |
 
 Through the quote the maker loses in every family at every spread: the
 prints that reach a resting quote are the informed ones, and widening the
 quote makes it worse per dollar (−20 at 2c, −24 at 5c in the J-League)
 because only the jumps still reach it. Quoting only well before the close
-removes the fills along with the losses (a few dollars a day). The at-the-quote bound is being computed and follows in the next revision.
+removes the fills along with the losses (a few dollars a day). The optimistic bound is no better: even
+assuming every print at our price reached us first, the maker loses 16 per
+$100 in the J-League, 6-12 in the Premier League and 3.6 in Miami, on a
+few dozen to a few hundred dollars of fills a day (report in
+`data/flow_maker_paper_at_2026-09-30.txt`). The quote gets picked off on
+the moves and earns nothing on the rest, and no spread, hour filter or
+family in this set changes the sign.
 
 **Weather, sports and the maker business are closed, and so is this
 research.** The tally since the niche survey: seven pre-registered tests

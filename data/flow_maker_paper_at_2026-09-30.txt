@@ -1,0 +1,41 @@
+Order flow by family: taker markout to expiry per share (positive = takers informed = makers lose) and the makers' edge per $100 filled, before rebates.
+The ± on maker/$100 treats each market as one observation (outcomes are shared within a market); `top mkt` is the share of sampled $ in the biggest single market.
+
+  family                             sport  fee  mkts  trades  $ sampled family $/day taker→expiry  maker/$100 ±se(mkt) top mkt      best bucket     worst bucket
+  premier-league-2025                yes   0.05   200   16675  3,645,051    1,439,184       -0.004           +0.72±5.87     17%       1-7d +64.0        1-6h -4.5
+  japan-j-league                     yes   0.05   200    4731    234,951      106,372       +0.003           -0.67±7.17     12%       6-24h +8.8       1-7d -14.6
+  miami-daily-weather                      0.05   200   40211    349,522       68,196       +0.002           -0.85±1.26     10%         <1h +2.7        1-7d -2.1
+
+Hours-to-close detail (makers' edge per $100, with $ sampled) for the families above:
+  family                                          <1h             1-6h            6-24h             1-7d              >7d
+  premier-league-2025                  +4.0 $ 869,197   -4.5 $2,142,246   +3.5 $ 525,808  +64.0 $ 107,134  +23.7 $     666
+  japan-j-league                       +3.7 $  92,584   -4.4 $ 131,646   +8.8 $   9,804  -14.6 $     862  +32.7 $      55
+  miami-daily-weather                  +2.7 $   6,429   +0.7 $  66,697   -1.1 $ 211,825   -2.1 $  64,571                -
+
+Price-band detail (makers' edge per $100) for the families above:
+  family                                    0.00-0.10        0.10-0.30        0.30-0.70        0.70-0.90        0.90-1.00
+  premier-league-2025                 -55.4 $  34,243   -8.5 $ 176,324   +6.6 $1,347,060   -2.6 $ 412,449   -1.1 $1,674,974
+  japan-j-league                      -46.5 $   6,138  -26.0 $  18,342   -2.8 $ 114,616  +21.7 $  45,112   -1.0 $  50,743
+  miami-daily-weather                 +29.6 $  10,724   -7.1 $  32,200   -2.5 $  95,453   -4.8 $  26,785   -0.1 $ 184,360
+
+Reading: a maker earns the `maker/$100` figure only on the fills it gets, at these prices and times; trades within one market share
+the outcome, so the se is optimistic. `family $/day` is Gamma volume of the family's closed events in the window, per day.
+
+Maker paper test on the tape: two-sided quotes re-centred on every print, filled only by prints through them, held to expiry.
+`per $100` is P&L per $100 of filled notional (± treats each market as one observation); `$/day` is filled notional per day over the sampled markets.
+
+  family                   config                                        mkts filled  fills  $ filled   $/day    pnl $     per $100 ±se  mkts>0
+  japan-j-league           h=0.02 size=20 min_h=0 cap=100 at              200    118    711     3,427      56     -555      -16.19±4.36  24/118
+  japan-j-league           h=0.02 size=20 min_h=1 cap=100 at              200     61    234     1,428      23     -193      -13.54±5.47  21/61 
+  japan-j-league           h=0.03 size=20 min_h=0 cap=100 at              200    115    571     2,471      41     -462      -18.70±5.52  21/115
+  japan-j-league           h=0.03 size=20 min_h=1 cap=100 at              200     48    143       796      13     -118      -14.80±6.56  13/48 
+  miami-daily-weather      h=0.02 size=20 min_h=0 cap=100 at              200    199   8120    37,903     623   -1,374       -3.63±0.60  32/199
+  miami-daily-weather      h=0.02 size=20 min_h=1 cap=100 at              200    196   8025    37,853     623   -1,365       -3.60±0.61  33/196
+  miami-daily-weather      h=0.03 size=20 min_h=0 cap=100 at              200    199   5642    23,463     386     -900       -3.83±0.87  32/199
+  miami-daily-weather      h=0.03 size=20 min_h=1 cap=100 at              200    196   5544    23,414     385     -891       -3.81±0.87  33/196
+  premier-league-2025      h=0.02 size=20 min_h=0 cap=100 at              200    148   1375     7,319     120     -855      -11.68±2.47  29/148
+  premier-league-2025      h=0.02 size=20 min_h=1 cap=100 at              200     92    667     4,313      71     -238       -5.51±2.48  32/92 
+  premier-league-2025      h=0.03 size=20 min_h=0 cap=100 at              200    146   1033     4,871      80     -836      -17.17±3.12  22/146
+  premier-league-2025      h=0.03 size=20 min_h=1 cap=100 at              200     79    430     2,571      42     -268      -10.42±3.55  26/79 
+
+wrote /tmp/claude-0/-home-user-agent-2-playground/770d56de-33cb-5a4e-9f43-7a1c558adb65/scratchpad/flow/maker_at.json
