@@ -15,7 +15,15 @@ from pm_scanner.weather import (
     OpenMeteo,
     actual_temperature,
     backtest,
+    bracket_probability_censored,
+    FixtureObs,
+    HourModel,
+    iem_station_id,
+    intraday,
+    parse_iem_csv,
     render_backtest,
+    render_intraday,
+    running_max,
     bracket_markets,
     bracket_probability,
     city_of,
@@ -238,3 +246,57 @@ def test_station_override_and_cli_trend(tmp_path):
     data = json.loads(out.read_text())
     assert "2026-09" in data["pairs"] and len(data["pairs"]["2026-09"]) == 33
     assert cli.main(["weather", "--mode", "trend", "--fixtures", str(FIXTURES), "--cities", "atlantis"]) == 2
+
+
+def test_iem_helpers_and_censored_probability():
+    assert iem_station_id("KLGA") == "LGA" and iem_station_id("PHNL") == "HNL" and iem_station_id("LLBG") == "LLBG"
+    csv = "station,valid,tmpf,tmpc\nLGA,2026-09-25 16:51,70.00,21.10\nLGA,2026-09-25 17:51,M,M\nLGA,2026-09-25 18:51,72.00,22.20\n"
+    obs = parse_iem_csv(csv, "F")
+    assert [v for _, v in obs] == [70.0, 72.0]
+    st = STATIONS["nyc"]
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    noon = datetime(2026, 9, 25, 12, 0, tzinfo=ZoneInfo(st.tz))
+    assert running_max(obs, st, date(2026, 9, 25), noon) is None  # 16:51Z is 12:51 local, after noon
+    assert running_max(obs, st, date(2026, 9, 25), datetime(2026, 9, 25, 15, 0, tzinfo=ZoneInfo(st.tz))) == 72.0
+    # ladder of brackets sums to one and everything below the settled value is dead
+    ladder = [(None, 65), (66, 67), (68, 69), (70, 71), (72, 73), (74, None)]
+    ps = [bracket_probability_censored(lo, hi, 71, 72.4, 1.5) for lo, hi in ladder]
+    assert abs(sum(ps) - 1.0) < 1e-9 and ps[0] == 0.0 and ps[1] == 0.0 and ps[2] == 0.0 and ps[3] > 0.2
+    hm = HourModel.fit([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0], prior_sd=2.0)
+    assert abs(hm.beta - 0.5) < 1e-9 and abs(hm.alpha) < 1e-9 and abs(hm.sd - 0.3) < 1e-9 and hm.n == 8
+    assert HourModel.fit([1.0], [1.0], prior_sd=2.0).sd == 2.0
+
+
+def _fake_obs(rows):
+    """Hourly readings that climb to the day's actual maximum by 14:51 local and fall after."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    data = {}
+    for evrows in group_by_event(rows).values():
+        city, day = evrows[0].city, evrows[0].day
+        st = STATIONS[city]
+        actual = actual_temperature(evrows)
+        pts = data.setdefault(st.icao, [])
+        for h in range(24):
+            local = datetime(day.year, day.month, day.day, h, 51, tzinfo=ZoneInfo(st.tz))
+            temp = actual - 8 + min(h, 14) * (8 / 14) if h <= 14 else actual - (h - 14) * 0.8
+            pts.append([int(local.timestamp()), round(temp, 1)])
+    return data
+
+
+def test_intraday_backtest_knows_the_answer_by_mid_afternoon():
+    events = FixtureSource(FIXTURES).poly_weather_events(SINCE, NOW)
+    rows = bracket_markets(events)
+    fc = FakeForecast(_truth(rows), {"ecmwf_ifs025": 0.5, "gfs_seamless": -0.5})
+    obs = FixtureObs(data=_fake_obs(rows))
+    r = intraday(rows, FixtureTrades(FIXTURES), fc, obs, hours=(11, 15), models=("ecmwf_ifs025", "gfs_seamless"), min_calib_days=0)
+    assert r.hours == (11, 15) and r.days and all(d["hour"] in (11, 15) for d in r.days)
+    at15 = [t for t in r.table if t["hour"] == 15 and t["city"] == "all"]
+    assert at15 and at15[0]["model_brier"] < at15[0]["market_brier"]  # the running max already equals the answer
+    for d in r.days:
+        if d["hour"] == 15:
+            assert d["settled"] == round(d["actual"]) or abs(d["settled"] - d["actual"]) <= 0.5
+    text = render_intraday(r)
+    assert "Weather intraday" in text and "15:00 all" in text
+    assert r.to_dict()["hours"] == [11, 15] or r.to_dict()["hours"] == (11, 15)

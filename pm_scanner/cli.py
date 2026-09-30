@@ -23,19 +23,23 @@ from .scans import (
 )
 from .sources import FixtureSource, LiveSource
 from .weather import (
-    DEFAULT_MODELS,
-    STATIONS,
-    Calib,
-    FixtureTrades,
-    LiveTrades,
-    OpenMeteo,
     backtest,
     bracket_markets,
+    Calib,
+    DEFAULT_MODELS,
+    FixtureObs,
+    FixtureTrades,
+    IemObs,
+    intraday,
+    LiveTrades,
     load_extra_forecasts,
+    OpenMeteo,
     parse_station_overrides,
     render_backtest,
+    render_intraday,
     render_today,
     render_trend,
+    STATIONS,
     today,
     trend,
 )
@@ -197,6 +201,15 @@ def _run_weather(args, source) -> int:
                 args.json.write_text(json.dumps(report.to_dict(), indent=1, default=str))
                 print(f"\nwrote {args.json}")
             return 0
+        if args.mode == "intraday":
+            hours = tuple(int(h) for h in args.hours.split(",") if h.strip())
+            obs_src = FixtureObs(args.fixtures) if args.fixtures else IemObs(cache_dir=args.obs_cache, report_types=(3, 4) if args.include_specials else (3,))
+            report = intraday(rows, trades_src, forecast_src, obs_src, hours=hours, latency_min=args.latency_min, lead_days=args.lead, models=models, edge=args.edge, fee_rate=args.fee, calib_window=args.calib_window, extra=extra, log=log)
+            print(render_intraday(report))
+            if args.json:
+                args.json.write_text(json.dumps(report.to_dict(), indent=1, default=str))
+                print(f"\nwrote {args.json}")
+            return 0
         calib = None
         if args.calib and args.calib.exists():
             data = json.loads(args.calib.read_text())
@@ -271,12 +284,16 @@ def build_parser() -> argparse.ArgumentParser:
     n.add_argument("--json", type=Path, default=None, help="also write every family's stats to this JSON file")
 
     wx = sub.add_parser("weather", help="daily temperature brackets: mispricing trend, forecast backtest, or live quotes")
-    wx.add_argument("--mode", choices=["trend", "backtest", "today"], default="backtest")
+    wx.add_argument("--mode", choices=["trend", "backtest", "intraday", "today"], default="backtest")
     wx.add_argument("--cities", default="nyc,london,tel-aviv", help=f"comma-separated city keys, or 'all'; known: {', '.join(sorted(STATIONS))}")
     wx.add_argument("--days", type=int, default=30, help="how many days back to load events for (trend/backtest)")
     wx.add_argument("--cutoff-hour", type=int, default=0, help="local hour on the target day whose price is scored (0 = as the day starts)")
     wx.add_argument("--lead", type=int, default=1, help="use the forecast issued this many days before the target day")
-    wx.add_argument("--calib-window", type=int, default=0, help="backtest: fit the station bias/sd on only the last N days (0 = all days so far)")
+    wx.add_argument("--calib-window", type=int, default=0, help="backtest/intraday: fit the station bias/sd on only the last N days (0 = all days so far)")
+    wx.add_argument("--hours", default="11,13,15", help="intraday: local decision hours, comma-separated")
+    wx.add_argument("--latency-min", type=int, default=5, help="intraday: minutes after the hour at which the price is taken (reaction time)")
+    wx.add_argument("--include-specials", action="store_true", help="intraday: count SPECI reports too, not only routine hourly METARs")
+    wx.add_argument("--obs-cache", type=Path, default=Path(".cache/pm_obs"), help="intraday: where IEM station observations are cached")
     wx.add_argument("--models", default=",".join(DEFAULT_MODELS), help="Open-Meteo model ids, comma-separated")
     wx.add_argument("--edge", type=float, default=0.05, help="minimum model-vs-market gap to trade, per share, before fees for backtest / after fees for today")
     wx.add_argument("--fee", type=float, default=0.05, help="taker rate (weather markets pay 0.05)")

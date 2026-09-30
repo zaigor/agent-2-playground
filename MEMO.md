@@ -523,6 +523,77 @@ intraday leg that reprices from each hourly observation between noon and
 neither needs money in the account. If neither works, weather is closed
 too and the next candidate family from section 10 comes up.
 
+## 13. Backtest #2 (30 Sep): the day-ahead forecast leg is closed; the intraday test is next
+
+Same 45 days and stations, calibration on the last 21 days, five models
+requested. GraphCast returned no rows (it is not in the previous-runs
+archive, only in the live forecast API), so the blend was ECMWF IFS, ECMWF
+AIFS, ICON and GFS.
+
+| station | best single model (MAE) | blend MAE / bias | market Brier | forecast Brier | gap ± se | trades | P&L ± se |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| London (°C) | ICON 0.76 | 0.82 / +0.59 | 0.0569 | 0.0554 | −0.0015 ± 0.0025 | 74 | +6.7 ± 3.4 |
+| NYC (°F) | ICON 1.79 | 1.35 / +0.60 | 0.0574 | 0.0643 | +0.0069 ± 0.0031 | 87 | −4.2 ± 3.8 |
+| Tel Aviv (°C) | ICON 0.47 | 0.64 / −0.55 | 0.0374 | 0.0489 | +0.0115 ± 0.0049 | 75 | +0.8 ± 3.3 |
+| all | | | 0.0506 | 0.0563 | **+0.0057 ± 0.0021** | 236 | +3.2 ± 6.1 |
+
+**Verdict: fail, at 2.7 standard errors, and the rule closes the day-ahead
+forecast leg.** The market is better than the blend everywhere except
+London, where they tie. Tel Aviv is the clearest case: the market's Brier
+of 0.037 is the sharpest of the three, and its reliability column is
+straight (contracts it prices at 0.74 win 76% of the time), while the model
+is over-confident at the top (0.76 → 57%). The bots pricing Ben Gurion know
+that station better than four free global models with a 21-day bias fit.
+
+What the run also showed, for the record:
+
+* **Both ECMWF variants are badly biased at these grid points** (Tel Aviv
+  −1.1°C, NYC +0.8 / +2.1°F, London +0.8 / +1.2°C) and the AI model AIFS is
+  the worst single model at every station. ICON is the best everywhere and
+  GFS second; at Tel Aviv and London ICON alone beats the equal-weight
+  blend even before bias correction. An MAE-weighted or ICON-only blend is
+  the obvious next tweak and I have not run it, on purpose: the rule was
+  set before run #1 and tuning the blend on the same 45 days until it
+  passes is how backtests lie. If we ever revisit day-ahead, it is with
+  ICON + GFS on a fresh window.
+* One caveat that cuts the other way: the Open-Meteo archive stores one
+  run per day, so the forecast scored here may be older than the run the
+  market had at midnight. The intraday test below does not have this
+  problem, because the new information there is the station's own reading.
+
+**The intraday test (`--mode intraday`), pushed with this section.** From
+noon on, the outcome is increasingly decided by readings anyone can see:
+the running maximum kills every bracket below it, and the remaining
+question is how much higher the afternoon goes. The mode reads routine
+hourly METARs from the Iowa Environmental Mesonet archive (free, global,
+includes LLBG), and at 11:00, 13:00 and 15:00 local combines the running
+maximum with the day-ahead blend through a per-hour regression, prices
+each bracket with the dead-below / rolled-up-at rule, and scores it
+against the price 5 minutes after the hour. It also marks each paper trade
+to market 30 minutes later: if the price moves toward the model after the
+reading, the reading was not yet priced when we acted, which is the speed
+edge; if the price 5 minutes after the hour already reflects it, the bots
+are faster and the leg is dead too.
+
+```
+python -m pm_scanner weather --mode intraday --cities nyc,london,tel-aviv --days 45 --calib-window 21 \
+    --models icon_seamless,gfs_seamless,ecmwf_ifs025 --hours 11,13,15 --latency-min 5
+```
+
+Decision rule, again before seeing the result: the leg goes forward only
+if, at some hour, the `all` row shows the model's Brier below the market's
+by more than twice its se **and** mtm30 positive by more than twice its
+se. Then the question becomes latency (can a laptop in Israel react within
+the window the mtm30 measures?), and the answer to that is a second run
+with `--latency-min 2` and `--latency-min 15`: the edge should shrink with
+latency, and the latency we can actually deliver decides.
+
+**If this fails too**, the last weather leg is pure market making (resting
+quotes at the mid, collecting the 10-15% overround), which needs a week of
+paper quotes from `--mode today` and cannot be backtested from trade
+history alone. After that, weather is closed and the next family from
+section 10 comes up.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
@@ -539,5 +610,5 @@ too and the next candidate family from section 10 comes up.
 * Who wins on Polymarket: [CEPR DP21615, Who Wins and Who Loses in Prediction Markets](https://cepr.org/publications/dp21615) (limit-order traders and election/sports directional traders; top 1% take 76.5% of profits).
 * Rules: [Polymarket market-integrity rules, March 2026](https://www.businesswire.com/news/home/20260320997513/en/Polymarket-Publishes-Enhanced-Market-Integrity-Rules-Across-Its-DeFi-Platform-and-CFTC-Regulated-U.S.-Exchange), [Debevoise on the April 2026 insider-trading charges](https://www.debevoise.com/insights/publications/2026/04/polymarket-insider-trading-charges-illustrate-doj).
 * Other niches checked: [weather bots and edge compression](https://laikalabs.ai/prediction-markets/trade-polymarket-weather-markets), [The Ankler on entertainment markets](https://theankler.com/gamblers-prediction-markets-entertainment-rotten-tomatoes-box-office-polymarket/).
-* Weather (section 11): Open-Meteo [previous-runs API](https://open-meteo.com/en/docs/previous-runs-api), [ensemble API](https://open-meteo.com/en/docs/ensemble-api), model ids incl. `gfs_graphcast025` and `ecmwf_aifs025_single`; Polymarket data-api `/trades?market=<conditionId>&limit=10000` (full history of closed markets); station coordinates from published aerodrome data; IMS forecasts at [ims.gov.il](https://ims.gov.il/he) (no archive of past forecasts).
+* Weather (sections 11-13): Iowa Environmental Mesonet ASOS/METAR archive ([download form](https://mesonet.agron.iastate.edu/request/download.phtml), CGI `cgi-bin/request/asos.py`, routine reports = `report_type=3`); Open-Meteo [previous-runs API](https://open-meteo.com/en/docs/previous-runs-api), [ensemble API](https://open-meteo.com/en/docs/ensemble-api), model ids incl. `gfs_graphcast025` and `ecmwf_aifs025_single`; Polymarket data-api `/trades?market=<conditionId>&limit=10000` (full history of closed markets); station coordinates from published aerodrome data; IMS forecasts at [ims.gov.il](https://ims.gov.il/he) (no archive of past forecasts).
 * Niche survey (section 10): Gamma `/events` by tag with `start_date_min/max` windows and `exclude_tag_id=102127`, `/series`, CLOB `/books` and `/prices-history` (history is purged about a week after a market closes; `data-api.polymarket.com/trades` keeps trades longer), 29 Sep 2026. Weather market rules cite NOAA `weather.gov/wrh/timeseries?site=<ICAO>` (US stations and LLBG Tel Aviv) and Weather Underground daily history (other cities). Forecast data for the backtest: [Open-Meteo historical forecast API](https://open-meteo.com/en/docs/historical-forecast-api), [Open-Meteo ensemble API](https://open-meteo.com/en/docs/ensemble-api).

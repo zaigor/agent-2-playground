@@ -49,6 +49,15 @@ class HttpClient:
             raise HttpError(f"GET {url} -> HTTP {resp.status_code}: {resp.text[:200]}")
         return resp.json()
 
+    def get_text(self, url: str, params: dict[str, Any] | None = None) -> str:
+        try:
+            resp = self.session.get(url, params=params, timeout=self.timeout, headers={"Accept": "text/plain, text/csv, */*"})
+        except requests.RequestException as exc:
+            raise HttpError(f"GET {url} failed: {exc}") from exc
+        if resp.status_code >= 400:
+            raise HttpError(f"GET {url} -> HTTP {resp.status_code}: {resp.text[:200]}")
+        return resp.text
+
     def post_json(self, url: str, body: Any) -> Any:
         try:
             resp = self.session.post(url, json=body, timeout=self.timeout)

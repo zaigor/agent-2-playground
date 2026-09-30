@@ -108,6 +108,12 @@ python -m pm_scanner weather --mode backtest --cities nyc,london,tel-aviv --days
 python -m pm_scanner weather --mode backtest --cities nyc,london,tel-aviv --days 45 --calib-window 21 \
     --models ecmwf_ifs025,ecmwf_aifs025_single,gfs_graphcast025,icon_seamless,gfs_seamless
 
+# 2b. the intraday leg: at 11:00, 13:00 and 15:00 local, the station's running maximum (IEM
+#     METAR archive) plus the day-ahead blend, scored against the price 5 minutes later and
+#     marked to market 30 minutes after that (did the price move toward the model?)
+python -m pm_scanner weather --mode intraday --cities nyc,london,tel-aviv --days 45 --calib-window 21 \
+    --models icon_seamless,gfs_seamless,ecmwf_ifs025 --hours 11,13,15 --latency-min 5
+
 # 3. today's forecast distribution vs the open books: takers with edge, then resting quotes
 python -m pm_scanner weather --mode today --cities nyc,london,tel-aviv --budget 300 --ensemble
 
@@ -125,6 +131,14 @@ settled value is an integer, so the fitted residuals carry rounding noise;
 that is removed before the sd is used, with a floor of 0.3 degrees. Each
 bracket's probability is the normal mass on `[lo-0.5, hi+0.5)` because the
 rules round to whole degrees.
+
+The intraday mode reads routine hourly METARs from the Iowa Environmental
+Mesonet archive (`mesonet.agron.iastate.edu`, free, cached under
+`.cache/pm_obs/`; add `--include-specials` to count SPECI reports). Brackets
+below the value already reached are priced at zero, the bracket holding it
+collects the mass of the remaining-hours forecast below its upper edge, and a
+per-hour regression of (final − running max) on (forecast − running max)
+supplies that forecast's mean and spread.
 
 `watch` and `summarize` are the cheap way to answer "is there anything here?"
 before any money moves. Nothing in this package calls an LLM; it runs fine on
@@ -157,7 +171,7 @@ pm_scanner/
   watch.py       polling loop, JSONL log, Telegram alerts, log summarizer
   israel.py      Knesset polls -> seat simulation -> bracket probabilities -> edges
   niches.py      recurring-family survey: cadence, depth, fees, day-before calibration
-  weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, trend/backtest/today
+  weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/today
   cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather` and `fee` commands
 data/            israel_polls_2026.csv (hand-maintained poll table)
 tests/           pytest suite running entirely on fixtures (incl. a 29 Sep 2026

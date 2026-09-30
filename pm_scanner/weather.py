@@ -615,22 +615,28 @@ class BacktestReport:
         return d
 
 
-def backtest(rows: list[BracketMarket], trades_source, forecast_source, *, cutoff_hour: int = 0, lead_days: int = 1, models: tuple[str, ...] = DEFAULT_MODELS, edge: float = 0.05, fee_rate: float = 0.05, min_calib_days: int = 8, calib_window: int = 0, extra: dict[tuple[str, date], dict[str, float]] | None = None, log=None) -> BacktestReport:
-    by_event = group_by_event([r for r in rows if r.event.closed])
-    # forecasts per city over the span of days seen
+def _fetch_forecasts(by_event: dict[str, list[BracketMarket]], forecast_source, models: tuple[str, ...], lead_days: int, extra, log) -> dict[tuple[str, date], dict[str, float]]:
+    """Day-ahead forecasts for every (city, day) that has a resolved bracket, plus hand-logged extras."""
     per_city_days: dict[str, list[date]] = defaultdict(list)
     for evrows in by_event.values():
         if actual_temperature(evrows) is not None and evrows[0].city in STATIONS:
             per_city_days[evrows[0].city].append(evrows[0].day)
     forecasts: dict[tuple[str, date], dict[str, float]] = {}
-    for city, days in per_city_days.items():
+    for city, days in sorted(per_city_days.items()):
         st = STATIONS[city]
-        kind = "high"
-        fc = merge_extra(forecast_source.previous_runs(st, min(days), max(days), models, lead_days, kind), extra or {}, city)
+        fc = merge_extra(forecast_source.previous_runs(st, min(days), max(days), models, lead_days, "high"), extra or {}, city)
         for d, vals in fc.items():
             forecasts[(city, d)] = vals
         if log:
-            log(f"{city}: forecasts for {len(fc)} days from {', '.join(models)}")
+            got = {m for vals in fc.values() for m in vals}
+            missing = [m for m in models if m not in got]
+            log(f"{city}: forecasts for {len(fc)} days from {', '.join(m for m in models if m in got)}" + (f"; no archive rows for {', '.join(missing)} (not in the previous-runs API?)" if missing else ""))
+    return forecasts
+
+
+def backtest(rows: list[BracketMarket], trades_source, forecast_source, *, cutoff_hour: int = 0, lead_days: int = 1, models: tuple[str, ...] = DEFAULT_MODELS, edge: float = 0.05, fee_rate: float = 0.05, min_calib_days: int = 8, calib_window: int = 0, extra: dict[tuple[str, date], dict[str, float]] | None = None, log=None) -> BacktestReport:
+    by_event = group_by_event([r for r in rows if r.event.closed])
+    forecasts = _fetch_forecasts(by_event, forecast_source, models, lead_days, extra, log)
     # walk days in order per city with an expanding calibration window
     days_out: list[BacktestDay] = []
     residuals: dict[str, list[float]] = defaultdict(list)
@@ -781,6 +787,274 @@ def render_backtest(r: BacktestReport) -> str:
     for d in r.days[-8:]:
         acts = ", ".join(f"{m['label']} {m['action']} @{m['p_market']:.2f} vs model {m['p_model']:.2f} -> {m['pnl']:+.2f}" for m in d.markets if m["action"])
         L.append(f"  {d.city:12} {d.day}  blend {d.blend:5.1f} bias {d.calib.bias:+.1f} sd {d.calib.sd:.1f}  actual {d.actual:5.1f}  | {acts or 'no trade'}")
+    return "\n".join(L)
+
+
+# --------------------------------------------------------------------------- #
+# Mode 2b: intraday (running maximum from the station's own hourly readings)
+# --------------------------------------------------------------------------- #
+
+IEM_ASOS = "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py"
+
+
+def iem_station_id(icao: str) -> str:
+    """IEM keys US ASOS stations by their 3-letter FAA id (KLGA -> LGA, PHNL -> HNL) and the rest by ICAO."""
+    if len(icao) == 4 and icao[0] in "KP" and icao[1:].isalpha():
+        return icao[1:]
+    return icao
+
+
+def round_half_up(x: float) -> int:
+    return math.floor(x + 0.5)
+
+
+class IemObs:
+    """Hourly station observations from the Iowa Environmental Mesonet ASOS/METAR archive
+    (free, no key, global coverage incl. LLBG). Routine hourly reports only by default, which
+    is what the markets' "hourly Temp reading" refers to; `report_types` (3 routine, 4 special)
+    widens that. Cached per station and range on disk because the archive never changes."""
+
+    def __init__(self, http: HttpClient | None = None, cache_dir: Path | None = None, report_types: tuple[int, ...] = (3,)) -> None:
+        self.http = http or HttpClient(timeout=120.0)
+        self.cache_dir = Path(cache_dir) if cache_dir else None
+        self.report_types = report_types
+
+    def observations(self, station: Station, start: date, end: date) -> list[tuple[int, float]]:
+        """[(utc timestamp, temperature in the station's unit)] for [start, end] (UTC dates, inclusive)."""
+        sid = iem_station_id(station.icao)
+        text = None
+        cache = None
+        if self.cache_dir:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            cache = self.cache_dir / f"{sid}_{start.isoformat()}_{end.isoformat()}_{''.join(map(str, self.report_types))}.csv"
+            if cache.exists():
+                text = cache.read_text()
+        if text is None:
+            params: dict[str, Any] = {
+                "station": sid, "data": ["tmpf", "tmpc"],  # repeated keys: data=tmpf&data=tmpc
+                "year1": start.year, "month1": start.month, "day1": start.day,
+                "year2": end.year, "month2": end.month, "day2": end.day,
+                "tz": "Etc/UTC", "format": "onlycomma", "latlon": "no", "elev": "no",
+                "missing": "M", "trace": "T", "direct": "no", "report_type": list(self.report_types),
+            }
+            try:
+                text = self.http.get_text(IEM_ASOS, params=params)
+            except HttpError as exc:
+                raise HttpError(f"IEM observations failed for {station.key} ({sid}): {exc}") from exc
+            if cache and text.strip():
+                cache.write_text(text)
+        return parse_iem_csv(text, station.unit)
+
+
+def parse_iem_csv(text: str, unit: str) -> list[tuple[int, float]]:
+    """IEM 'onlycomma' output: header `station,valid,tmpf,tmpc` then rows with valid in UTC ('2026-09-25 12:51')."""
+    out: list[tuple[int, float]] = []
+    header: list[str] | None = None
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        cells = [c.strip() for c in line.split(",")]
+        if header is None:
+            if "valid" in cells:
+                header = cells
+                continue
+            raise ValueError(f"unexpected IEM response: {line[:120]}")
+        row = dict(zip(header, cells))
+        col = "tmpf" if unit == "F" else "tmpc"
+        v = row.get(col, "M")
+        if v in ("", "M", "T"):
+            continue
+        try:
+            ts = int(datetime.strptime(row["valid"], "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc).timestamp())
+            out.append((ts, float(v)))
+        except (KeyError, ValueError):
+            continue
+    out.sort()
+    return out
+
+
+class FixtureObs:
+    """Offline observations: {icao: [[utc_ts, temp], ...]} from weather_obs.json, or an in-memory dict."""
+
+    def __init__(self, directory: Path | None = None, data: dict[str, list[list[float]]] | None = None) -> None:
+        self.data = data if data is not None else json.loads((Path(directory) / "weather_obs.json").read_text())
+
+    def observations(self, station: Station, start: date, end: date) -> list[tuple[int, float]]:
+        return sorted((int(t), float(v)) for t, v in self.data.get(station.icao, []))
+
+
+def running_max(obs: list[tuple[int, float]], station: Station, day: date, until: datetime) -> float | None:
+    """Highest reading whose local date is `day` and whose time is <= `until`."""
+    tz = ZoneInfo(station.tz)
+    best = None
+    lim = int(until.timestamp())
+    for ts, v in obs:
+        if ts > lim:
+            break
+        if datetime.fromtimestamp(ts, tz).date() == day:
+            best = v if best is None else max(best, v)
+    return best
+
+
+def bracket_probability_censored(lo: int | None, hi: int | None, settled: int, mu: float, sd: float) -> float:
+    """P(final bracket) when the day's maximum so far already rounds to `settled`: the final value is
+    max(settled, Y) with Y ~ N(mu, sd), so brackets below `settled` are dead and the one holding it
+    collects all of Y's mass below its upper edge."""
+    if hi is not None and hi < settled:
+        return 0.0
+    if lo is None or lo <= settled:
+        return 1.0 if hi is None else _phi((hi + 0.5 - mu) / sd)
+    return bracket_probability(lo, hi, mu, sd)
+
+
+@dataclass
+class HourModel:
+    """final = max(settled, M + alpha + beta * (F - M) + N(0, sd)), fitted per decision hour."""
+
+    alpha: float = 0.0
+    beta: float = 1.0
+    sd: float = 2.0
+    n: int = 0
+
+    @classmethod
+    def fit(cls, xs: list[float], ds: list[float], prior_sd: float, min_n: int = 8, bracket_width: float = 1.0) -> "HourModel":
+        n = len(xs)
+        if n < max(min_n, 3):
+            return cls(0.0, 1.0, prior_sd, n)
+        mx, md = statistics.mean(xs), statistics.mean(ds)
+        vx = sum((x - mx) ** 2 for x in xs)
+        beta = sum((x - mx) * (d - md) for x, d in zip(xs, ds)) / vx if vx > 1e-9 else 1.0
+        beta = min(max(beta, 0.0), 1.5)
+        alpha = md - beta * mx
+        res = [d - (alpha + beta * x) for x, d in zip(xs, ds)]
+        var = statistics.variance(res) - bracket_width**2 / 12.0
+        return cls(alpha, beta, math.sqrt(max(var, (0.3 * bracket_width) ** 2)), n)
+
+
+@dataclass
+class IntradayReport:
+    hours: tuple[int, ...]
+    latency_min: int
+    lead_days: int
+    models: tuple[str, ...]
+    edge: float
+    fee_rate: float
+    table: list[dict[str, Any]]  # per (city|all, hour): scored, briers, diff se, trades, pnl se, mark-to-market after 30 min
+    days: list[dict[str, Any]]  # per (city, day, hour): settled, forecast, model mean/sd, brackets traded
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def intraday(rows: list[BracketMarket], trades_source, forecast_source, obs_source, *, hours: tuple[int, ...] = (11, 13, 15), latency_min: int = 5, lead_days: int = 1, models: tuple[str, ...] = DEFAULT_MODELS, edge: float = 0.05, fee_rate: float = 0.05, min_calib_days: int = 8, calib_window: int = 0, extra=None, log=None) -> IntradayReport:
+    """At each decision hour, combine the station's running maximum with the day-ahead forecast and
+    score the result against the price `latency_min` after the hour, and again 30 minutes later
+    (if the market moves toward the model after the reading, the reading was not priced yet)."""
+    by_event = group_by_event([r for r in rows if r.event.closed])
+    forecasts = _fetch_forecasts(by_event, forecast_source, models, lead_days, extra, log)
+    events_sorted = sorted((evrows for evrows in by_event.values() if actual_temperature(evrows) is not None and evrows[0].city in STATIONS and (evrows[0].city, evrows[0].day) in forecasts), key=lambda e: (e[0].city, e[0].day))
+    obs: dict[str, list[tuple[int, float]]] = {}
+    for city in sorted({e[0].city for e in events_sorted}):
+        days = [e[0].day for e in events_sorted if e[0].city == city]
+        st = STATIONS[city]
+        obs[city] = obs_source.observations(st, min(days) - timedelta(days=1), max(days) + timedelta(days=1))
+        if log:
+            log(f"{city}: {len(obs[city])} hourly readings from {st.icao}")
+    residuals: dict[str, list[float]] = defaultdict(list)
+    hx: dict[tuple[str, int], list[float]] = defaultdict(list)  # F - M per (city, hour)
+    hd: dict[tuple[str, int], list[float]] = defaultdict(list)  # actual - M
+    acc: dict[tuple[str, int], dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    days_out: list[dict[str, Any]] = []
+    for evrows in events_sorted:
+        city, day = evrows[0].city, evrows[0].day
+        st = STATIONS[city]
+        actual = actual_temperature(evrows)
+        mu0 = blend(forecasts[(city, day)])
+        if mu0 is None or actual is None:
+            continue
+        calib = Calib.fit(residuals[city], st.default_sd, min_calib_days, window=calib_window)
+        f_cal = mu0 + calib.bias
+        series = {r.market.condition_id: yes_price_series(trades_source.trades(r.market.condition_id)) for r in evrows}
+        for hour in hours:
+            t_hour = cutoff_utc(st, day, hour)
+            m = running_max(obs[city], st, day, t_hour)
+            if m is None:
+                continue
+            settled = round_half_up(m)
+            hm = HourModel.fit(hx[(city, hour)], hd[(city, hour)], calib.sd, min_calib_days)
+            mu_y = m + hm.alpha + hm.beta * (f_cal - m)
+            t_dec = t_hour + timedelta(minutes=latency_min)
+            t_30 = t_dec + timedelta(minutes=30)
+            rec: dict[str, Any] = {"city": city, "day": day.isoformat(), "hour": hour, "running_max": m, "settled": settled, "forecast": round(f_cal, 2), "mu": round(mu_y, 2), "sd": round(hm.sd, 2), "actual": actual, "markets": []}
+            for r in sorted(evrows, key=lambda x: (x.lo if x.lo is not None else -999)):
+                p_mkt = price_at(series[r.market.condition_id], t_dec)
+                p_30 = price_at(series[r.market.condition_id], t_30)
+                y = r.resolved_yes
+                if p_mkt is None or y is None:
+                    continue
+                p_mod = bracket_probability_censored(r.lo, r.hi, settled, mu_y, hm.sd)
+                mk: dict[str, Any] = {"label": r.label(), "p_model": round(p_mod, 4), "p_market": p_mkt, "p_market_30": p_30, "y": int(y), "action": "", "pnl": 0.0, "mtm30": None}
+                if hm.n >= min_calib_days:
+                    a = acc[(city, hour)]
+                    a["msq"].append((p_mkt - y) ** 2)
+                    a["fsq"].append((p_mod - y) ** 2)
+                    if p_30 is not None:
+                        a["msq30"].append((p_30 - y) ** 2)
+                    fee = fee_rate * p_mkt * (1 - p_mkt)
+                    if p_mkt - p_mod > edge and p_mkt >= 0.05:
+                        mk["action"], mk["pnl"] = "sell", p_mkt - y - fee
+                        mk["mtm30"] = (p_mkt - p_30 - fee) if p_30 is not None else None
+                    elif p_mod - p_mkt > edge and p_mkt <= 0.95:
+                        mk["action"], mk["pnl"] = "buy", y - p_mkt - fee
+                        mk["mtm30"] = (p_30 - p_mkt - fee) if p_30 is not None else None
+                    if mk["action"]:
+                        a["pnl"].append(mk["pnl"])
+                        if mk["mtm30"] is not None:
+                            a["mtm30"].append(mk["mtm30"])
+                rec["markets"].append(mk)
+            days_out.append(rec)
+            hx[(city, hour)].append(f_cal - m)
+            hd[(city, hour)].append(actual - m)
+        residuals[city].append(actual - mu0)
+    table: list[dict[str, Any]] = []
+    cities = sorted({c for c, _ in acc})
+    for hour in hours:
+        for city in cities + ["all"]:
+            keys = [(city, hour)] if city != "all" else [(c, hour) for c in cities]
+            msq = [x for k in keys for x in acc[k]["msq"]]
+            fsq = [x for k in keys for x in acc[k]["fsq"]]
+            msq30 = [x for k in keys for x in acc[k]["msq30"]]
+            pnl = [x for k in keys for x in acc[k]["pnl"]]
+            mtm = [x for k in keys for x in acc[k]["mtm30"]]
+            if not msq:
+                continue
+            table.append({
+                "city": city, "hour": hour, "n_scored": len(msq),
+                "market_brier": statistics.mean(msq), "model_brier": statistics.mean(fsq),
+                "market_brier_30": statistics.mean(msq30) if msq30 else None,
+                "brier_diff_se": _se_of_mean([f - m for f, m in zip(fsq, msq)]),
+                "trades": len(pnl), "pnl": sum(pnl), "pnl_se": _se_of_sum(pnl),
+                "mtm30": sum(mtm) if mtm else None, "mtm30_se": _se_of_sum(mtm),
+            })
+    return IntradayReport(hours=hours, latency_min=latency_min, lead_days=lead_days, models=models, edge=edge, fee_rate=fee_rate, table=table, days=days_out)
+
+
+def render_intraday(r: IntradayReport) -> str:
+    L = [f"Weather intraday  decision {r.latency_min} min after each local hour {', '.join(f'{h:02d}:00' for h in r.hours)}; running max from routine hourly readings + day-ahead blend ({', '.join(r.models)})", ""]
+    L.append("Brier at the decision time (market vs model), market Brier 30 min later, and paper P&L: at expiry and marked to market after 30 min.")
+    L.append("A positive mtm30 means the price moved toward the model right after the reading: the reading was not yet priced.")
+    L.append(f"  {'hour':>5} {'city':12} {'scored':>6} {'market':>7} {'model':>7} {'mdl-mkt ±se':>16} {'mkt+30':>7} {'trades':>6} {'pnl ±se':>14} {'mtm30 ±se':>14}")
+    for t in r.table:
+        diff = t["model_brier"] - t["market_brier"]
+        m30 = f"{t['market_brier_30']:7.4f}" if t["market_brier_30"] is not None else f"{'-':>7}"
+        L.append(f"  {t['hour']:02d}:00 {t['city']:12} {t['n_scored']:6} {t['market_brier']:7.4f} {t['model_brier']:7.4f} {_pm(diff, t['brier_diff_se'], '+.4f'):>16} {m30} {t['trades']:6} {_pm(t['pnl'], t['pnl_se'], '+.2f'):>14} {_pm(t['mtm30'], t['mtm30_se'], '+.2f'):>14}")
+    L.append(f"  (edge threshold {r.edge:.2f}, fee {r.fee_rate:.2f}; se treats brackets as independent, so it is optimistic)")
+    L.append("")
+    L.append("Last decisions (running max -> settled-so-far, forecast, model mean/sd, actual, trades):")
+    for d in r.days[-9:]:
+        acts = ", ".join(f"{m['label']} {m['action']} @{m['p_market']:.2f} vs {m['p_model']:.2f} -> {m['pnl']:+.2f}" for m in d["markets"] if m["action"])
+        L.append(f"  {d['city']:12} {d['day']} {d['hour']:02d}:00  max {d['running_max']:5.1f} -> {d['settled']}, fc {d['forecast']:5.1f}, model {d['mu']:5.1f}±{d['sd']:.1f}, actual {d['actual']:5.1f} | {acts or 'no trade'}")
     return "\n".join(L)
 
 
