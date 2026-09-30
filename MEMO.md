@@ -769,6 +769,66 @@ at the mid in that one family. If they are flukes, the recommendation is
 to stop spending credits on Polymarket research and put the memo away
 until the fee schedule or the market structure changes.
 
+## 16. Closing the loop (30 Sep): the two survivors re-sampled, and the maker paper test
+
+**Out of sample.** Sixty fresh resolved markets per family over 60 days,
+every market from the first pass excluded (`flow --families ... --exclude-json`;
+report in `data/flow_oos_miami_jleague_2026-09-30.txt`).
+
+| family | first pass (30 mkts) | out of sample (60 fresh) | combined (90) | all 200 resolved markets |
+| --- | --- | --- | --- | --- |
+| Miami daily weather | +14.6 ± 4.4 | **−1.5 ± 1.6** | +1.1 ± 1.9 | −0.9 ± 1.3 |
+| Japanese J-League | +13.6 ± 4.5 | +24.3 ± 14.1 | +17.1 ± 4.9 | **−0.7 ± 7.2** |
+
+(makers' edge per $100 filled, ± treats each market as one observation)
+
+Miami was the expected fluke: gone at the first fresh sample. The J-League
+looked like it might survive (combined +17 ± 5 over 90 markets, still
++20 ± 9 without its two biggest), then the full set of 200 resolved
+markets put it at zero, with the 110 markets outside the two samples
+running about −12 per $100. The lesson is about the estimator, not the
+league: taker markouts are so heavy-tailed market to market that ninety
+markets and a clustered error still let a +3.5-sigma reading come from
+nothing. Nothing in the screen survives a bigger sample.
+
+**The maker paper test on the tape** (`flow --maker`; report in
+`data/flow_maker_paper_2026-09-30.txt`), the honest form of "a week of
+paper quotes": a two-sided quote re-centred on every print at ±2, 3 or 5
+cents, 20 shares a side, position cap 100 shares, filled by prints
+through the quote, held to expiry, over all 200 resolved markets of each
+family. Fills through the quote are a lower bound on fills and select the
+adverse ones; fills at the quote (`--fill at`, assuming we were first in
+the queue) are the upper bound. Both are below.
+
+| family | quotes | fills through the quote: P&L per $100 ± se | filled $/day | fills at the quote: P&L per $100 ± se | filled $/day |
+| --- | --- | --- | --- | --- | --- |
+| J-League | ±2c, any hour | −19.8 ± 4.1 | 49 | pending | pending |
+| J-League | ±2c, ≥1h to close | −14.7 ± 5.5 | 19 | pending | pending |
+| Premier League | ±2c, any hour | −13.9 ± 2.9 | 100 | pending | pending |
+| Premier League | ±2c, ≥1h to close | −8.8 ± 2.8 | 56 | pending | pending |
+| Miami weather | ±2c, any hour | −3.9 ± 0.6 | 526 | pending | pending |
+| Miami weather | ±2c, ≥1h to close | −3.9 ± 0.6 | 525 | pending | pending |
+
+Through the quote the maker loses in every family at every spread: the
+prints that reach a resting quote are the informed ones, and widening the
+quote makes it worse per dollar (−20 at 2c, −24 at 5c in the J-League)
+because only the jumps still reach it. Quoting only well before the close
+removes the fills along with the losses (a few dollars a day). The at-the-quote bound is being computed and follows in the next revision.
+
+**Weather, sports and the maker business are closed, and so is this
+research.** The tally since the niche survey: seven pre-registered tests
+(day-ahead forecast, intraday forecast, speed, weather maker flow,
+site-wide maker flow, out-of-sample re-check, maker paper test), every one
+at zero or negative for us, with the two flattering readings on the way
+each explained by a bug or by sampling. The tools stay in the repo and
+run in one line; the memo stays as the record of what was tried and why
+it did not work. If anything changes the picture it will be structural:
+a fee change that leaves makers a rebate worth having, a new family with
+retail flow before the bots arrive, or a decision to compete on
+operations (latency, uptime, capital) rather than on research. None of
+those is a $50 experiment, and I would not recommend funding an account
+on the strength of anything in sections 10-16.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
@@ -785,6 +845,6 @@ until the fee schedule or the market structure changes.
 * Who wins on Polymarket: [CEPR DP21615, Who Wins and Who Loses in Prediction Markets](https://cepr.org/publications/dp21615) (limit-order traders and election/sports directional traders; top 1% take 76.5% of profits).
 * Rules: [Polymarket market-integrity rules, March 2026](https://www.businesswire.com/news/home/20260320997513/en/Polymarket-Publishes-Enhanced-Market-Integrity-Rules-Across-Its-DeFi-Platform-and-CFTC-Regulated-U.S.-Exchange), [Debevoise on the April 2026 insider-trading charges](https://www.debevoise.com/insights/publications/2026/04/polymarket-insider-trading-charges-illustrate-doj).
 * Other niches checked: [weather bots and edge compression](https://laikalabs.ai/prediction-markets/trade-polymarket-weather-markets), [The Ankler on entertainment markets](https://theankler.com/gamblers-prediction-markets-entertainment-rotten-tomatoes-box-office-polymarket/).
-* Order flow (section 15): Polymarket data-api `/trades?market=<conditionId>&limit=10000` (`side` read as the taker's side; outcome labels matched against the market's outcome list), 30 Sep 2026; full report in `data/flow_families_2026-09-30.txt`.
+* Order flow (sections 15-16): Polymarket data-api `/trades?market=<conditionId>&limit=10000` (`side` read as the taker's side; outcome labels matched against the market's outcome list), 30 Sep 2026; full report in `data/flow_families_2026-09-30.txt`.
 * Weather (sections 11-13): Iowa Environmental Mesonet ASOS/METAR archive ([download form](https://mesonet.agron.iastate.edu/request/download.phtml), CGI `cgi-bin/request/asos.py`, routine reports = `report_type=3`); Open-Meteo [previous-runs API](https://open-meteo.com/en/docs/previous-runs-api), [ensemble API](https://open-meteo.com/en/docs/ensemble-api), model ids incl. `gfs_graphcast025` and `ecmwf_aifs025_single`; Polymarket data-api `/trades?market=<conditionId>&limit=10000` (full history of closed markets); station coordinates from published aerodrome data; IMS forecasts at [ims.gov.il](https://ims.gov.il/he) (no archive of past forecasts).
 * Niche survey (section 10): Gamma `/events` by tag with `start_date_min/max` windows and `exclude_tag_id=102127`, `/series`, CLOB `/books` and `/prices-history` (history is purged about a week after a market closes; `data-api.polymarket.com/trades` keeps trades longer), 29 Sep 2026. Weather market rules cite NOAA `weather.gov/wrh/timeseries?site=<ICAO>` (US stations and LLBG Tel Aviv) and Weather Underground daily history (other cities). Forecast data for the backtest: [Open-Meteo historical forecast API](https://open-meteo.com/en/docs/historical-forecast-api), [Open-Meteo ensemble API](https://open-meteo.com/en/docs/ensemble-api).
