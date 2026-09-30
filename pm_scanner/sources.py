@@ -40,6 +40,10 @@ class LiveSource:
                 lo = hi
         return list(seen.values())
 
+    def poly_weather_events(self, since: datetime, until: datetime) -> list[PolyEvent]:
+        """Every daily-temperature event (all cities): open ones plus those started in the window."""
+        return [e for e in self.poly_events_survey(("weather",), since, until, exclude_tag_id="102127") if e.series_slug]
+
     def kalshi_markets(self) -> list[KalshiMarket]:
         return list(self.kalshi.iter_markets())
 
@@ -55,8 +59,8 @@ class LiveSource:
 
 class FixtureSource:
     """Reads gamma_events.json, clob_books.json, kalshi_markets.json, kalshi_orderbooks.json,
-    plus israel_events.json / israel_books.json for the election model and niche_events.json
-    for the niche survey."""
+    plus israel_events.json / israel_books.json for the election model, niche_events.json
+    for the niche survey and weather_events.json / weather_trades.json for the weather model."""
 
     def __init__(self, directory: Path) -> None:
         self.dir = Path(directory)
@@ -81,6 +85,9 @@ class FixtureSource:
 
     def poly_events_survey(self, tags: tuple[str, ...], since: datetime, until: datetime, exclude_tag_id: str | None = None) -> list[PolyEvent]:
         return [parse_event(d) for d in self._load("niche_events.json", [])]
+
+    def poly_weather_events(self, since: datetime, until: datetime) -> list[PolyEvent]:
+        return [parse_event(d) for d in self._load("weather_events.json", [])]
 
     def kalshi_markets(self) -> list[KalshiMarket]:
         data = self._load("kalshi_markets.json", {})

@@ -22,6 +22,22 @@ from .scans import (
     utcnow,
 )
 from .sources import FixtureSource, LiveSource
+from .weather import (
+    DEFAULT_MODELS,
+    STATIONS,
+    Calib,
+    FixtureTrades,
+    LiveTrades,
+    OpenMeteo,
+    backtest,
+    bracket_markets,
+    parse_station_overrides,
+    render_backtest,
+    render_today,
+    render_trend,
+    today,
+    trend,
+)
 from .watch import ARB_KINDS, JsonlLog, TelegramNotifier, render_summary, summarize, watch
 
 
@@ -144,6 +160,58 @@ def _scan_kwargs(args: argparse.Namespace) -> dict:
     )
 
 
+def _run_weather(args, source) -> int:
+    from datetime import timedelta
+
+    parse_station_overrides(args.station)
+    cities = None if args.cities.strip().lower() == "all" else {c.strip() for c in args.cities.split(",") if c.strip()}
+    unknown = sorted(c for c in (cities or set()) if c not in STATIONS)
+    if unknown:
+        print(f"unknown city keys: {', '.join(unknown)}; known: {', '.join(sorted(STATIONS))}", file=sys.stderr)
+        return 2
+    now = utcnow()
+    since = now - timedelta(days=args.days)
+    models = tuple(m.strip() for m in args.models.split(",") if m.strip())
+    log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
+    try:
+        events = source.poly_weather_events(since, now)
+        rows = bracket_markets(events, cities)
+        log(f"{len(events)} weather events loaded, {len(rows)} brackets in {len({r.city for r in rows})} cities")
+        trades_src = FixtureTrades(args.fixtures) if args.fixtures else LiveTrades(cache_dir=args.cache_dir)
+        if args.mode == "trend":
+            table, pairs = trend(rows, trades_src, cutoff_hour=args.cutoff_hour, events_per_month=args.events_per_month, fee_rate=args.fee, log=log)
+            print(render_trend(table, args.cutoff_hour))
+            if args.json:
+                args.json.write_text(json.dumps({"rows": [r.__dict__ for r in table], "pairs": pairs}, indent=1))
+                print(f"\nwrote {args.json}")
+            return 0
+        forecast_src = OpenMeteo()
+        if args.mode == "backtest":
+            report = backtest(rows, trades_src, forecast_src, cutoff_hour=args.cutoff_hour, lead_days=args.lead, models=models, edge=args.edge, fee_rate=args.fee, log=log)
+            print(render_backtest(report))
+            if args.json:
+                args.json.write_text(json.dumps(report.to_dict(), indent=1, default=str))
+                print(f"\nwrote {args.json}")
+            return 0
+        calib = None
+        if args.calib and args.calib.exists():
+            data = json.loads(args.calib.read_text())
+            calib = {}
+            for d in data.get("days", []):
+                c = d.get("calib") or {}
+                calib[d["city"]] = Calib(c.get("bias", 0.0), c.get("sd", 2.0), c.get("n", 0))  # last day wins
+        books = source.poly_books([r.market.yes_token for r in rows if not r.event.closed and r.market.yes_token])
+        quotes, summaries = today(rows, books, forecast_src, calib=calib, models=models, ensemble=args.ensemble, budget=args.budget, edge=args.edge, maker_margin=args.maker_margin, fee_rate=None, log=log)
+        print(render_today(quotes, summaries, args.budget))
+        if args.json:
+            args.json.write_text(json.dumps({"quotes": [q.__dict__ for q in quotes], "forecasts": summaries}, indent=1, default=str))
+            print(f"\nwrote {args.json}")
+        return 0
+    except Exception as exc:
+        print(f"weather failed: {exc}", file=sys.stderr)
+        return 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="pm_scanner", description="Read-only Polymarket/Kalshi opportunity scanner")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -198,6 +266,25 @@ def build_parser() -> argparse.ArgumentParser:
     n.add_argument("--fixtures", type=Path, default=None, help="offline: read niche_events.json from DIR")
     n.add_argument("--json", type=Path, default=None, help="also write every family's stats to this JSON file")
 
+    wx = sub.add_parser("weather", help="daily temperature brackets: mispricing trend, forecast backtest, or live quotes")
+    wx.add_argument("--mode", choices=["trend", "backtest", "today"], default="backtest")
+    wx.add_argument("--cities", default="nyc,london,tel-aviv", help=f"comma-separated city keys, or 'all'; known: {', '.join(sorted(STATIONS))}")
+    wx.add_argument("--days", type=int, default=30, help="how many days back to load events for (trend/backtest)")
+    wx.add_argument("--cutoff-hour", type=int, default=0, help="local hour on the target day whose price is scored (0 = as the day starts)")
+    wx.add_argument("--lead", type=int, default=1, help="use the forecast issued this many days before the target day")
+    wx.add_argument("--models", default=",".join(DEFAULT_MODELS), help="Open-Meteo model ids, comma-separated")
+    wx.add_argument("--edge", type=float, default=0.05, help="minimum model-vs-market gap to trade, per share, before fees for backtest / after fees for today")
+    wx.add_argument("--fee", type=float, default=0.05, help="taker rate (weather markets pay 0.05)")
+    wx.add_argument("--events-per-month", type=int, default=25, help="trend: sampled events per month (each is ~11 trade-history calls)")
+    wx.add_argument("--budget", type=float, default=300.0, help="today: total budget for sizing")
+    wx.add_argument("--maker-margin", type=float, default=0.05, help="today: how far inside the model to post resting orders")
+    wx.add_argument("--ensemble", action="store_true", help="today: also pull the ECMWF ensemble for the spread")
+    wx.add_argument("--calib", type=Path, default=None, help="today: JSON from a backtest run to reuse per-city bias/sd")
+    wx.add_argument("--station", default="", help="override coordinates, e.g. 'nyc=40.78,-73.87;tel-aviv=32.01,34.89'")
+    wx.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_trades"), help="where trade histories are cached")
+    wx.add_argument("--fixtures", type=Path, default=None, help="offline: weather_events.json / weather_trades.json from DIR")
+    wx.add_argument("--json", type=Path, default=None, help="also write the report to this JSON file")
+
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
     f.add_argument("--platform", choices=["polymarket", "kalshi"], required=True)
     f.add_argument("--price", type=float, required=True)
@@ -248,6 +335,9 @@ def main(argv: list[str] | None = None) -> int:
             args.json.write_text(json.dumps(report.to_dict(), indent=2, default=str))
             print(f"\nwrote {args.json}")
         return 0
+
+    if args.cmd == "weather":
+        return _run_weather(args, source)
 
     if args.cmd == "niches":
         now = utcnow()

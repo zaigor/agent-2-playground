@@ -90,6 +90,35 @@ Brier skill of that price; a negative `LSbias`/`midbias` means 3-20c / 30-70c
 contracts hit less often than they were priced. The 29 Sep 2026 survey and its
 conclusions are in MEMO.md section 10.
 
+### Daily temperature markets (`weather`)
+
+52 cities, ~1,000 bracket markets a day, each resolving on a named airport
+station's hourly readings. Three modes:
+
+```bash
+# 1. is the mispricing still there? price of every bracket at local midnight of the target day,
+#    from data-api trade history (kept for months), 25 sampled event-days per month
+python -m pm_scanner weather --mode trend --cities all --days 270 --events-per-month 25
+
+# 2. do previous-day forecasts beat those prices? Open-Meteo previous-runs (ECMWF, GFS, ICON),
+#    rolling per-station bias/sd, Brier vs the market, paper P&L net of the 5% fee
+python -m pm_scanner weather --mode backtest --cities nyc,london,tel-aviv --days 45
+
+# 3. today's forecast distribution vs the open books: takers with edge, then resting quotes
+python -m pm_scanner weather --mode today --cities nyc,london,tel-aviv --budget 300 --ensemble
+
+python -m pm_scanner weather --mode trend --fixtures tests/fixtures --days 400   # offline sample
+```
+
+Trade histories are cached under `.cache/pm_trades/` (one request per market,
+about 0.7s each; a 30-day, 3-city backtest is ~1,000 requests the first time
+and instant afterwards). Open-Meteo needs no key. Coordinates for every
+station are in `weather.py`; fix one with `--station nyc=40.78,-73.87`. The
+forecast is the mean of the requested models plus a per-station bias, with an
+error sd fitted on the days already seen (prior 1.8°C / 3.2°F), and each
+bracket's probability is the normal mass on `[lo-0.5, hi+0.5)` because the
+rules round to whole degrees.
+
 `watch` and `summarize` are the cheap way to answer "is there anything here?"
 before any money moves. Nothing in this package calls an LLM; it runs fine on
 a laptop or a small VPS and costs nothing to leave running.
@@ -121,11 +150,13 @@ pm_scanner/
   watch.py       polling loop, JSONL log, Telegram alerts, log summarizer
   israel.py      Knesset polls -> seat simulation -> bracket probabilities -> edges
   niches.py      recurring-family survey: cadence, depth, fees, day-before calibration
-  cli.py         `scan`, `watch`, `summarize`, `israel`, `niches` and `fee` commands
+  weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, trend/backtest/today
+  cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather` and `fee` commands
 data/            israel_polls_2026.csv (hand-maintained poll table)
 tests/           pytest suite running entirely on fixtures (incl. a 29 Sep 2026
                  snapshot of the Israel election markets and their order books,
-                 and a sample of weather / box-office / tweet-count events)
+                 a sample of weather / box-office / tweet-count events, and three
+                 resolved temperature events with their trade histories)
 ```
 
 Every opportunity also carries the venue's minimum order size for its legs
