@@ -114,6 +114,11 @@ python -m pm_scanner weather --mode backtest --cities nyc,london,tel-aviv --days
 python -m pm_scanner weather --mode intraday --cities nyc,london,tel-aviv --days 45 --calib-window 21 \
     --models icon_seamless,gfs_seamless,ecmwf_ifs025 --hours 11,13,15 --latency-min 5
 
+# 2c. the maker leg from the trade histories alone: every trade seen from the taker's side, marked
+#     to expiry and 30 min later, by station, local time of day and price band. Negative taker
+#     markout = takers lose = the makers who filled them earned it (before liquidity rebates).
+python -m pm_scanner weather --mode flow --cities nyc,london,tel-aviv --days 45
+
 # 3. today's forecast distribution vs the open books: takers with edge, then resting quotes
 python -m pm_scanner weather --mode today --cities nyc,london,tel-aviv --budget 300 --ensemble
 
@@ -171,7 +176,7 @@ pm_scanner/
   watch.py       polling loop, JSONL log, Telegram alerts, log summarizer
   israel.py      Knesset polls -> seat simulation -> bracket probabilities -> edges
   niches.py      recurring-family survey: cadence, depth, fees, day-before calibration
-  weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/today
+  weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/flow/today
   cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather` and `fee` commands
 data/            israel_polls_2026.csv (hand-maintained poll table)
 tests/           pytest suite running entirely on fixtures (incl. a 29 Sep 2026

@@ -319,7 +319,7 @@ class PolymarketClient:
         start_min: datetime | None = None,
         start_max: datetime | None = None,
         exclude_tag_id: str | None = None,
-        max_offset: int = 4000,
+        max_offset: int = 2000,
     ) -> Iterator[PolyEvent]:
         """Events carrying a Gamma tag (e.g. `israel-election`).
 

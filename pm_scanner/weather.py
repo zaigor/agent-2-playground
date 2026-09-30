@@ -1059,6 +1059,162 @@ def render_intraday(r: IntradayReport) -> str:
 
 
 # --------------------------------------------------------------------------- #
+# Mode 2c: flow (who wins, takers or makers?)
+# --------------------------------------------------------------------------- #
+
+FLOW_TIME_BUCKETS = (("day before", None), ("00-06", (0, 6)), ("06-09", (6, 9)), ("09-12", (9, 12)), ("12-14", (12, 14)), ("14-16", (14, 16)), ("16-24", (16, 24)))
+FLOW_PRICE_BANDS = ((0.0, 0.10), (0.10, 0.30), (0.30, 0.70), (0.70, 0.90), (0.90, 1.01))
+
+
+def _time_bucket(local: datetime, day: date) -> str:
+    if local.date() < day:
+        return "day before"
+    if local.date() > day:
+        return "after"
+    for name, rng in FLOW_TIME_BUCKETS[1:]:
+        if rng[0] <= local.hour < rng[1]:
+            return name
+    return "after"
+
+
+def _price_band(p: float) -> str:
+    for lo, hi in FLOW_PRICE_BANDS:
+        if lo <= p < hi:
+            return f"{lo:.2f}-{min(hi, 1.0):.2f}"
+    return "?"
+
+
+class _FlowAcc:
+    def __init__(self) -> None:
+        self.n = 0
+        self.shares = 0.0
+        self.dollars = 0.0
+        self.fees = 0.0
+        self.w_exp: list[tuple[float, float]] = []  # (size, taker markout to expiry per share)
+        self.w_h: list[tuple[float, float]] = []  # (size, taker markout at the horizon per share)
+
+    def add(self, size: float, p: float, fee: float, mo_exp: float, mo_h: float | None) -> None:
+        self.n += 1
+        self.shares += size
+        self.dollars += size * p
+        self.fees += size * fee
+        self.w_exp.append((size, mo_exp))
+        if mo_h is not None:
+            self.w_h.append((size, mo_h))
+
+    @staticmethod
+    def _wmean_se(pairs: list[tuple[float, float]]) -> tuple[float | None, float | None]:
+        tot = sum(w for w, _ in pairs)
+        if not pairs or tot <= 0:
+            return None, None
+        mean = sum(w * x for w, x in pairs) / tot
+        if len(pairs) < 2:
+            return mean, None
+        se = math.sqrt(sum((w * (x - mean)) ** 2 for w, x in pairs)) / tot
+        return mean, se
+
+    def row(self, **keys) -> dict[str, Any]:
+        m_exp, se_exp = self._wmean_se(self.w_exp)
+        m_h, se_h = self._wmean_se(self.w_h)
+        return {**keys, "trades": self.n, "shares": self.shares, "dollars": self.dollars, "taker_fees": self.fees,
+                "taker_markout_expiry": m_exp, "taker_markout_expiry_se": se_exp,
+                "taker_markout_horizon": m_h, "taker_markout_horizon_se": se_h,
+                "maker_pnl": -sum(w * x for w, x in self.w_exp),
+                "maker_pnl_per_100": (-sum(w * x for w, x in self.w_exp) / self.dollars * 100) if self.dollars else None}
+
+
+@dataclass
+class FlowReport:
+    horizon_min: int
+    fee_rate: float
+    by_city_time: list[dict[str, Any]]
+    by_band: list[dict[str, Any]]
+    total: dict[str, Any]
+    event_days: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def flow(rows: list[BracketMarket], trades_source, *, horizon_min: int = 30, fee_rate: float = 0.05, log=None) -> FlowReport:
+    """Every trade in the histories, seen from the taker's side: did the taker's position gain by
+    expiry (informed flow: makers lose) or lose (noise flow: makers earn the spread)? The maker's
+    P&L is the mirror image of the taker's markout, before any liquidity rebate, and the maker
+    paid no fee. The horizon markout says how quickly the price moves against the maker."""
+    by_event = group_by_event([r for r in rows if r.event.closed])
+    ct: dict[tuple[str, str], _FlowAcc] = defaultdict(_FlowAcc)
+    bands: dict[str, _FlowAcc] = defaultdict(_FlowAcc)
+    total = _FlowAcc()
+    horizon = horizon_min * 60
+    n_days = 0
+    events_sorted = sorted((e for e in by_event.values() if actual_temperature(e) is not None and e[0].city in STATIONS), key=lambda e: (e[0].city, e[0].day))
+    for i, evrows in enumerate(events_sorted):
+        city, day = evrows[0].city, evrows[0].day
+        tz = ZoneInfo(STATIONS[city].tz)
+        n_days += 1
+        if log and i % 25 == 0:
+            log(f"flow: {i}/{len(events_sorted)} event-days")
+        for r in evrows:
+            y = r.resolved_yes
+            if y is None:
+                continue
+            trades = trades_source.trades(r.market.condition_id)
+            series = yes_price_series(trades)
+            for t in trades:
+                try:
+                    ts, price, size = int(t["timestamp"]), float(t["price"]), float(t.get("size") or 0)
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if size <= 0 or not 0 < price < 1:
+                    continue
+                is_yes = str(t.get("outcome", "Yes")).lower() != "no"
+                p_yes = price if is_yes else 1.0 - price
+                # the taker's exposure to YES: buying Yes or selling No is long YES
+                direction = 1 if (str(t.get("side", "BUY")).upper() == "BUY") == is_yes else -1
+                mo_exp = direction * (int(y) - p_yes)
+                p_h = price_at(series, datetime.fromtimestamp(ts + horizon, timezone.utc))
+                mo_h = direction * (p_h - p_yes) if p_h is not None else None
+                fee = fee_rate * p_yes * (1 - p_yes)
+                bucket = _time_bucket(datetime.fromtimestamp(ts, tz), day)
+                for acc in (ct[(city, bucket)], ct[("all", bucket)], bands[_price_band(p_yes)], total):
+                    acc.add(size, p_yes, fee, mo_exp, mo_h)
+    order = {name: i for i, (name, _) in enumerate(FLOW_TIME_BUCKETS)} | {"after": 99}
+    by_city_time = [acc.row(city=c, when=b) for (c, b), acc in sorted(ct.items(), key=lambda kv: (kv[0][0] == "all", kv[0][0], order.get(kv[0][1], 98)))]
+    by_band = [acc.row(band=b) for b, acc in sorted(bands.items())]
+    return FlowReport(horizon_min=horizon_min, fee_rate=fee_rate, by_city_time=by_city_time, by_band=by_band, total=total.row(), event_days=n_days)
+
+
+def render_flow(r: FlowReport) -> str:
+    L = [f"Weather order flow  {r.event_days} event-days; markouts per share from the TAKER's side (negative = takers lose = makers earn); horizon {r.horizon_min} min", ""]
+    hdr = f"  {'city':12} {'when (local)':12} {'trades':>7} {'$ traded':>10} {'taker→expiry ±se':>18} {'taker→+' + str(r.horizon_min) + 'm ±se':>17} {'maker $':>9} {'per $100':>8} {'taker fees $':>12}"
+    L.append(hdr)
+    for row in r.by_city_time:
+        if row["city"] == "all":
+            continue
+        L.append(_flow_line(row, row["city"], row["when"]))
+    L.append("")
+    for row in r.by_city_time:
+        if row["city"] == "all":
+            L.append(_flow_line(row, "all", row["when"]))
+    L.append(_flow_line(r.total, "all", "total"))
+    L.append("")
+    L.append("By price of the taker's YES exposure:")
+    for row in r.by_band:
+        L.append(_flow_line(row, "all", row["band"]))
+    L.append("")
+    L.append("Reading: makers as a group earned `maker $` before rebates; `per $100` is that per $100 of notional filled. Trades within one market")
+    L.append("share the outcome, so the se is optimistic. A maker only earns this if its quotes are the ones filled, at these prices, at these times.")
+    return "\n".join(L)
+
+
+def _flow_line(row: dict[str, Any], city: str, when: str) -> str:
+    def pm(x, se, f="+.3f"):
+        return "-" if x is None else f"{x:{f}}" + (f"±{se:{f.lstrip('+')}}" if se is not None else "")
+    per100 = f"{row['maker_pnl_per_100']:+8.2f}" if row["maker_pnl_per_100"] is not None else f"{'-':>8}"
+    return f"  {city:12} {when:12} {row['trades']:7} {row['dollars']:10,.0f} {pm(row['taker_markout_expiry'], row['taker_markout_expiry_se']):>18} {pm(row['taker_markout_horizon'], row['taker_markout_horizon_se']):>17} {row['maker_pnl']:+9,.0f} {per100} {row['taker_fees']:12,.0f}"
+
+
+# --------------------------------------------------------------------------- #
 # Mode 3: today
 # --------------------------------------------------------------------------- #
 

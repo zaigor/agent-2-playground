@@ -25,16 +25,17 @@ class LiveSource:
     def poly_events_by_tag(self, tag_slug: str) -> list[PolyEvent]:
         return list(self.poly.iter_events_by_tag(tag_slug))
 
-    def poly_events_survey(self, tags: tuple[str, ...], since: datetime, until: datetime, exclude_tag_id: str | None = None) -> list[PolyEvent]:
+    def poly_events_survey(self, tags: tuple[str, ...], since: datetime, until: datetime, exclude_tag_id: str | None = None, window_days: int = 7) -> list[PolyEvent]:
         """Open events plus events started in [since, until) for each tag, de-duplicated.
-        Closed events are pulled month by month to stay under Gamma's offset cap."""
+        Closed events are pulled in `window_days` windows to stay under Gamma's offset cap
+        (about 2,000 as of 30 Sep 2026; the weather tag alone starts ~100 events a day)."""
         seen: dict[str, PolyEvent] = {}
         for tag in tags:
             for ev in self.poly.iter_events_by_tag(tag, exclude_tag_id=exclude_tag_id):
                 seen.setdefault(ev.id, ev)
             lo = since
             while lo < until:
-                hi = min(until, (lo.replace(day=1) + timedelta(days=32)).replace(day=1))
+                hi = min(until, lo + timedelta(days=window_days))
                 for ev in self.poly.iter_events_by_tag(tag, closed_only=True, start_min=lo, start_max=hi, exclude_tag_id=exclude_tag_id):
                     seen.setdefault(ev.id, ev)
                 lo = hi

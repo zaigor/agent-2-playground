@@ -17,11 +17,13 @@ from pm_scanner.weather import (
     backtest,
     bracket_probability_censored,
     FixtureObs,
+    flow,
     HourModel,
     iem_station_id,
     intraday,
     parse_iem_csv,
     render_backtest,
+    render_flow,
     render_intraday,
     running_max,
     bracket_markets,
@@ -300,3 +302,19 @@ def test_intraday_backtest_knows_the_answer_by_mid_afternoon():
     text = render_intraday(r)
     assert "Weather intraday" in text and "15:00 all" in text
     assert r.to_dict()["hours"] == [11, 15] or r.to_dict()["hours"] == (11, 15)
+
+
+def test_flow_markouts_mirror_between_taker_and_maker():
+    events = FixtureSource(FIXTURES).poly_weather_events(SINCE, NOW)
+    rows = bracket_markets(events)
+    r = flow(rows, FixtureTrades(FIXTURES), horizon_min=30)
+    assert r.event_days == 3 and r.total["trades"] > 100 and r.total["dollars"] > 0
+    # maker P&L is minus the size-weighted taker markout
+    assert abs(r.total["maker_pnl"] + r.total["taker_markout_expiry"] * r.total["shares"]) < 1e-6
+    assert sum(x["trades"] for x in r.by_city_time if x["city"] == "all") == r.total["trades"]
+    assert sum(x["trades"] for x in r.by_band) == r.total["trades"]
+    text = render_flow(r)
+    assert "Weather order flow" in text and "total" in text and "By price" in text
+    # a taker who buys YES at 0.99 on a winner made +0.01; the fixture's first trade is exactly that shape
+    bought = flow(rows, FixtureTrades(FIXTURES), horizon_min=1)
+    assert bought.total["trades"] == r.total["trades"]
