@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from pm_scanner.cli import main
-from pm_scanner.flow import FlowAcc, family_flow, hours_bucket, price_band, render_family_flow, resolved_markets, score_trades
+from pm_scanner.flow import FlowAcc, family_flow, hours_bucket, is_first_outcome, price_band, render_family_flow, resolved_markets, score_trades
 from pm_scanner.sources import FixtureSource
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -97,3 +97,24 @@ def test_flow_cli_offline(capsys):
     rc = main(["flow", "--fixtures", str(FIXTURES), "--days", "400", "--per-family", "3", "--min-markets", "1"])
     out = capsys.readouterr()
     assert rc == 0 and ("Order flow by family" in out.out or "no family" in out.out)
+
+
+def test_team_named_outcomes_are_mapped_to_the_first_outcome():
+    from collections import defaultdict
+    outcomes = ["Yankees", "Red Sox"]
+    assert is_first_outcome({"outcome": "Yankees"}, outcomes) and not is_first_outcome({"outcome": "red sox"}, outcomes)
+    assert is_first_outcome({"outcome": "Over", "outcomeIndex": 0}, ["Over", "Under"]) and not is_first_outcome({"outcomeIndex": 1}, None)
+    assert is_first_outcome({"outcome": "Yes"}, None) and not is_first_outcome({"outcome": "No"}, ["Yes", "No"])
+    sinks, bands, tot = defaultdict(FlowAcc), defaultdict(FlowAcc), FlowAcc()
+    # Yankees win (y=1). A taker buying Red Sox at 0.40 lost 0.40 a share; buying Yankees at 0.60 gained 0.40.
+    trades = [
+        {"timestamp": 1000, "price": 0.40, "size": 10, "side": "BUY", "outcome": "Red Sox"},
+        {"timestamp": 2000, "price": 0.60, "size": 10, "side": "BUY", "outcome": "Yankees"},
+    ]
+    score_trades(trades, 1, 0.05, 60, sinks, bands, [tot], outcomes=outcomes)
+    r = tot.row()
+    assert abs(r["taker_markout_expiry"]) < 1e-9 and abs(r["maker_pnl"]) < 1e-9
+    # without the outcome list the Red Sox buy would be misread as a YES buy that won
+    sinks2, bands2, tot2 = defaultdict(FlowAcc), defaultdict(FlowAcc), FlowAcc()
+    score_trades(trades, 1, 0.05, 60, sinks2, bands2, [tot2])
+    assert tot2.row()["taker_markout_expiry"] > 0.4

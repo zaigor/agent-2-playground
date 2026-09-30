@@ -82,14 +82,30 @@ class FlowAcc:
                 "maker_pnl": maker, "maker_pnl_per_100": per100, "maker_pnl_per_100_se": per100_se}
 
 
-def yes_price_series(trades: list[dict[str, Any]]) -> list[tuple[int, float]]:
+def is_first_outcome(trade: dict[str, Any], outcomes: list[str] | None) -> bool:
+    """Whether a trade record is on the market's first outcome (the one `resolved_yes` refers to).
+    Weather and most binary markets name them Yes/No; sports name them after the teams or
+    Over/Under, so the label is matched against the market's own outcome list."""
+    idx = trade.get("outcomeIndex")
+    if idx in (0, 1):
+        return idx == 0
+    label = str(trade.get("outcome", "")).strip().lower()
+    if outcomes and len(outcomes) >= 2:
+        if label == str(outcomes[0]).strip().lower():
+            return True
+        if label == str(outcomes[1]).strip().lower():
+            return False
+    return label != "no"
+
+
+def yes_price_series(trades: list[dict[str, Any]], outcomes: list[str] | None = None) -> list[tuple[int, float]]:
     pts: list[tuple[int, float]] = []
     for t in trades:
         try:
             ts, p = int(t["timestamp"]), float(t["price"])
         except (KeyError, TypeError, ValueError):
             continue
-        if str(t.get("outcome", "Yes")).lower() == "no" or t.get("outcomeIndex") == 1:
+        if not is_first_outcome(t, outcomes):
             p = 1.0 - p
         pts.append((ts, p))
     pts.sort()
@@ -105,9 +121,10 @@ def price_at(series: list[tuple[int, float]], ts: int) -> float | None:
     return last
 
 
-def score_trades(trades: list[dict[str, Any]], y: int, fee_rate: float, horizon_s: int, sinks: dict[str, FlowAcc], band_sinks: dict[str, FlowAcc], totals: list[FlowAcc]) -> None:
-    """Add every trade of one resolved market to the hours-to-close, price-band and total sinks."""
-    series = yes_price_series(trades)
+def score_trades(trades: list[dict[str, Any]], y: int, fee_rate: float, horizon_s: int, sinks: dict[str, FlowAcc], band_sinks: dict[str, FlowAcc], totals: list[FlowAcc], outcomes: list[str] | None = None) -> None:
+    """Add every trade of one resolved market to the hours-to-close, price-band and total sinks.
+    `y` is the settled value of the first outcome; `outcomes` names the two sides."""
+    series = yes_price_series(trades, outcomes)
     if not series:
         return
     close_ts = series[-1][0]
@@ -118,7 +135,7 @@ def score_trades(trades: list[dict[str, Any]], y: int, fee_rate: float, horizon_
             continue
         if size <= 0 or not 0 < price < 1:
             continue
-        is_yes = str(t.get("outcome", "Yes")).lower() != "no"
+        is_yes = is_first_outcome(t, outcomes)
         p_yes = price if is_yes else 1.0 - price
         direction = 1 if (str(t.get("side", "BUY")).upper() == "BUY") == is_yes else -1
         mo_exp = direction * (y - p_yes)
@@ -184,7 +201,7 @@ def family_flow(events: list[PolyEvent], trades_source, *, now: datetime, since:
         fee = max(polymarket_rate_for_event(e) for e, _ in pairs[:20])
         for e, m in sample:
             trades = trades_source.trades(m.condition_id or m.id)
-            score_trades(trades, int(m.resolved_yes), fee, horizon_min * 60, sinks, bands, [total])
+            score_trades(trades, int(m.resolved_yes), fee, horizon_min * 60, sinks, bands, [total], outcomes=m.outcomes)
         if log:
             log(f"flow {i + 1}/{min(len(ranked), max_families)}: {key} ({len(sample)} markets, {total.n} trades)")
         if total.n == 0:
