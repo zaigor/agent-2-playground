@@ -594,7 +594,7 @@ paper quotes from `--mode today` and cannot be backtested from trade
 history alone. After that, weather is closed and the next family from
 section 10 comes up.
 
-## 14. Intraday test (30 Sep): the market is sharper at every hour; the maker leg measured from the tape
+## 14. Intraday and maker tests (30 Sep): the market is sharper at every hour, and the takers are informed. Weather is closed
 
 **Intraday result.** Same 45 days and stations, routine hourly METARs from
 the Iowa archive (about 24 readings a day per station, first request
@@ -640,9 +640,71 @@ The taker's average markout is minus the makers' average edge, before any
 liquidity rebate. `--mode flow` does this and needs only Polymarket, so it
 ran from here.
 
-Results: the run over the same 45 days and three stations is in progress
-(about 1,400 trade histories to fetch); the table follows in the next
-revision of this section.
+Results, same 45 days and three stations, 127 event-days, 283,820 trades,
+$1.93M notional (about $15K per station-day). Markouts are per share from
+the taker's side, so a positive number means the takers won and the makers
+who filled them lost. `side` in the data-api trade feed is read as the
+taker's side; the 30-minute markout being positive and significant in
+every bucket (the recorded side moves the price its own way, which is what
+an aggressor does) supports that reading.
+
+| slice | trades | $ traded | taker → expiry ± se | makers, per $100 filled |
+| --- | --- | --- | --- | --- |
+| all | 283,820 | 1,928,772 | **+0.004 ± 0.001** | **−1.90** |
+| day before, all | 113,087 | 555,084 | +0.011 ± 0.003 | −5.23 |
+| day before, Tel Aviv | 24,345 | 139,587 | +0.030 ± 0.006 | −11.61 |
+| 00-06 local | 35,781 | 184,679 | +0.006 ± 0.006 | −3.25 |
+| 06-09 local | 19,085 | 87,429 | −0.008 ± 0.005 | +4.96 |
+| 09-12 local | 29,318 | 124,158 | −0.000 ± 0.004 | +0.18 |
+| 12-16 local | 59,501 | 410,032 | +0.005 ± 0.002 | −2.43 |
+| 16-24 local | 26,686 | 553,764 | −0.003 ± 0.002 | +0.68 |
+| price 0.00-0.10 | 125,626 | 87,589 | −0.001 ± 0.001 | +8.21 |
+| price 0.10-0.30 | 56,782 | 248,006 | +0.007 ± 0.005 | −3.56 |
+| price 0.30-0.70 | 75,846 | 730,417 | +0.020 ± 0.005 | −4.44 |
+| price 0.70-0.90 | 10,974 | 204,161 | +0.009 ± 0.008 | −1.15 |
+| price 0.90-1.00 | 14,592 | 658,600 | +0.000 ± 0.002 | −0.03 |
+
+**Verdict: the maker leg fails as well.** The takers in these markets are
+informed. Whoever crosses the spread gains 0.4c a share by expiry on
+average, and 2c a share in the 30-70c band where a maker's spread income
+would come from, so the makers as a group lost $36.7K on $1.93M, about 2%
+of everything they filled, before the liquidity rebate (25% of the $35.6K
+of taker fees, so about $9K back, which does not close the gap). The day
+before the target day is the worst time to be quoting, and Tel Aviv is
+the worst station: the evening quotes there are picked off for 3c a share,
+which is a bot with a better forecast hitting stale orders. The two slices
+where makers earned, 06:00-09:00 local (+5 per $100 on $87K) and the
+1-9c longshot band (+8 per $100 on $88K, buyers of 3c contracts that
+die), are small, at one standard error, and are the first places another
+maker would already sit.
+
+The whole picture, in one line: over 45 days and three stations, takers
+gained $37K, paid $36K in fees, and makers lost $37K. The platform earned
+the money; the informed bots roughly broke even against the fee; everyone
+else paid.
+
+**Weather is closed.** Four pre-registered tests: the day-ahead forecast
+(sections 12-13), the intraday forecast, the speed leg and the maker leg,
+each failed on its own rule, and the last one shows why the others did:
+the counterparties are informed bots, not retail. Nothing in this family
+rewards a laptop with free models and a $50-500 stake. The code stays
+because the trend, backtest, intraday and flow modes generalise to any
+recurring family and are the tools for the next candidate.
+
+**What the flow test suggests as the next move.** The question that
+matters for a small trader is not "can we forecast better" (no, not
+against bots) but "where are the takers noise, so that a quoted spread is
+paid rather than picked off?" Weather says: not here. The same measurement
+runs on any family with resolved markets, because it needs only the trade
+tape and the outcome, and both are on Polymarket's own API, reachable
+from here. A site-wide version of `flow` over the families of section 10
+(taker markout to expiry by family, hours-to-close and price band, with
+the notional behind it) would rank the site by maker edge instead of by
+forecastability, which is the ranking we should have asked for first.
+Sports, pop culture and the mention markets are where retail flow is
+likeliest; whether it survives the makers already there is what the
+numbers would show.
+
 
 ## Sources
 
