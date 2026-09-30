@@ -594,6 +594,56 @@ paper quotes from `--mode today` and cannot be backtested from trade
 history alone. After that, weather is closed and the next family from
 section 10 comes up.
 
+## 14. Intraday test (30 Sep): the market is sharper at every hour; the maker leg measured from the tape
+
+**Intraday result.** Same 45 days and stations, routine hourly METARs from
+the Iowa archive (about 24 readings a day per station, first request
+worked), running maximum plus a per-hour regression on the ICON/GFS/ECMWF
+blend, scored against the price five minutes after the hour.
+
+| hour (local) | scored | market Brier | model Brier | gap ± se | paper P&L ± se | mtm30 ± se |
+| --- | --- | --- | --- | --- | --- | --- |
+| 11:00 | 1,122 | 0.0472 | 0.0570 | +0.0098 ± 0.0029 | +6.0 ± 6.4 | +1.6 ± 1.2 |
+| 13:00 | 1,122 | 0.0377 | 0.0483 | +0.0106 ± 0.0024 | −2.0 ± 5.8 | +1.4 ± 2.1 |
+| 15:00 | 1,133 | 0.0161 | 0.0300 | +0.0139 ± 0.0025 | −8.6 ± 3.9 | +2.2 ± 2.4 |
+
+**Verdict: fail, at 3 to 6 standard errors, in every city and at every
+hour.** The market at 15:05 on Ben Gurion has a Brier of 0.0002: it is
+already resolved, because the afternoon reading has told everyone the
+maximum is in. Our model, which does not yet know that a falling reading
+ends the day, still sells the favourite at 0.98 and loses the fee 27 times.
+London and NYC are less extreme but the same shape. The 30-minute
+mark-to-market is positive in seven of nine city-hours, which is the
+speed edge in the direction expected, but never above 1.3 standard
+errors, and the price at expiry says the model was wrong more often than
+the market whenever they disagreed. Note also the `mkt+30` column: the
+market's own Brier keeps falling for 30 minutes after each reading, so
+whoever is quoting these markets updates within the half hour, not within
+the day. A laptop in Israel reacting five minutes after the hour is not
+ahead of them.
+
+So: no forecast edge day-ahead, no forecast edge intraday, no speed edge
+worth a standard error. Three pre-registered tests, three fails. Weather
+is efficiently priced by bots that read the same free models and the same
+METARs, faster and with better afternoon models than a first attempt.
+
+**The maker leg, measured without a week of paper quotes.** The last
+argument for weather was liquidity provision: quote both sides at the
+mid, earn the overround from takers, pay no fee. Whether that earns money
+depends on who the takers are. If they are informed (a bot hitting a
+stale quote after a reading), the maker loses more than the spread; if
+they are noise (someone buying a bracket at 23:00 because the app said
+sunny), the maker keeps the spread. This is measurable from the same
+trade histories: every trade seen from the taker's side, marked to expiry
+and to 30 minutes later, by station, local time of day and price band.
+The taker's average markout is minus the makers' average edge, before any
+liquidity rebate. `--mode flow` does this and needs only Polymarket, so it
+ran from here.
+
+Results: the run over the same 45 days and three stations is in progress
+(about 1,400 trade histories to fetch); the table follows in the next
+revision of this section.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
