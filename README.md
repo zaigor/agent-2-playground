@@ -190,6 +190,9 @@ python -m pm_scanner ladder --fixtures tests/fixtures                       # of
 # $1-10 ones) the share of the daily pot a two-sided quote at the minimum size would earn
 # against the live book, and what the same quote loses on the market's last 14 days of tape
 python -m pm_scanner rewards --days 14 --json rewards.json
+# ... and, without tapes, every rewarded market's book at $10+/day: where a minimum-size quote at
+# half the max spread would take a quarter or more of the pot (the "unclaimed pot" list)
+python -m pm_scanner rewards --books-only --min-rate 10 --min-days 7 --json pocket.json
 
 # your own probabilities: a CSV of market,time,p is scored against the price at that time
 # (Brier vs the market, a 50/50 blend, markout, paper P&L after fees, reliability), with

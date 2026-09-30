@@ -1,0 +1,58 @@
+2026-09-30T21:13:19+00:00 18612 rewarded markets 238144 $/day nominal; 264 evaluated
+=== case touch x1
+   >=100:  55 mkts (1 with no trades in 14d) | share lo median   0.2% | reward lo median   1.45 | net lo: p25 -10.40 median  -0.33 p75   2.88 | >$0.5/d: 25/55 | sum net lo  -101.1 hi   219.8 | sum reward lo   436.4 | loss   577.5 | capital $5010
+        124.3..157.8  rate   210 mid 0.55 sprd 0.030 Q 109/0 fills/d 20.4 loss -7.2 tape 279 | Will the highest temperature in Seoul (Incheon) be 21°C on O
+         61.4..145.9  rate   366 mid 0.85 sprd 0.060 Q 7/9 fills/d 9.1 loss 23.2 tape 38 | Will the biggest earthquake on September 30, 2026 be 5.5 to 
+         61.1..61.1   rate   200 mid 0.94 sprd 0.010 Q 160/2684 fills/d 9.1 loss 5.6 tape 286 | Gemini 4.0 released by October 31, 2026?
+         18.1..18.1   rate   200 mid 0.93 sprd 0.030 Q 130/78 fills/d 6.0 loss 2.3 tape 301 | Will there be between 25 and 29 average daily transits of th
+         12.5..12.5   rate   200 mid 0.94 sprd 0.021 Q 195/132 fills/d 3.3 loss 3.9 tape 98 | Will Holtec Nuclear not IPO before November 2026?
+  10-100:  95 mkts (19 with no trades in 14d) | share lo median   5.5% | reward lo median   1.73 | net lo: p25  -0.46 median   0.88 p75   3.18 | >$0.5/d: 51/95 | sum net lo   194.3 hi   410.4 | sum reward lo   381.5 | loss   197.4 | capital $2665
+         25.0..25.0   rate    50 mid 0.08 sprd 0.080 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will Terry McLaurin have 10+ receiving touchdowns in the 202
+         24.4..37.0   rate    50 mid 0.46 sprd 0.080 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will US Dollar Index (DXY) hit (HIGH) 102.50 in October?
+         23.5..36.2   rate    50 mid 0.21 sprd 0.070 Q 1/1 fills/d 0.4 loss 0.9 tape 7 | Will Gold (XAUUSD) hit (LOW) $3,900 in October?
+         19.4..32.7   rate    50 mid 0.34 sprd 0.010 Q 25/26 fills/d 0.0 loss -0.0 tape 1 | Will Nico Collins finish as a top-12 WR in the 2026-27 NFL s
+         15.0..27.3   rate    50 mid 0.12 sprd 0.070 Q 3/2 fills/d 0.0 loss -0.0 tape 0 | Will CeeDee Lamb be the first WR to 1,000 receiving yards in
+    1-10:  43 mkts (4 with no trades in 14d) | share lo median  13.2% | reward lo median   0.33 | net lo: p25  -1.08 median  -0.12 p75   0.22 | >$0.5/d: 5/43 | sum net lo   -26.5 hi   -17.6 | sum reward lo    16.1 | loss    44.8 | capital $1050
+          2.0..2.0    rate     2 mid 0.07 sprd 0.108 Q 2/0 fills/d 0.1 loss 0.0 tape 3 | Will César Aurelio Rodríguez Valderrama win the next Chiclay
+          1.0..1.0    rate     2 mid 0.04 sprd 0.067 Q 33/1 fills/d 0.0 loss -0.0 tape 0 | Will AGF Aarhus score the most goals in the UECL league phas
+          0.7..0.7    rate     2 mid 0.06 sprd 0.016 Q 23/35 fills/d 0.0 loss -0.0 tape 1 | Will Jynxzi Win the 2026 Esports Personality of the Year Awa
+          0.7..1.5    rate     3 mid 0.33 sprd 0.010 Q 57/75 fills/d 0.3 loss 0.1 tape 4 | Will OnRe launch a token by March 31, 2027?
+          0.7..0.8    rate     1 mid 0.15 sprd 0.080 Q 0/0 fills/d 0.2 loss -0.0 tape 9 | Will the Republican Party candidate win the 2026 UT-04 House
+=== case half-max x1
+   >=100:  60 mkts (2 with no trades in 14d) | share lo median   0.1% | reward lo median   0.51 | net lo: p25  -3.61 median   0.21 p75   2.97 | >$0.5/d: 28/60 | sum net lo  1319.1 hi  1524.7 | sum reward lo  1497.6 | loss   198.8 | capital $5110
+        375.6..375.6  rate   351 mid 0.69 sprd 0.290 Q 0/0 fills/d 51.7 loss -23.8 tape 8 | Will MrBeast Gaming's next video get between 29 and 29.5 mil
+        241.8..241.8  rate   219 mid 0.38 sprd 0.644 Q 0/0 fills/d 35.2 loss -22.5 tape 22 | Will the lowest temperature in Shanghai be 19°C on October 1
+        200.0..200.0  rate   200 mid 0.28 sprd 0.410 Q 0/0 fills/d 0.0 loss -0.0 tape 4 | Cornell President out by October 31?
+        200.0..200.0  rate   200 mid 0.23 sprd 0.410 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will the next Claude Haiku (4.6+) model be released by Octob
+        195.4..195.4  rate   200 mid 0.92 sprd 0.123 Q 0/0 fills/d 3.1 loss 4.7 tape 86 | Will any other model be the best AI model on October 5, 2026
+  10-100: 147 mkts (38 with no trades in 14d) | share lo median  23.1% | reward lo median   7.79 | net lo: p25   0.10 median   2.31 p75  21.85 | >$0.5/d: 99/147 | sum net lo  1867.5 hi  2023.8 | sum reward lo  2543.8 | loss   691.3 | capital $3865
+         50.0..50.0   rate    50 mid 0.25 sprd 0.480 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will Omarion Hampton finish as a top-12 RB in the 2026-27 NF
+         50.0..50.0   rate    50 mid 0.88 sprd 0.190 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will South Korea ETF (EWY) hit (LOW) $184 in October?
+         50.0..50.0   rate    50 mid 0.50 sprd 0.960 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will WTI Crude Oil (WTI) hit (LOW) $90 Week of September 28 
+         50.0..50.0   rate    50 mid 0.12 sprd 0.230 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will Will Reichard finish as a top-5 K in the 2026-27 NFL se
+         50.0..50.0   rate    50 mid 0.52 sprd 0.920 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will Kraken's valuation hit (HIGH) $10.75B by October 31?
+    1-10:  57 mkts (8 with no trades in 14d) | share lo median  12.5% | reward lo median   0.23 | net lo: p25  -0.55 median   0.06 p75   0.97 | >$0.5/d: 18/57 | sum net lo    -1.1 hi     4.3 | sum reward lo    53.6 | loss    56.8 | capital $1330
+          5.0..5.0    rate     5 mid 0.29 sprd 0.150 Q 0/0 fills/d 0.0 loss -0.0 tape 1 | Will Robert Thomas record 80+ points in the 2026-27 regular 
+          5.0..5.0    rate     5 mid 0.32 sprd 0.450 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will Alix Truong reach the Semifinals of the 2027 PPA Tour F
+          5.0..5.0    rate     5 mid 0.20 sprd 0.390 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will Jahmyr Gibbs have 1,599.5+ rushing yards in the 2026-27
+          4.6..4.6    rate     5 mid 0.33 sprd 0.647 Q 0/0 fills/d 0.3 loss 0.4 tape 6 | Will Trump praise Allah again by September 30?
+          4.4..4.4    rate     5 mid 0.83 sprd 0.220 Q 0/0 fills/d 1.5 loss 0.7 tape 53 | Will Ashton Jeanty have 974.5+ rushing yards in the 2026-27 
+=== case half-max x5
+   >=100:  60 mkts (2 with no trades in 14d) | share lo median   0.7% | reward lo median   2.53 | net lo: p25  -5.26 median   2.38 p75  15.11 | >$0.5/d: 38/60 | sum net lo  1532.0 hi  1940.0 | sum reward lo  2017.1 | loss   533.5 | capital $25550
+        433.4..433.4  rate   351 mid 0.69 sprd 0.290 Q 0/0 fills/d 51.7 loss -79.5 tape 8 | Will MrBeast Gaming's next video get between 29 and 29.5 mil
+        245.6..245.6  rate   219 mid 0.38 sprd 0.644 Q 0/0 fills/d 35.2 loss -26.2 tape 22 | Will the lowest temperature in Shanghai be 19°C on October 1
+        200.0..200.0  rate   200 mid 0.28 sprd 0.410 Q 0/0 fills/d 0.0 loss -0.0 tape 4 | Cornell President out by October 31?
+        200.0..200.0  rate   200 mid 0.23 sprd 0.410 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will the next Claude Haiku (4.6+) model be released by Octob
+        183.9..183.9  rate   200 mid 0.92 sprd 0.123 Q 0/0 fills/d 3.3 loss 16.3 tape 86 | Will any other model be the best AI model on October 5, 2026
+  10-100: 147 mkts (38 with no trades in 14d) | share lo median  60.1% | reward lo median  12.00 | net lo: p25   0.78 median   8.58 p75  30.05 | >$0.5/d: 113/147 | sum net lo  2056.3 hi  2282.4 | sum reward lo  2990.2 | loss   955.4 | capital $19325
+         50.0..50.0   rate    50 mid 0.25 sprd 0.480 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will Omarion Hampton finish as a top-12 RB in the 2026-27 NF
+         50.0..50.0   rate    50 mid 0.88 sprd 0.190 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will South Korea ETF (EWY) hit (LOW) $184 in October?
+         50.0..50.0   rate    50 mid 0.50 sprd 0.960 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will WTI Crude Oil (WTI) hit (LOW) $90 Week of September 28 
+         50.0..50.0   rate    50 mid 0.12 sprd 0.230 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will Will Reichard finish as a top-5 K in the 2026-27 NFL se
+         50.0..50.0   rate    50 mid 0.52 sprd 0.920 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will Kraken's valuation hit (HIGH) $10.75B by October 31?
+    1-10:  57 mkts (8 with no trades in 14d) | share lo median  41.8% | reward lo median   0.86 | net lo: p25  -1.12 median   0.38 p75   1.05 | >$0.5/d: 28/57 | sum net lo   -67.2 hi   -54.7 | sum reward lo    69.3 | loss   139.5 | capital $6650
+          5.0..5.0    rate     5 mid 0.29 sprd 0.150 Q 0/0 fills/d 0.0 loss -0.0 tape 1 | Will Robert Thomas record 80+ points in the 2026-27 regular 
+          5.0..5.0    rate     5 mid 0.32 sprd 0.450 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will Alix Truong reach the Semifinals of the 2027 PPA Tour F
+          5.0..5.0    rate     5 mid 0.20 sprd 0.390 Q 0/0 fills/d 0.0 loss -0.0 tape 0 | Will Jahmyr Gibbs have 1,599.5+ rushing yards in the 2026-27
+          4.3..4.3    rate     5 mid 0.83 sprd 0.220 Q 0/0 fills/d 1.5 loss 0.8 tape 53 | Will Ashton Jeanty have 974.5+ rushing yards in the 2026-27 
+          3.9..3.9    rate     5 mid 0.33 sprd 0.647 Q 0/0 fills/d 0.3 loss 1.1 tape 6 | Will Trump praise Allah again by September 30?

@@ -273,6 +273,93 @@ def rewards_survey(http: HttpClient, trades_source, book_fetcher, *, now: dateti
     return RewardsReport(when=now.isoformat(timespec="seconds"), markets_with_rewards=len(configs), total_daily_rate=total, sampled=len(picked), evaluated=len(rows), rows=rows, days=days)
 
 
+# --------------------------------------------------------------------------- #
+# Books-only scan of every rewarded market: where is the pot unclaimed?
+# --------------------------------------------------------------------------- #
+
+@dataclass
+class PocketRow:
+    condition_id: str
+    question: str
+    rate_per_day: float
+    max_spread: float
+    min_size: float
+    mid: float
+    spread: float
+    q_bid: float
+    q_ask: float
+    share_low: float  # of a min-size two-sided quote at half the max spread
+    share_high: float
+    reward_low: float
+    reward_high: float
+    capital: float
+    liquidity: float
+    volume_24h: float
+    days_to_end: float | None
+    url: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def pocket_scan(configs: list[dict[str, Any]], markets: dict[str, PolyMarket], books: dict[str, Book], *, now: datetime) -> list[PocketRow]:
+    """For every rewarded market with a two-sided book: the pot share a minimum-size quote
+    resting at half the max spread would take against the orders on the book right now."""
+    rows: list[PocketRow] = []
+    for c in configs:
+        m = markets.get(c.get("condition_id", ""))
+        if m is None or not m.yes_token or not m.accepting_orders:
+            continue
+        b = books.get(m.yes_token)
+        if b is None or b.best_bid is None or b.best_ask is None:
+            continue
+        rate = float(c.get("total_daily_rate") or 0.0)
+        v = float(c.get("rewards_max_spread") or 0.0)
+        ms = float(c.get("rewards_min_size") or 0.0)
+        if rate <= 0 or v <= 0:
+            continue
+        mid = (b.best_bid.price + b.best_ask.price) / 2.0
+        comp = book_competition(b, mid, v, ms)
+        size = max(ms, 5.0)
+        lo, hi = our_share(order_score(v, v / 2.0) * size, comp["q_bid"], comp["q_ask"], mid)
+        days = (m.end_date - now).total_seconds() / 86400.0 if m.end_date else None
+        rows.append(PocketRow(c["condition_id"], m.question, rate, v, ms, round(mid, 4), round(b.best_ask.price - b.best_bid.price, 4), comp["q_bid"], comp["q_ask"], lo, hi, rate * lo, rate * hi, size, m.liquidity, m.volume_24h, round(days, 1) if days is not None else None, m.url))
+    rows.sort(key=lambda r: -r.reward_low)
+    return rows
+
+
+def rewards_pocket(http: HttpClient, book_fetcher, *, now: datetime, min_rate: float = 10.0, configs: list[dict[str, Any]] | None = None, log=None) -> list[PocketRow]:
+    configs = [c for c in (configs if configs is not None else fetch_reward_configs(http)) if float(c.get("total_daily_rate") or 0) >= min_rate]
+    markets = gamma_markets_by_condition(http, [c["condition_id"] for c in configs])
+    if log:
+        log(f"{len(configs)} rewarded markets at >= ${min_rate:g}/day, {len(markets)} found on Gamma; fetching books")
+    books = book_fetcher([m.yes_token for m in markets.values() if m.yes_token])
+    return pocket_scan(configs, markets, books, now=now)
+
+
+def render_pocket(rows: list[PocketRow], *, top: int = 40, min_days: float = 7.0) -> str:
+    if not rows:
+        return "rewards pocket: no two-sided books"
+    pot = sum(r.rate_per_day for r in rows)
+    empty = [r for r in rows if r.q_bid < 1 and r.q_ask < 1]
+    quarter = [r for r in rows if r.share_low >= 0.25]
+    L = [f"Rewarded markets with a two-sided book: {len(rows)}, pots ${pot:,.0f}/day.",
+         f"  no qualifying order within the max spread on either side: {len(empty)} markets, ${sum(r.rate_per_day for r in empty):,.0f}/day of pots",
+         f"  a minimum-size quote at half the max spread would take >= 25% of the pot in {len(quarter)} markets: ${sum(r.reward_low for r in quarter):,.0f}/day on ${sum(r.capital for r in quarter):,.0f} of capital",
+         f"    of which resolving within 2 days: {sum(1 for r in quarter if r.days_to_end is not None and r.days_to_end < 2)} (${sum(r.reward_low for r in quarter if r.days_to_end is not None and r.days_to_end < 2):,.0f}/day); {min_days:g}+ days out: {sum(1 for r in quarter if r.days_to_end is not None and r.days_to_end >= min_days)} (${sum(r.reward_low for r in quarter if r.days_to_end is not None and r.days_to_end >= min_days):,.0f}/day)"]
+    for k in (5, 10, 20, 50, 100):
+        t = rows[:k]
+        if len(t) == k:
+            L.append(f"  top {k:3} by reward: ${sum(r.reward_low for r in t):,.0f}..{sum(r.reward_high for r in t):,.0f}/day on ${sum(r.capital for r in t):,.0f} capital")
+    long_ = [r for r in rows if r.days_to_end is not None and r.days_to_end >= min_days and r.spread <= 0.5 and 0.05 <= r.mid <= 0.95][:top]
+    L.append("")
+    L.append(f"  {min_days:g}+ days to resolution, spread <= 50c, mid in 5-95c (a live test would start here):")
+    L.append(f"  {'reward lo..hi':>14} {'rate':>5} {'min':>4} {'mid':>5} {'sprd':>5} {'Q b/a':>9} {'liq $':>7} {'v24 $':>6} {'days':>5}  question")
+    for r in long_:
+        L.append(f"  {r.reward_low:6.1f}..{r.reward_high:<6.1f} {r.rate_per_day:5.0f} {r.min_size:4.0f} {r.mid:5.2f} {r.spread:5.2f} {r.q_bid:4.0f}/{r.q_ask:<4.0f} {r.liquidity:7.0f} {r.volume_24h:6.0f} {r.days_to_end:5.0f}  {r.question[:60]}")
+    return "\n".join(L)
+
+
 def _tier(rate: float) -> str:
     return ">=100/day" if rate >= 100 else ("10-100/day" if rate >= 10 else "1-10/day")
 

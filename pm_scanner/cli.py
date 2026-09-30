@@ -10,7 +10,7 @@ from pathlib import Path
 from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
 from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
 from .ladder import render_ladder_report, scan_ladders, summarize_snapshots
-from .rewards import render_rewards, rewards_survey
+from .rewards import render_pocket, render_rewards, rewards_pocket, rewards_survey
 from .signal import FixtureResolver, GammaResolver, load_signal_csv, render_signal, score_signal
 from .flow import MakerConfig, family_flow, maker_backtest, render_family_flow, render_maker, sampled_market_ids
 from .niches import DEFAULT_SURVEY_TAGS, UP_OR_DOWN_TAG_ID, default_since, load_survey_tags, render_survey, survey
@@ -370,6 +370,9 @@ def build_parser() -> argparse.ArgumentParser:
     rw.add_argument("--list", type=int, default=25, help="best markets to list")
     rw.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_rewards_trades"), help="where the (open-market) tapes are cached for this run")
     rw.add_argument("--configs", type=Path, default=None, help="offline: a saved JSON list from /rewards/markets/current")
+    rw.add_argument("--books-only", action="store_true", help="skip the tapes: read every rewarded market's book and report where the pot is unclaimed")
+    rw.add_argument("--min-rate", type=float, default=10.0, help="books-only: only markets paying at least this much per day")
+    rw.add_argument("--min-days", type=float, default=7.0, help="books-only: list markets at least this many days from resolution")
     rw.add_argument("--fixtures", type=Path, default=None, help="unused: the survey needs live books and tapes")
     rw.add_argument("--json", type=Path, default=None, help="also write every sampled market's numbers to this JSON file")
 
@@ -522,6 +525,13 @@ def main(argv: list[str] | None = None) -> int:
         log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
         try:
             configs = json.loads(args.configs.read_text()) if args.configs else None
+            if args.books_only:
+                rows = rewards_pocket(source.http, source.poly_books, now=now, min_rate=args.min_rate, configs=configs, log=log)
+                print(render_pocket(rows, top=args.list, min_days=args.min_days))
+                if args.json:
+                    args.json.write_text(json.dumps([r.to_dict() for r in rows], indent=1, default=str))
+                    print(f"\nwrote {args.json}")
+                return 0
             report = rewards_survey(source.http, LiveTrades(cache_dir=args.cache_dir), source.poly_books, now=now, days=args.days, top=args.top, mid_n=args.mid, low_n=args.low, seed=args.seed, configs=configs, log=log)
         except Exception as exc:
             print(f"rewards failed: {exc}", file=sys.stderr)

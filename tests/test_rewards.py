@@ -59,3 +59,23 @@ def test_sample_configs_covers_the_tiers():
     picked = sample_configs(cfgs, top=2, mid_n=2, low_n=2, seed=1)
     rates = sorted((c["total_daily_rate"] for c in picked), reverse=True)
     assert rates[:2] == [500, 200] and len(picked) == 6 and all(1 <= r < 100 for r in rates[2:])
+
+
+def test_pocket_scan_finds_unclaimed_pots():
+    from pm_scanner.rewards import pocket_scan, render_pocket
+    cfgs = [
+        {"condition_id": "0xa", "total_daily_rate": 50.0, "rewards_max_spread": 4.5, "rewards_min_size": 20},
+        {"condition_id": "0xb", "total_daily_rate": 200.0, "rewards_max_spread": 3.0, "rewards_min_size": 100},
+    ]
+    mk = lambda cid, tok, end: parse_market({"id": cid, "question": f"Q {cid}?", "conditionId": cid, "outcomes": '["Yes", "No"]', "clobTokenIds": f'["{tok}", "n{tok}"]', "outcomePrices": '["0.5", "0.5"]', "endDate": end, "acceptingOrders": True})  # noqa: E731
+    markets = {"0xa": mk("0xa", "ta", "2026-12-31T00:00:00Z"), "0xb": mk("0xb", "tb", "2026-10-01T00:00:00Z")}
+    books = {
+        "ta": Book("ta", bids=[Level(0.10, 30)], asks=[Level(0.40, 30)]),  # nothing within 4.5c of the 0.25 mid: the pot is unclaimed
+        "tb": Book("tb", bids=[Level(0.49, 5000)], asks=[Level(0.51, 5000)]),  # deep two-sided book at the touch
+    }
+    rows = pocket_scan(cfgs, markets, books, now=NOW)
+    by = {r.condition_id: r for r in rows}
+    assert by["0xa"].share_low == 1.0 and by["0xa"].reward_low == 50.0 and by["0xa"].days_to_end > 7
+    assert by["0xb"].share_low < 0.02 and by["0xb"].reward_low < 5.0
+    text = render_pocket(rows, top=10)
+    assert "no qualifying order within the max spread on either side: 1 markets, $50/day" in text and "Q 0xa?" in text and "Q 0xb?" not in text.split("a live test would start here")[1]
