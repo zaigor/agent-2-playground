@@ -28,7 +28,10 @@ For each early close at time t of a NO bracket in window [a, b):
   p(i)     = P(lo_i <= n_min + R <= hi_i), R ~ NB(mu_rem, r), Poisson when the totals are not
              over-dispersed, for every bracket i still open at t
 
-and each (bracket, t, p) is a `signal` row: scored against the last trade at or before t and the
+(with `count="interval"`, n_min is replaced by every value from n_min to the ceiling of the lowest
+bracket still alive at t, averaged: the crowd has not killed that bracket, so the count has most
+likely not passed it either; this is the post-hoc variant, see the memo) and each (bracket, t, p)
+is a `signal` row: scored against the last trade at or before t and the
 resolution, with the market's taker fee for the paper trade. Standard errors cluster by event
 (one ladder at one moment is one observation), which is stricter than `signal`'s per-market
 clustering.
@@ -187,11 +190,23 @@ def base_rate(windows: list[Window], current: Window, t: datetime, *, k: int = 8
 class Decision:
     window: Window
     t: datetime
-    n_min: int
+    n_min: int  # the count is at least this (largest crossed ceiling plus one)
     frac: float
     base: BaseRate
     mu_rem: float
     open_brackets: list[Bracket]
+    n_max: int | None = None  # ... and, if the next bracket up is still alive, at most this
+
+    def counts(self, count: str, max_points: int = 21) -> list[int]:
+        """The count values the model averages over: the lower bound alone, or the interval up to
+        the ceiling of the lowest bracket still alive (the crowd has not killed it, so the count
+        has most likely not passed it either)."""
+        if count != "interval" or self.n_max is None or self.n_max < self.n_min:
+            return [self.n_min]
+        span = self.n_max - self.n_min
+        if span < max_points:
+            return list(range(self.n_min, self.n_max + 1))
+        return sorted({self.n_min + round(i * span / (max_points - 1)) for i in range(max_points)})
 
 
 def decisions(windows: list[Window], *, k: int = 8, min_windows: int = 3, merge: timedelta = timedelta(minutes=10)) -> tuple[list[Decision], dict[str, int]]:
@@ -226,16 +241,20 @@ def decisions(windows: list[Window], *, k: int = 8, min_windows: int = 3, merge:
             if not open_:
                 skipped["nothing open"] += 1
                 continue
-            out.append(Decision(w, t, n_min, frac, base, base.mu * (1.0 - frac), open_))
+            lowest = min(open_, key=lambda x: x.lo)
+            n_max = lowest.hi if lowest.hi is not None else n_min + int(w.width) - 1
+            out.append(Decision(w, t, n_min, frac, base, base.mu * (1.0 - frac), open_, n_max))
     return out, dict(skipped)
 
 
-def signal_rows(decs: list[Decision]) -> list[SignalOut]:
+def signal_rows(decs: list[Decision], *, count: str = "lower") -> list[SignalOut]:
     rows: list[SignalOut] = []
     for d in decs:
+        ns = d.counts(count)
         for x in d.open_brackets:
-            p = p_bracket(d.n_min, d.mu_rem, d.base.r, (x.lo, x.hi))
-            note = f"{d.window.series}|{d.window.event_id}|{x.label}|n>={d.n_min}|frac={d.frac:.2f}|mu={d.base.mu:.0f}|k={d.base.n}"
+            p = sum(p_bracket(n, d.mu_rem, d.base.r, (x.lo, x.hi)) for n in ns) / len(ns)
+            n_txt = f"n>={d.n_min}" if len(ns) == 1 else f"n={d.n_min}..{d.n_max}"
+            note = f"{d.window.series}|{d.window.event_id}|{x.label}|{n_txt}|frac={d.frac:.2f}|mu={d.base.mu:.0f}|k={d.base.n}"
             rows.append(SignalOut(x.condition_id, d.t.isoformat(timespec="minutes"), round(p, 4), note))
     return rows
 
@@ -355,22 +374,25 @@ class CrossingsResult:
     by_phase: list[GroupStat]
     lags: dict[str, dict[str, float]]
     timing: str = "close"
+    count: str = "lower"
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "timing": self.timing, "series": self.series, "windows": self.windows, "windows_consistent": self.windows_consistent, "decisions": self.decisions, "skipped": self.skipped,
+            "timing": self.timing, "count": self.count, "series": self.series, "windows": self.windows, "windows_consistent": self.windows_consistent, "decisions": self.decisions, "skipped": self.skipped,
             "rows": [asdict(r) for r in self.rows], "report": self.report.to_dict(),
             "by_series": [asdict(g) for g in self.by_series], "by_phase": [asdict(g) for g in self.by_phase], "lags": self.lags,
         }
 
 
-def run_crossings(events_by_series: dict[str, list[dict[str, Any]]], trades_source, *, k_windows: int = 8, min_windows: int = 3, edge: float = 0.05, max_stale_hours: float = 24.0, horizon_min: int = 30, timing: str = "close", lags: bool = True, log: Callable[[str], None] | None = None) -> CrossingsResult:
+def run_crossings(events_by_series: dict[str, list[dict[str, Any]]], trades_source, *, k_windows: int = 8, min_windows: int = 3, edge: float = 0.05, max_stale_hours: float = 24.0, horizon_min: int = 30, timing: str = "close", count: str = "lower", lags: bool = True, log: Callable[[str], None] | None = None) -> CrossingsResult:
     """`timing="close"` dates each crossing by the bracket's UMA close (a certain lower bound,
     stale by the proposer's lag); `timing="collapse"` dates it by the bracket's price collapse
     (when the crowd itself marked the bracket dead: fresher, but a market can sell a bracket to
     nothing a little before the count actually passes it, so the bound is no longer certain)."""
     if timing not in ("close", "collapse"):
         raise ValueError("timing must be 'close' or 'collapse'")
+    if count not in ("lower", "interval"):
+        raise ValueError("count must be 'lower' or 'interval'")
     windows: list[Window] = []
     for slug, events in events_by_series.items():
         ws = load_windows(events, slug, log=log)
@@ -389,7 +411,7 @@ def run_crossings(events_by_series: dict[str, list[dict[str, Any]]], trades_sour
         decs_all.extend(decs)
         for k, v in sk.items():
             skipped[k] += v
-    rows = signal_rows(decs_all)
+    rows = signal_rows(decs_all, count=count)
     markets = {x.condition_id: x.market for w in windows for x in w.brackets}
     srows = [SignalRow(r.market, datetime.fromisoformat(r.time), r.p, "", r.note) for r in rows]
     report = score_signal(srows, markets, trades_source, horizon_min=horizon_min, edge=edge, max_stale_hours=max_stale_hours, log=log)
@@ -397,7 +419,7 @@ def run_crossings(events_by_series: dict[str, list[dict[str, Any]]], trades_sour
     order = ["early (<1/3)", "mid", "late (>2/3)"]
     by_phase = sorted(breakdown(report.scored, lambda s: phase_of(float(note_field(s.note, "frac") or 0.0))), key=lambda g: order.index(g.name) if g.name in order else 9)
     lag_summary = {k: _quartiles(v) for k, v in lag_raw.items() if v}
-    return CrossingsResult(list(events_by_series), len(windows), sum(1 for w in windows if w.crossings() and w.consistent()), len(decs_all), dict(skipped), rows, report, by_series, by_phase, lag_summary, timing)
+    return CrossingsResult(list(events_by_series), len(windows), sum(1 for w in windows if w.crossings() and w.consistent()), len(decs_all), dict(skipped), rows, report, by_series, by_phase, lag_summary, timing, count)
 
 
 def _pm(x: float | None, se: float | None, f: str = "+.4f") -> str:
@@ -407,7 +429,7 @@ def _pm(x: float | None, se: float | None, f: str = "+.4f") -> str:
 
 
 def render_crossings(res: CrossingsResult, *, edge: float = 0.05, horizon_min: int = 30) -> str:
-    L = [f"Bracket-crossing test, crossings dated by the {'UMA close' if res.timing == 'close' else 'price collapse'}: {res.windows} windows in {len(res.series)} series, {res.windows_consistent} with usable early closes, {res.decisions} decision times, {len(res.rows)} rows" + (f"; skipped windows/decisions: {', '.join(f'{v} {k}' for k, v in res.skipped.items())}" if res.skipped else "") + "."]
+    L = [f"Bracket-crossing test, crossings dated by the {'UMA close' if res.timing == 'close' else 'price collapse'}, count {'= the lower bound' if res.count == 'lower' else 'spread up to the next live bracket'}: {res.windows} windows in {len(res.series)} series, {res.windows_consistent} with usable early closes, {res.decisions} decision times, {len(res.rows)} rows" + (f"; skipped windows/decisions: {', '.join(f'{v} {k}' for k, v in res.skipped.items())}" if res.skipped else "") + "."]
     L.append(render_signal(res.report, horizon_min, edge))
     L.append("  (the ± above cluster by market; the tables below cluster by event, one ladder at one moment being one observation)")
     hdr = f"  {'group':34s} {'win':>4s} {'dec':>5s} {'rows':>5s}  {'Brier mkt/model':>16s}  {'market-model':>18s}  {'market-blend':>18s}  {'trades':>6s}  {'P&L/$100':>18s}"

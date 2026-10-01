@@ -128,3 +128,21 @@ def test_collapse_timing_dates_crossings_earlier():
         assert False, "bad timing accepted"
     except ValueError:
         pass
+
+
+def test_interval_count_variant():
+    ws = load_windows(_events(), "trump-truth-social")
+    decs, _ = decisions(ws, min_windows=3)
+    assert all(d.n_max is not None and d.n_max >= d.n_min for d in decs)
+    d = decs[0]
+    assert d.counts("lower") == [d.n_min]
+    ns = d.counts("interval")
+    assert ns[0] == d.n_min and ns[-1] == d.n_max and len(ns) <= 21
+    lower = signal_rows(decs, count="lower")
+    interval = signal_rows(decs, count="interval")
+    assert len(lower) == len(interval) and any(a.p != b.p for a, b in zip(lower, interval))
+    by_dec = {}
+    for r in interval:
+        by_dec[(r.note.split("|")[1], r.time)] = by_dec.get((r.note.split("|")[1], r.time), 0.0) + r.p
+    assert all(abs(s - 1.0) < 1e-3 for s in by_dec.values())
+    assert all("n=" in r.note for r in interval) and all("n>=" in r.note for r in lower)
