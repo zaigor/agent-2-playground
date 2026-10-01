@@ -98,6 +98,10 @@ def test_run_and_render_with_fake_trades():
     res = run_crossings({"trump-truth-social": evs}, _FakeTrades(ws), min_windows=3, max_stale_hours=24 * 14)
     assert res.windows == 6 and res.decisions > 0 and res.report.rows_scored > 0
     assert [g.name for g in res.by_series] == ["trump-truth-social"]
+    g = res.by_series[0]
+    assert g.rows == res.report.rows_scored and g.trades == res.report.trades
+    if res.report.trades:
+        assert abs(g.pnl_per_100 - res.report.pnl_per_100) < 1e-9  # one group = the whole report, in the same units
     assert {g.name for g in res.by_phase} <= {"early (<1/3)", "mid", "late (>2/3)"}
     assert res.lags and res.lags["trump-truth-social"]["n"] >= 3
     text = render_crossings(res)

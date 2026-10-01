@@ -297,7 +297,7 @@ def breakdown(scored: list[ScoredRow], key: Callable[[ScoredRow], str]) -> list[
             name, len({s.note.split("|")[1] for s in rows if "|" in s.note}), len({(s.note.split("|")[1] if "|" in s.note else s.market, s.time) for s in rows}), len(rows),
             statistics.mean(s.brier_market for s in rows), statistics.mean(s.brier_signal for s in rows),
             mean("gap"), cluster_se(per["gap"]), mean("blend"), cluster_se(per["blend"]),
-            trades, mean("pnl"), (pnl_se * 100.0 if pnl_se is not None else None),
+            trades, (mean("pnl") * 100.0 if mean("pnl") is not None else None), (pnl_se * 100.0 if pnl_se is not None else None),
         ))
     return out
 
