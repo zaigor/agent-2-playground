@@ -308,7 +308,17 @@ class LiveTrades:
             return json.loads(path.read_text())
         import time as _time
 
-        data = self.http.get_json(f"{DATA_API}/trades", params={"market": condition_id, "limit": 10000})
+        from .http import HttpError
+
+        data = None
+        for attempt in range(6):
+            try:
+                data = self.http.get_json(f"{DATA_API}/trades", params={"market": condition_id, "limit": 10000})
+                break
+            except HttpError as exc:
+                if "429" not in str(exc) or attempt == 5:
+                    raise
+                _time.sleep(10.0 * (attempt + 1))  # data-api rate limit: back off hard rather than lose the market
         rows = [{"timestamp": t.get("timestamp"), "price": t.get("price"), "size": t.get("size"), "outcome": t.get("outcome"), "side": t.get("side")} for t in (data if isinstance(data, list) else [])]
         if path and closed:
             path.parent.mkdir(parents=True, exist_ok=True)
