@@ -338,7 +338,7 @@ def _run_crossings(args, source) -> int:
             events_by_slug[slug] = fetch_series_events(source.http, slug)
         print(f"{slug}: {len(events_by_slug[slug])} events", file=sys.stderr)
     trades_src = LiveTrades(cache_dir=args.cache_dir)
-    res = run_crossings(events_by_slug, trades_src, k_windows=args.windows, min_windows=args.min_windows, edge=args.edge, max_stale_hours=args.max_stale, horizon_min=args.horizon_min, timing=args.timing, count=args.count, lags=not args.no_lag, log=lambda m: print(m, file=sys.stderr))
+    res = run_crossings(events_by_slug, trades_src, k_windows=args.windows, min_windows=args.min_windows, edge=args.edge, max_stale_hours=args.max_stale, horizon_min=args.horizon_min, timing=args.timing, count=args.count, lags=not args.no_lag, fill_wait_hours=args.fill_wait, log=lambda m: print(m, file=sys.stderr))
     if args.out:
         write_signal_csv(res.rows, args.out)
         print(f"signal rows written to {args.out} (re-score: python -m pm_scanner signal --csv {args.out})", file=sys.stderr)
@@ -577,6 +577,7 @@ def build_parser() -> argparse.ArgumentParser:
     cr.add_argument("--out", type=Path, default=Path("crossings_signal.csv"), help="write the signal rows here (re-scorable with `signal --csv`)")
     cr.add_argument("--timing", choices=("close", "collapse"), default="close", help="date each crossing by the bracket's UMA close (certain, stale) or by its price collapse (fresh, assumes the crowd did not sell it dead early)")
     cr.add_argument("--count", choices=("lower", "interval"), default="lower", help="use the count lower bound alone (pre-registered) or spread it up to the ceiling of the lowest bracket still alive (post-hoc variant)")
+    cr.add_argument("--fill-wait", type=float, default=6.0, help="re-execute each paper trade at the first print after the decision time on the side we need, within this many hours (0 = skip)")
     cr.add_argument("--no-lag", action="store_true", help="skip the close-lag diagnostic")
     cr.add_argument("--json", type=Path, default=None, help="also write the full result here")
     cr.add_argument("--fixtures", type=Path, default=None, help=argparse.SUPPRESS)

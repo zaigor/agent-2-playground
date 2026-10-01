@@ -146,3 +146,39 @@ def test_interval_count_variant():
         by_dec[(r.note.split("|")[1], r.time)] = by_dec.get((r.note.split("|")[1], r.time), 0.0) + r.p
     assert all(abs(s - 1.0) < 1e-3 for s in by_dec.values())
     assert all("n=" in r.note for r in interval) and all("n>=" in r.note for r in lower)
+
+
+def test_executable_fills_use_the_next_print_on_our_side():
+    from pm_scanner.crossings import executable_fills, taker_bought_yes
+    from pm_scanner.signal import ScoredRow
+
+    assert taker_bought_yes({"side": "BUY", "outcome": "Yes"}, ["Yes", "No"]) is True
+    assert taker_bought_yes({"side": "SELL", "outcome": "No"}, ["Yes", "No"]) is True
+    assert taker_bought_yes({"side": "BUY", "outcome": "No"}, ["Yes", "No"]) is False
+    assert taker_bought_yes({"side": "", "outcome": "Yes"}, ["Yes", "No"]) is None
+    ws = load_windows(_events(), "trump-truth-social")
+    x = ws[-1].brackets[5]
+    m = x.market
+    t0 = int(ws[-1].a.timestamp())
+    tape = [
+        {"timestamp": t0 - 60, "price": 0.20, "outcome": "Yes", "side": "BUY", "size": 5},  # the stale last print
+        {"timestamp": t0 + 600, "price": 0.70, "outcome": "No", "side": "BUY", "size": 5},   # taker sells YES at 0.30: not our side for a YES buy
+        {"timestamp": t0 + 1200, "price": 0.35, "outcome": "Yes", "side": "BUY", "size": 5},  # taker buys YES at 0.35: our fill
+    ]
+
+    class Src:
+        def trades(self, cid, closed=True):
+            return tape
+
+    tm = datetime.fromtimestamp(t0, tz=timezone.utc).isoformat(timespec="minutes")
+    row = ScoredRow(x.condition_id, m.question, tm, 0.60, 0.20, 1, 0.16, 0.64, 0.36, None, "YES", 0.75, 0.20, "trump-truth-social|ev|lbl|n>=20|frac=0.10|mu=90|k=5")
+    [f] = executable_fills([row], {x.condition_id: m}, Src(), wait_hours=1.0, edge=0.05, fee_rate=0.0)
+    assert f.trades == 1 and f.filled == 1 and f.taken == 1
+    assert abs(f.adverse_move - 0.15) < 1e-9 and abs(f.pnl_per_100 - (0.65 / 0.35 * 100)) < 1e-6
+    # too little edge left at the fill: filled but not taken
+    row2 = ScoredRow(x.condition_id, m.question, tm, 0.38, 0.20, 1, 0.0, 0.0, 0.0, None, "YES", 0.0, 0.20, row.note)
+    [f2] = executable_fills([row2], {x.condition_id: m}, Src(), wait_hours=1.0, edge=0.05, fee_rate=0.0)
+    assert f2.filled == 1 and f2.taken == 0 and f2.pnl_per_100 is None
+    # no print on our side within the wait: not filled
+    [f3] = executable_fills([row], {x.condition_id: m}, Src(), wait_hours=0.25, edge=0.05, fee_rate=0.0)
+    assert f3.filled == 0

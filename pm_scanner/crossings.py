@@ -45,7 +45,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 from .counts import SignalOut, p_bracket, parse_bracket, parse_window
-from .flow import yes_price_series
+from .fees import polymarket_taker_fee
+from .flow import is_first_outcome, yes_price_series
 from .polymarket import PolyMarket, parse_event
 from .signal import ScoredRow, SignalReport, SignalRow, cluster_se, render_signal, score_signal
 
@@ -362,6 +363,93 @@ def _quartiles(xs: list[float]) -> dict[str, float]:
 
 
 @dataclass
+class FillStat:
+    """Paper trades re-executed at the first print after the decision time on the side we need."""
+    name: str
+    trades: int  # paper trades in the signal block
+    filled: int  # that found such a print within the wait
+    taken: int  # and still cleared the edge at that price
+    pnl_per_100: float | None
+    pnl_per_100_se: float | None
+    adverse_move: float | None  # mean (fill - last print) against us, per share, over the filled trades
+
+
+def taker_bought_yes(trade: dict[str, Any], outcomes: list[str] | None) -> bool | None:
+    """True when the print is a taker buying the first outcome (the YES ask), False when selling it."""
+    side = str(trade.get("side") or "").upper()
+    if side not in ("BUY", "SELL"):
+        return None
+    first = is_first_outcome(trade, outcomes)
+    return (side == "BUY") == first
+
+
+def executable_fills(scored: list[ScoredRow], markets: dict[str, PolyMarket], trades_source, *, wait_hours: float = 6.0, edge: float = 0.05, fee_rate: float | None = None, key: Callable[[ScoredRow], str] | None = None) -> list[FillStat]:
+    """The signal block fills every paper trade at the last print before the decision time, which
+    in a thin ladder is often a stale print nobody would fill at. This re-executes each trade at
+    the first print after the decision time (within `wait_hours`) on the side we would have had
+    to take (a taker buying YES for our YES, a taker selling YES for our NO), decides again at
+    that price, and scores it. Grouped by `key` (default: everything in one group)."""
+    groups: dict[str, list[ScoredRow]] = defaultdict(list)
+    for s in scored:
+        if s.trade:
+            groups[key(s) if key else "all"].append(s)
+    cache: dict[str, list[dict[str, Any]]] = {}
+    out: list[FillStat] = []
+    for name, rows in groups.items():
+        per: dict[str, tuple[float, float]] = defaultdict(lambda: (0.0, 0.0))
+        filled = taken = 0
+        moves: list[float] = []
+        for s in rows:
+            m = markets.get(s.market)
+            if m is None:
+                continue
+            if s.market not in cache:
+                cache[s.market] = sorted(trades_source.trades(m.condition_id or m.id, closed=True), key=lambda t: int(t.get("timestamp", 0)))
+            ts = datetime.fromisoformat(s.time).timestamp()
+            want_buy = s.trade == "YES"
+            fill = None
+            for t in cache[s.market]:
+                tt = int(t.get("timestamp", 0))
+                if tt <= ts:
+                    continue
+                if tt > ts + wait_hours * 3600:
+                    break
+                side = taker_bought_yes(t, m.outcomes)
+                if side is None or side != want_buy:
+                    continue
+                try:
+                    p = float(t["price"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                fill = p if is_first_outcome(t, m.outcomes) else 1.0 - p
+                break
+            if fill is None:
+                continue
+            filled += 1
+            moves.append((fill - s.price) if want_buy else (s.price - fill))
+            rate = fee_rate if fee_rate is not None else (m.fee_rate if m.fee_rate is not None else 0.05)
+            ev = s.note.split("|")[1] if "|" in s.note else s.market
+            if want_buy:
+                fee = polymarket_taker_fee(fill, 1.0, rate)
+                if s.p - fill > edge + fee:
+                    taken += 1
+                    pnl, stake = (s.y - fill) - fee, fill
+                    a, c = per[ev]
+                    per[ev] = (a + pnl * 100.0, c + stake * 100.0)
+            else:
+                fee = polymarket_taker_fee(1.0 - fill, 1.0, rate)
+                if fill - s.p > edge + fee:
+                    taken += 1
+                    pnl, stake = ((1 - s.y) - (1.0 - fill)) - fee, 1.0 - fill
+                    a, c = per[ev]
+                    per[ev] = (a + pnl * 100.0, c + stake * 100.0)
+        stake = sum(c for _, c in per.values())
+        se = cluster_se(per) if taken else None
+        out.append(FillStat(name, len(rows), filled, taken, (sum(a for a, _ in per.values()) / stake * 100.0) if stake else None, (se * 100.0 if se is not None else None), (statistics.mean(moves) if moves else None)))
+    return out
+
+
+@dataclass
 class CrossingsResult:
     series: list[str]
     windows: int
@@ -375,16 +463,18 @@ class CrossingsResult:
     lags: dict[str, dict[str, float]]
     timing: str = "close"
     count: str = "lower"
+    fills: list[FillStat] = field(default_factory=list)  # pooled, then by series, then by phase
+    fill_wait_hours: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "timing": self.timing, "count": self.count, "series": self.series, "windows": self.windows, "windows_consistent": self.windows_consistent, "decisions": self.decisions, "skipped": self.skipped,
+            "timing": self.timing, "count": self.count, "fills": [asdict(f) for f in self.fills], "fill_wait_hours": self.fill_wait_hours, "series": self.series, "windows": self.windows, "windows_consistent": self.windows_consistent, "decisions": self.decisions, "skipped": self.skipped,
             "rows": [asdict(r) for r in self.rows], "report": self.report.to_dict(),
             "by_series": [asdict(g) for g in self.by_series], "by_phase": [asdict(g) for g in self.by_phase], "lags": self.lags,
         }
 
 
-def run_crossings(events_by_series: dict[str, list[dict[str, Any]]], trades_source, *, k_windows: int = 8, min_windows: int = 3, edge: float = 0.05, max_stale_hours: float = 24.0, horizon_min: int = 30, timing: str = "close", count: str = "lower", lags: bool = True, log: Callable[[str], None] | None = None) -> CrossingsResult:
+def run_crossings(events_by_series: dict[str, list[dict[str, Any]]], trades_source, *, k_windows: int = 8, min_windows: int = 3, edge: float = 0.05, max_stale_hours: float = 24.0, horizon_min: int = 30, timing: str = "close", count: str = "lower", lags: bool = True, fill_wait_hours: float = 6.0, log: Callable[[str], None] | None = None) -> CrossingsResult:
     """`timing="close"` dates each crossing by the bracket's UMA close (a certain lower bound,
     stale by the proposer's lag); `timing="collapse"` dates it by the bracket's price collapse
     (when the crowd itself marked the bracket dead: fresher, but a market can sell a bracket to
@@ -419,7 +509,12 @@ def run_crossings(events_by_series: dict[str, list[dict[str, Any]]], trades_sour
     order = ["early (<1/3)", "mid", "late (>2/3)"]
     by_phase = sorted(breakdown(report.scored, lambda s: phase_of(float(note_field(s.note, "frac") or 0.0))), key=lambda g: order.index(g.name) if g.name in order else 9)
     lag_summary = {k: _quartiles(v) for k, v in lag_raw.items() if v}
-    return CrossingsResult(list(events_by_series), len(windows), sum(1 for w in windows if w.crossings() and w.consistent()), len(decs_all), dict(skipped), rows, report, by_series, by_phase, lag_summary, timing, count)
+    fills: list[FillStat] = []
+    if fill_wait_hours > 0 and report.trades:
+        fills = executable_fills(report.scored, markets, trades_source, wait_hours=fill_wait_hours, edge=edge)
+        fills += sorted(executable_fills(report.scored, markets, trades_source, wait_hours=fill_wait_hours, edge=edge, key=lambda s: s.note.split("|")[0]), key=lambda f: f.name)
+        fills += sorted(executable_fills(report.scored, markets, trades_source, wait_hours=fill_wait_hours, edge=edge, key=lambda s: phase_of(float(note_field(s.note, "frac") or 0.0))), key=lambda f: order.index(f.name) if f.name in order else 9)
+    return CrossingsResult(list(events_by_series), len(windows), sum(1 for w in windows if w.crossings() and w.consistent()), len(decs_all), dict(skipped), rows, report, by_series, by_phase, lag_summary, timing, count, fills, fill_wait_hours if fills else 0.0)
 
 
 def _pm(x: float | None, se: float | None, f: str = "+.4f") -> str:
@@ -438,6 +533,11 @@ def render_crossings(res: CrossingsResult, *, edge: float = 0.05, horizon_min: i
         L.append(hdr)
         for g in groups:
             L.append(f"  {g.name[:34]:34s} {g.windows:4d} {g.decisions:5d} {g.rows:5d}  {g.brier_market:7.4f} /{g.brier_signal:7.4f}  {_pm(g.gap, g.gap_se):>18s}  {_pm(g.blend_gap, g.blend_gap_se):>18s}  {g.trades:6d}  {_pm(g.pnl_per_100, g.pnl_per_100_se, '+.2f'):>18s}")
+    if res.fills:
+        L.append(f"  paper trades re-executed at the first print after the decision time on the side we need (within {res.fill_wait_hours:g} h), decided again at that price:")
+        L.append(f"  {'group':34s} {'trades':>6s} {'filled':>6s} {'taken':>6s}  {'P&L/$100':>18s}  {'fill vs last print':>18s}")
+        for f in res.fills:
+            L.append(f"  {f.name[:34]:34s} {f.trades:6d} {f.filled:6d} {f.taken:6d}  {_pm(f.pnl_per_100, f.pnl_per_100_se, '+.2f'):>18s}  {('-' if f.adverse_move is None else f'{f.adverse_move:+.4f} against us'):>18s}")
     if res.lags:
         L.append("  hours from a crossed bracket's price collapse (first print under 10c that held) to its UMA close (median [q1, q3], n): how long the crowd had the crossing before the close dated it")
         for k, q in sorted(res.lags.items()):
