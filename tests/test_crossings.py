@@ -105,3 +105,22 @@ def test_run_and_render_with_fake_trades():
     assert phase_of(0.1) == "early (<1/3)" and phase_of(0.5) == "mid" and phase_of(0.9) == "late (>2/3)"
     d = res.to_dict()
     assert d["decisions"] == res.decisions and len(d["rows"]) == len(res.rows)
+
+
+def test_collapse_timing_dates_crossings_earlier():
+    evs = _events()
+    ws = load_windows(evs, "trump-truth-social")
+    fake = _FakeTrades(ws)
+    close = run_crossings({"trump-truth-social": evs}, fake, min_windows=3, max_stale_hours=24 * 14, timing="close")
+    coll = run_crossings({"trump-truth-social": evs}, fake, min_windows=3, max_stale_hours=24 * 14, timing="collapse")
+    assert close.timing == "close" and coll.timing == "collapse"
+    # the fake price falls under 10c at mid-window, before every real close, so collapse-dated decisions come earlier
+    t_close = sorted(datetime.fromisoformat(r.time) for r in close.rows)
+    t_coll = sorted(datetime.fromisoformat(r.time) for r in coll.rows)
+    assert t_coll[0] <= t_close[0] and coll.decisions >= 1
+    assert "price collapse" in render_crossings(coll) and "UMA close" in render_crossings(close)
+    try:
+        run_crossings({"trump-truth-social": evs}, fake, timing="bogus")
+        assert False, "bad timing accepted"
+    except ValueError:
+        pass

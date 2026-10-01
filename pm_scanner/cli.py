@@ -338,7 +338,7 @@ def _run_crossings(args, source) -> int:
             events_by_slug[slug] = fetch_series_events(source.http, slug)
         print(f"{slug}: {len(events_by_slug[slug])} events", file=sys.stderr)
     trades_src = LiveTrades(cache_dir=args.cache_dir)
-    res = run_crossings(events_by_slug, trades_src, k_windows=args.windows, min_windows=args.min_windows, edge=args.edge, max_stale_hours=args.max_stale, horizon_min=args.horizon_min, lags=not args.no_lag, log=lambda m: print(m, file=sys.stderr))
+    res = run_crossings(events_by_slug, trades_src, k_windows=args.windows, min_windows=args.min_windows, edge=args.edge, max_stale_hours=args.max_stale, horizon_min=args.horizon_min, timing=args.timing, lags=not args.no_lag, log=lambda m: print(m, file=sys.stderr))
     if args.out:
         write_signal_csv(res.rows, args.out)
         print(f"signal rows written to {args.out} (re-score: python -m pm_scanner signal --csv {args.out})", file=sys.stderr)
@@ -575,6 +575,7 @@ def build_parser() -> argparse.ArgumentParser:
     cr.add_argument("--horizon-min", type=int, default=30, help="minutes after each row for the markout")
     cr.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_trades"), help="where trade histories are cached")
     cr.add_argument("--out", type=Path, default=Path("crossings_signal.csv"), help="write the signal rows here (re-scorable with `signal --csv`)")
+    cr.add_argument("--timing", choices=("close", "collapse"), default="close", help="date each crossing by the bracket's UMA close (certain, stale) or by its price collapse (fresh, assumes the crowd did not sell it dead early)")
     cr.add_argument("--no-lag", action="store_true", help="skip the close-lag diagnostic")
     cr.add_argument("--json", type=Path, default=None, help="also write the full result here")
     cr.add_argument("--fixtures", type=Path, default=None, help=argparse.SUPPRESS)
