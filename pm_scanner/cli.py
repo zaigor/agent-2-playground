@@ -321,6 +321,33 @@ def _run_headroom(args, source) -> int:
     return 0
 
 
+def _run_crossings(args, source) -> int:
+    import json as _json
+
+    from .counts import fetch_series_events, write_signal_csv
+    from .crossings import render_crossings, run_crossings
+    from .weather import LiveTrades
+
+    slugs = [x.strip() for x in args.series.split(",") if x.strip()]
+    events_by_slug: dict[str, list] = {}
+    for slug in slugs:
+        if args.events_dir:
+            path = args.events_dir / f"{slug}.json"
+            events_by_slug[slug] = _json.loads(path.read_text()) if path.exists() else []
+        else:
+            events_by_slug[slug] = fetch_series_events(source.http, slug)
+        print(f"{slug}: {len(events_by_slug[slug])} events", file=sys.stderr)
+    trades_src = LiveTrades(cache_dir=args.cache_dir)
+    res = run_crossings(events_by_slug, trades_src, k_windows=args.windows, min_windows=args.min_windows, edge=args.edge, max_stale_hours=args.max_stale, horizon_min=args.horizon_min, lags=not args.no_lag, log=lambda m: print(m, file=sys.stderr))
+    if args.out:
+        write_signal_csv(res.rows, args.out)
+        print(f"signal rows written to {args.out} (re-score: python -m pm_scanner signal --csv {args.out})", file=sys.stderr)
+    print(render_crossings(res, edge=args.edge, horizon_min=args.horizon_min))
+    if args.json:
+        args.json.write_text(_json.dumps(res.to_dict(), indent=1, default=str))
+    return 0
+
+
 def _run_lp(args, source) -> int:
     log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
     if args.budget > args.max_budget:
@@ -538,6 +565,20 @@ def build_parser() -> argparse.ArgumentParser:
     sg.add_argument("--fixtures", type=Path, default=None, help="offline: markets and tapes from DIR")
     sg.add_argument("--json", type=Path, default=None, help="also write every scored row to this JSON file")
 
+    cr = sub.add_parser("crossings", help="test the count model against outcomes with no outside data: Polymarket closes each count bracket the moment the running count passes its ceiling, and those close times are a timestamped partial count (memo section 19e)")
+    cr.add_argument("--series", default="trump-truth-social,whitehouse-daily-tweets,khamenei-daily-tweets,zelenskyy-tweets,ted-cruz-daily-tweets,nycmayor-tweets,cz-tweets", help="comma-separated Gamma series slugs")
+    cr.add_argument("--events-dir", type=Path, default=None, help="read <slug>.json event dumps from DIR instead of Gamma")
+    cr.add_argument("--windows", type=int, default=8, help="trailing windows for the base rate")
+    cr.add_argument("--min-windows", type=int, default=3, help="skip decision times with fewer trailing windows than this")
+    cr.add_argument("--edge", type=float, default=0.05, help="paper-trade only when |p - price| exceeds this plus the taker fee")
+    cr.add_argument("--max-stale", type=float, default=24.0, help="drop rows whose last trade before the decision time is older than this many hours")
+    cr.add_argument("--horizon-min", type=int, default=30, help="minutes after each row for the markout")
+    cr.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_trades"), help="where trade histories are cached")
+    cr.add_argument("--out", type=Path, default=Path("crossings_signal.csv"), help="write the signal rows here (re-scorable with `signal --csv`)")
+    cr.add_argument("--no-lag", action="store_true", help="skip the close-lag diagnostic")
+    cr.add_argument("--json", type=Path, default=None, help="also write the full result here")
+    cr.add_argument("--fixtures", type=Path, default=None, help=argparse.SUPPRESS)
+
     lp = sub.add_parser("lp", help="liquidity-reward test rig: rest minimum-size two-sided post-only quotes in a few unquoted rewarded markets (memo section 18)")
     lp.add_argument("--live", action="store_true", help="actually send orders (default: dry run, public data only)")
     lp.add_argument("--smoke", action="store_true", help="one market only, for the first hours of a fresh account")
@@ -741,6 +782,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "counts":
         return _run_counts(args, source)
+    if args.cmd == "crossings":
+        return _run_crossings(args, source)
     if args.cmd == "headroom":
         return _run_headroom(args, source)
 

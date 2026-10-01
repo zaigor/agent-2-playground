@@ -248,6 +248,30 @@ Brier at the window start leaves room only for the live count.
 python -m pm_scanner headroom --series trump-truth-social,6pt5-earthquake-weekly,ships-transit-the-strait-of-hormuz --per-family 12
 ```
 
+### Testing the count model against outcomes with no outside data: `crossings` (memo section 19e)
+
+Polymarket closes a count bracket the moment the running count passes its
+ceiling ("<20" on Monday, "20-39" on Tuesday, ...), each a NO resolved by UMA
+while the window is still open. Those close timestamps are a public staircase
+lower bound on the count through every resolved posts window, so the model in
+`counts` can be scored against outcomes without the tracker's export: at each
+early close the count is at least the ceiling plus one, the remainder is the
+trailing windows' mean rate times the fraction of the window left, and every
+bracket still open gets a probability that `signal` scores against the price
+at that moment and the resolution.
+
+```
+python -m pm_scanner crossings --series trump-truth-social,ted-cruz-daily-tweets --out crossings_signal.csv
+python -m pm_scanner crossings --events-dir dumps/ --max-stale 72 --json crossings.json   # offline event dumps, looser price staleness
+```
+
+The report is the `signal` block plus event-clustered tables by series and by
+window phase, and the hours between the price collapse of each crossed bracket
+and its close (how stale the lower bound is). The count used is a lower bound
+and there is no phase profile, so the test is biased against the model: a
+positive result is conservative, a null one ambiguous. Earthquake, ship and
+weather brackets close only after the window, so this covers the posts families.
+
 ## The one live command: `lp` (memo section 18)
 
 Everything above is read-only. `lp` is the test rig for the liquidity-reward
@@ -304,6 +328,7 @@ pm_scanner/
   ladder.py      ladder consistency: nested outcomes by number or date, violations net of fees, confirmed on books
   rewards.py     liquidity rewards: reward share of a small quote against the live book vs its adverse selection on the tape
   signal.py      generic backtest of a CSV of your own probabilities against the price at that time and the outcome
+  crossings.py   bracket-crossing test: early bracket closes as a timestamped count lower bound, scored against outcomes with `signal`
   counts.py      count-window ladders: windows and brackets from the Gamma wording, catalog -> negative-binomial probabilities -> signal CSV; headroom of the market itself
   lp.py          the liquidity-reward test rig: minimum-size post-only quotes in unquoted rewarded markets, scoring and earnings read-back
   weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/flow/today
