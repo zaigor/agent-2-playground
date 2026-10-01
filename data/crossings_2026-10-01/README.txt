@@ -8,4 +8,6 @@ full trade tapes (data-api /trades).
   *_stale2h / *_stale72h  the price must be a print within 2 h / 72 h of the decision time (default 24 h)
   *_signal.csv  the (market, time, p, note) rows: re-score with  python -m pm_scanner signal --csv FILE
 
+musk_*  the same two tests on elon-tweets and elon-tweets-48h (their signal rows, 31,000 each, are not kept: regenerate with the command below)
+
 Command:  python -m pm_scanner crossings --series <slugs> --timing {close,collapse} --count {lower,interval} --max-stale H --fill-wait 6

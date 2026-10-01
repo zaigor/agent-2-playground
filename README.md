@@ -277,8 +277,9 @@ still alive. The count is a lower bound and there is no phase profile, so the
 test is biased against the model. Earthquake, ship and weather brackets close
 only after the window, so this covers the posts families. Results and the
 re-scorable rows: `data/crossings_2026-10-01/`; the pre-registered close-dated
-test fails, the collapse-dated one shows a paper P&L of about +12 per $100
-that survives the fill check (memo 19e has the caveats).
+test fails, the collapse-dated one shows a paper P&L of about +11 per $100
+that survives the fill check, in the thin ladders and in Musk's weekly series
+(memo 19e has the caveats).
 
 ## The one live command: `lp` (memo section 18)
 

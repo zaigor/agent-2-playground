@@ -1712,15 +1712,36 @@ crossed bracket's price collapse to its UMA close):
 | whitehouse-daily-tweets | 64 [25, 106] | 146 |
 | zelenskyy-tweets | 26 [7, 54] | 113 |
 
-**Musk's two series** (weekly and 48-hour, the liquid end of the family: 167
-and 90 windows with early closes) are scored separately once their 4,000 trade
-tapes have loaded; the line goes here when they have.
+**Musk's two series**, scored after everything above and so not used to
+design B: the liquid end of the family, 169 weekly and 90 two-day windows with
+early closes, 31,000 rows, fills within half a cent of the last print.
+
+| series | windows | decisions (A / B) | A: market - blend | A: P&L per $100 at the fill (trades taken) | B: market - blend | B: P&L per $100 at the fill (trades taken) |
+| --- | --- | --- | --- | --- | --- | --- |
+| elon-tweets (weekly) | 163 | 1,591 / 1,563 | -0.0014 ± 0.0004 | +0.7 ± 1.9 (5,060) | **+0.0018 ± 0.0007** | **+10.8 ± 1.8 (8,628)** |
+| elon-tweets-48h | 87 | 163 / 161 | -0.0025 ± 0.0030 | +9.8 ± 5.6 (360) | -0.0027 ± 0.0028 | +4.7 ± 6.6 (424) |
+
+The weekly series is the one family large enough to settle B, and it settles
+it in B's favour: the blend gap is positive at 2.6 standard errors, which is
+17d's criterion met, and the fill-adjusted P&L is +10.8 ± 1.8 per $100 over
+8,628 trades. The shape is the thin families' shape: the brackets above the
+count bound, priced at 5c on average, win 10% of the time (+78 per $100 on
+$247 staked); selling the bracket that holds the bound earns +16 on $781;
+selling the brackets above it +5 on $2,853. A, as everywhere, shows nothing
+(+0.7 ± 1.9), and blending the close-dated model into the price makes the
+price worse (-0.0014 ± 0.0004). The two-day series has 160 decisions and shows
+nothing after the fill in either timing. The close lags the collapse by a
+median of 41 hours in the weekly series: under B that is how long the
+most-traded count market on the site takes to re-price the rest of its ladder
+after killing a bracket, and it is not zero.
 
 **Why B is not yet a result to bank.**
 
 1. It is post hoc. The timing was changed after the first look, on A's lag
-   table. Six variants later it is one phenomenon rather than a lucky cell,
-   but the pre-registered test is A, and A fails.
+   table. It has since held across six variants on the seven thin families
+   and on Musk's weekly series, which was scored last, was not used to design
+   it, and meets 17d's criterion on its own. What it does not have is a timing
+   written down before any number was seen; the test that was, A, fails.
 2. The collapse time is chosen knowing the collapse held (it looks at the
    bracket's own later prints, never at the brackets scored), and a bracket
    can be sold to nothing shortly before the count actually passes it. Live,
@@ -1738,14 +1759,16 @@ tapes have loaded; the line goes here when they have.
 
 **What this changes in the plan.** 19c's recipes stand, but the posts
 families move to the front and the first laptop run is the tracker export for
-Trump, the White House, Cruz and the mayor: `counts` with the real count, then
-`signal --fill-wait 6`. If that reproduces B's fill-adjusted P&L at two
-standard errors on data the model was not fitted on, the $50 test of section
-18 gets a second leg: at each tracker update that carries the count past a
-bracket ceiling, take the model's trades in those four ladders at taker, two to
-five dollars a trade, and rest the rest of the ladder as maker quotes where
-the reward pots pay. Until then the decision rule of 17d stands, and A, the
-test as written before the numbers, says no.
+Musk, Trump, the White House, Cruz and the mayor: `counts` with the real
+count, then `signal --fill-wait 6`. If that reproduces B's fill-adjusted P&L
+at two standard errors with the real count (which is earlier and exact, so it
+should do better, not worse), the $50 test of section 18 gets a second leg: at
+each tracker update that carries the count past a bracket ceiling, take the
+model's trades at taker, two to five dollars a trade, in Musk's weekly ladder,
+the one where $50 fills at the print, and rest the thin ladders as maker
+quotes where the reward pots pay. Until then the decision rule of 17d stands:
+B meets it on Musk's series, A, the test as written before the numbers, says
+no, and the laptop run with the real count is what breaks the tie.
 
 ## Sources
 
