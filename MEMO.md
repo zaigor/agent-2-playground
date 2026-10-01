@@ -1207,6 +1207,335 @@ Pre-registered reading of the result, per day and per market:
 Whatever happens, the log and the earnings readings go into section 20,
 with the same honesty as sections 12-16.
 
+## 19. Niche public data (1 Oct): what exists, which markets price against it, how much room the price leaves
+
+You asked for open data that is too niche to be obvious, where the link
+to a market is not trivial, so that other players have not bothered. I
+went through every recurring Polymarket series (the 690 families from
+section 10, re-pulled from Gamma today) by *what it resolves on*, and
+asked of each: is there a public, timestamped feed upstream of the
+resolution source, and is the step from feed to probability something the
+crowd would skip? Two constraints shaped the work. This container's
+network policy reaches Polymarket's own APIs, PyPI and raw GitHub files
+and nothing else (sixty candidate hosts tested: USGS, NOAA, CDC, BLS,
+FRED, EIA, Wikipedia, Federal Register, SEC EDGAR, CourtListener,
+Spotify, FlixPatrol, OpenSky, the IMF, the xtracker resolution site,
+all refused), so the data pulls below are yours to run; and section 14's
+rule stands, nothing non-public and nothing from inside the resolution
+source's own process.
+
+### 19a. The shape that works
+
+The pattern that satisfies all six criteria of 17d by construction is a
+**count window**: a market that resolves on an official aggregate over a
+window (posts this week, quakes this week, ships this week, tornadoes
+this month), published with a lag by one source, while the occurrences
+themselves are public and timestamped as they happen. The count so far is
+then known exactly, the remainder is a distribution with a base rate you
+can read off the previous windows, and the probability of each bracket is
+arithmetic. The connection is "not trivial" in exactly the sense you
+meant: nobody has to know anything, they have to do a Poisson sum with the
+live count, every day, for every bracket, and most people eyeball it
+instead. Polymarket runs more of these than I expected:
+
+| series | events / markets (resolved) | since | volume | resolves on | upstream feed |
+| --- | --- | --- | --- | --- | --- |
+| Donald Trump Truth Social posts per week | 70 / 770 (735) | Feb 2026 | $13.6M | xtracker.polymarket.com post counter | the tracker's own "Export Data" CSV (timestamps of every counted post) |
+| White House, Khamenei, Zelenskyy, Ted Cruz, NYC Mayor, CZ posts per week | 59+59+58+58+58+57 / 3,949 (3,723) | Mar 2026 | $10.4M | same | same |
+| Elon Musk posts per week, per 48h | 185 / 4,090 (4,023); 119 / 1,196 | 2024 | $1.44B + $195M | same | same (section 15: informed takers) |
+| 6.5+ earthquakes per week; 5.5+ per week | 37 / 259 (252); 18 / 150 (141) | Dec 2025; Jun 2026 | $3.3M + $0.8M | USGS search, magnitude ≥ threshold, ET day boundaries | USGS FDSN event API (free, no key; one CSV for the whole catalog) |
+| Ships through Hormuz per week; Bab el-Mandeb per week; Hormuz 7-day average at month end | 31 / 185 (173); 12 / 57 (47); 11 / 67 (53) | Mar 2026; Jul 2026 | $6.2M + $0.2M + $5.0M | IMF PortWatch daily transit calls | PortWatch's own daily CSV (published with a few days' lag, "finalised" when the next day appears); live AIS for the days PortWatch has not published |
+| US tornadoes per month | 12 / 77 (67) | Dec 2025 | $1.7M | NCEI monthly count, released ~6 weeks after month end | SPC preliminary storm reports (daily CSV, same day); NCEI's final count is a stable fraction of the preliminary one |
+| Monthly precipitation (Seoul, Seattle, NYC, ...) | 15 / 110 (38) plus 12 older events | Jul 2026 | $1.4M | KMA / NWS monthly total | the same agencies' daily observations (accumulation to date) plus ECMWF 15-day precipitation from Open-Meteo for the remainder |
+| Claude downtime days per month | 8 / 42 (37) | Feb 2026 | $0.4M | status page history | the status page itself, daily |
+
+Those first three rows are one family in the sense that matters: the same
+rule text, the same tracker, 20-wide brackets, Friday-noon-to-Friday-noon
+ET windows. Section 17c recorded your decision not to chase mention and
+tweet markets as *information processing*; this is a different use of the
+same markets, a base-rate model, and the smaller accounts have none of the
+bot competition section 15 found around Musk.
+
+The second shape is an **official index with a public leading series**,
+where the mapping is a regression fitted on years before the test period:
+
+| series | events / markets (resolved) | since | volume | resolves on | leading public data | mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Monthly global temperature anomaly; "hottest month on record" rank | 16 / 94 (82); 14 / 35 (35) | Nov 2024 | $21.1M + $8.1M | NASA GISTEMP table, ~mid next month | Copernicus Climate Pulse ERA5 daily global temperature (public CSV, ~5-day lag); Berkeley Earth monthly quick-look | ERA5 month-to-date anomaly → GISTEMP anomaly, fitted 2015-2024; residual sd ≈ 0.03-0.05 °C against 0.05 °C brackets |
+| Price of a dozen eggs (BLS average price) | 17 / 145 (135) | Jan 2025 | $7.4M | FRED APU0000708111, CPI release day | USDA AMS Egg Markets Overview (weekly wholesale, public), Daily National Shell Egg Index | wholesale of the CPI survey weeks → retail, fitted 2015-2024; the lag is weeks |
+| Flu hospitalization rate (FluSurv-NET) per week | 34 / 184 (184) | Jan 2026 | $0.8M | CDC FluView, Fridays | NHSN hospital respiratory admissions (all hospitals, same Friday), state dashboards, WastewaterSCAN / NWSS influenza A (twice weekly, leads by about a week) | wastewater and NHSN of the week → FluSurv-NET rate; brackets are 0.1 wide |
+| Measles cases by date | 25 / 133 (115) | May 2025 | $13.4M | CDC counter, weekly | state health department releases (Texas DSHS, Utah, South Carolina, ...), days to a week ahead of CDC aggregation | state sum plus the CDC's lag; a cumulative count, so only the "by date" tail is uncertain |
+| IPO first-day closing market cap | 58 / 403 (386) | Feb 2026 | $9.6M | first-day close | the 424B4 final prospectus on EDGAR (timestamped pricing and share count); Jay Ritter's first-day return tables (public, 1980-) | priced cap × the empirical first-day return distribution → P(bracket), fitted on IPOs before 2026; the edge window is the hours between pricing and the open |
+| White House calls a full lid by 6:30 PM | 30 / 180 (173) | Feb 2026 | $1.9M | pool reports | the daily guidance the White House publishes the evening before (archived by Factbase) | schedule features (evening event, travel, weekend) → P(full lid), fitted on earlier days |
+| Opening weekend box office | 315 / 1,342 (1,220) | 2021 | $77.0M | the-numbers.com | Wikipedia pageviews of the film's article in the week before release (hourly API, archived since 2015, exactly point-in-time); Google Trends | the Mestyán-Yasseri-Kertész (2013) regression, refitted on 2021-2024 films, scored on 2025-26 markets; the crowd uses tracking leaks from the trades, pageviews are orthogonal to them |
+| #1 Netflix show / movie (global, US) per week; Billboard #1; Spotify #1 | ~2,000; 759; 850 | 2025 | $7M; $1.3M; $2.2M | Netflix Tuesday top 10; Billboard; Spotify | Wikipedia pageviews of the titles during the chart week; Kworb's daily Spotify archive; Mediabase daily radio chart (Billboard only) | multi-outcome: P(title is #1) from relative attention; the aggregator the crowd uses (FlixPatrol) is itself a leading indicator |
+
+Left out on purpose: TSA daily passengers (777 markets) and FlightAware
+delays (136) were discontinued in April and June 2026, though TSA's own
+history back to 2019 makes them the cleanest sandbox if the series
+returns; the D4-drought state count ($0.1M), the GPU rental index ($0.4M)
+and Claude downtime ($0.4M) are too small to pay for a model; Musk's net
+worth is TSLA arithmetic that sharp traders already do; MrBeast views and
+the LMArena "best AI company" markets have leading indicators (first-hour
+view velocity, anonymous arena models) that nobody archived, so they can
+only be collected forward; approval-rating markets are a model of Silver
+Bulletin's model, not of the world.
+
+### 19b. Two things checked from here
+
+**A niche archive that failed the coverage test.** The one upstream feed
+reachable from this container was a public GitHub archive of Truth Social
+posts (29,469 posts with timestamps, scraped every four hours). It is
+exactly the kind of source you had in mind, and it is useless for this
+market: its scraper broke in October 2025 and resumed in late April
+2026, so the weeks Polymarket has traded (February to September 2026)
+have zero or a few dozen posts in it; 0 of 23 resolved windows matched
+the winning bracket. That is criterion 2 of 17d failing in practice, and
+it is why `counts --check-only` exists: before any backtest, the
+catalog's count over each resolved window must land in the bracket that
+won. If it does not, the catalog is not what the tracker counts (replies,
+reposts, deletions, magnitude revisions, time zone) and the result would
+be noise either way.
+
+**How sharp the markets already are, with no outside data.** `headroom`
+scores the market's own price at the start, the middle and 90% of each
+window against the outcome, next to two references that need nothing
+external: a uniform spread over the ladder, and a point-in-time
+climatology (how often this bracket label had won in the series up to
+that moment, needing five earlier outcomes). The Brier of the market at
+the window start tells you whether the crowd prices the base rate; the
+"blend gap" (market Brier minus the Brier of a 50/50 mix of price and
+climatology) tells you whether the base rate carried information the
+price lacked, which is the cheapest edge there is. Twelve resolved events
+sampled per series (six for the weekly charts), every market of each,
+prices from the full trade tapes; 42 series, 3,900 market-offsets:
+
+| series | events | markets | Brier start / mid / late | uniform | blend gap at start | at mid |
+| --- | --- | --- | --- | --- | --- | --- |
+| trump-truth-social | 12 | 132 | 0.086 / 0.071 / 0.019 | 0.083 | +0.001 ± 0.005 | -0.005 ± 0.005 |
+| whitehouse-daily-tweets | 12 | 132 | 0.064 / 0.053 / 0.020 | 0.079 | -0.001 ± 0.002 | -0.002 ± 0.006 |
+| khamenei-daily-tweets | 12 | 154 | 0.053 / 0.047 / 0.014 | 0.072 | +0.001 ± 0.005 | -0.002 ± 0.004 |
+| zelenskyy-tweets | 12 | 132 | 0.064 / 0.058 / 0.023 | 0.083 | +0.006 ± 0.004 | +0.003 ± 0.006 |
+| ted-cruz-daily-tweets | 12 | 132 | 0.072 / 0.072 / 0.065 | 0.075 | +0.001 ± 0.004 | +0.003 ± 0.005 |
+| nycmayor-tweets | 12 | 132 | 0.039 / 0.015 / 0.008 | 0.087 | -0.004 ± 0.006 | -0.013 ± 0.006 |
+| cz-tweets | 12 | 132 | 0.051 / 0.039 / 0.002 | 0.083 | -0.004 ± 0.004 | -0.005 ± 0.004 |
+| 6pt5-earthquake-weekly | 12 | 84 | 0.083 / 0.055 / 0.003 | 0.118 | -0.005 ± 0.006 | -0.016 ± 0.008 |
+| 5-5-earthquake | 12 | 101 | 0.087 / 0.072 / 0.046 | 0.101 | +0.001 ± 0.004 | -0.006 ± 0.006 |
+| ships-transit-the-strait-of-hormuz | 12 | 73 | 0.109 / 0.098 / 0.063 | 0.156 | +0.028 ± 0.015 | +0.031 ± 0.032 |
+| weekly-total-bab-el-mandeb-strait | 10 | 47 | 0.166 / 0.163 / 0.154 | 0.167 | - | - |
+| hormuz-transits-neg | 9 | 53 | 0.139 / 0.075 / 0.045 | 0.140 | - | - |
+| monthly-tornadoes-us | 10 | 67 | 0.186 / 0.092 / 0.030 | 0.132 | - | - |
+| monthly-precipitation | 5 | 38 | 0.116 / 0.109 / 0.002 | 0.114 | - | - |
+| claude-downtime | 7 | 37 | 0.152 / 0.145 / 0.073 | 0.175 | - | - |
+| temperature-increase | 12 | 70 | 0.215 / 0.113 / 0.024 | 0.142 | +0.101 ± 0.074 | -0.120 ± 0.033 |
+| hottest-month | 12 | 30 | 0.168 / 0.002 / 0.005 | 0.317 | -0.090 | -0.098 ± 0.019 |
+| egg-prices-monthly | 12 | 102 | 0.107 / 0.066 / 0.046 | 0.103 | -0.004 | -0.005 |
+| flu-hospitalization-rate-week | 12 | 67 | 0.078 / 0.024 / 0.018 | 0.146 | -0.026 ± 0.026 | -0.038 ± 0.021 |
+| measles | 12 | 43 | 0.242 / 0.110 / 0.032 | 0.479 | - | - |
+| ipo-closing-market-cap | 12 | 83 | 0.147 / 0.098 / 0.041 | 0.123 | - | -0.186 ± 0.067 |
+| white-house-call-a-full-lid | 12 | 72 | 0.218 / 0.220 / 0.094 | 0.409 | - | - |
+| box-office-openings | 12 | 46 | 0.160 / 0.099 / 0.020 | 0.162 | -0.037 | -0.046 |
+| rotten-tomatoes | 12 | 57 | 0.175 / 0.137 / 0.035 | 0.401 | -0.010 ± 0.018 | -0.021 ± 0.037 |
+| first-week-album-sales | 12 | 73 | 0.144 / 0.111 / 0.044 | 0.137 | - | - |
+| top-netflix-show-week | 6 | 94 | 0.097 / 0.022 / 0.029 | 0.110 | -0.090 | -0.093 |
+| 1-us-netflix-show | 6 | 119 | 0.088 / 0.002 / 0.001 | 0.086 | - | - |
+| billboard-1-song | 6 | 128 | 0.040 / 0.028 / 0.000 | 0.096 | -0.014 ± 0.004 | -0.019 ± 0.009 |
+| 1-spotify-song | 6 | 139 | 0.036 / 0.000 / 0.000 | 0.089 | -0.036 ± 0.007 | -0.034 ± 0.007 |
+| 1-free-app | 6 | 109 | 0.125 / 0.049 / 0.004 | 0.101 | +0.042 ± 0.052 | -0.008 ± 0.014 |
+| best-ai-company | 6 | 85 | 0.108 / 0.062 / 0.001 | 0.103 | +0.056 ± 0.055 | -0.001 ± 0.000 |
+| openrouter-ai-market-share | 6 | 90 | 0.032 / 0.029 / 0.013 | 0.077 | -0.005 | -0.016 |
+| mrbeast-views-day-1 | 6 | 44 | 0.179 / 0.040 / 0.002 | 0.118 | - | - |
+| tsa-daily | 12 | 84 | 0.094 / 0.052 / 0.065 | 0.139 | -0.000 ± 0.016 | -0.013 ± 0.011 |
+| tsa-passengers | 12 | 84 | 0.098 / 0.087 / 0.037 | 0.122 | -0.010 ± 0.007 | +0.004 ± 0.063 |
+| flight-delays-daily | 12 | 96 | 0.089 / 0.065 / 0.026 | 0.103 | +0.002 ± 0.010 | -0.000 ± 0.013 |
+| trump-538-approval | 12 | 74 | 0.139 / 0.135 / 0.018 | 0.136 | +0.001 ± 0.007 | -0.014 ± 0.012 |
+| elon-net-worth | 12 | 88 | 0.122 / 0.096 / 0.071 | 0.117 | +0.002 | -0.012 |
+| b200-rental-price | 5 | 40 | 0.174 / 0.119 / 0.067 | 0.335 | - | - |
+| drought-d4-weekly | 12 | 276 | 0.098 / 0.036 / 0.023 | 0.273 | -0.002 ± 0.000 | -0.001 ± 0.001 |
+| tornado-risk-daily | 6 | 150 | 0.055 / 0.024 / 0.006 | 0.002 | +0.001 ± 0.000 | +0.002 ± 0.002 |
+| rain-daily | 6 | 90 | 0.143 / 0.062 / 0.002 | 0.216 | +0.002 ± 0.024 | -0.027 ± 0.008 |
+
+The full report, with the uniform and climatology columns and the
+clustered standard errors, is `data/headroom_2026-10-01.txt`. How to read
+it: "start" is the price at the window's first minute (for series whose
+rules state no window, the market's first trade), which in a thin book is
+often the maker's seed ladder rather than a price anyone could trade
+against, so the honest number is "mid"; "late" is 90% of the way through.
+A market that is at the uniform Brier at mid-window has not learned
+anything from the public count by then.
+
+What it says, family by family:
+
+* **Posts per week (seven accounts, 946 markets sampled).** At the start
+  of every window the market is no sharper than the uniform ladder or the
+  base rate, and the blend gaps are all within one standard error of
+  zero: there is no base-rate edge, the crowd prices the previous weeks
+  about as well as a frequency table does. By 90% of the window six of the
+  seven are sharp (0.002-0.023), so the live count is read and priced.
+  The exception is Ted Cruz: 0.072 at the start, 0.072 at mid, 0.065 late,
+  against a uniform 0.075-0.083. Nobody updates that market during the
+  week. It is also the thinnest of the seven ($1.1M lifetime, 1c spreads
+  on nothing). Musk's weekly and 48-hour series are missing from the
+  table: the trade-history API answered their tapes with server errors
+  during the run, and section 15 had measured them anyway.
+* **Earthquakes.** The 6.5+ market tracks the USGS feed (0.083 at start
+  against a uniform 0.118, 0.003 late). The 5.5+ market does not: 0.087,
+  0.072, then still 0.046 at 90% of the week, with the count public and
+  one day of remainder to price. That is room, in the family with
+  $0.8M of lifetime volume.
+* **Ships.** Hormuz shows the one positive blend gap in the table
+  (+0.028 ± 0.015 at the window start), and it is not what it looks
+  like. The weekly transit count swung from 15-19 ships in March to 150+
+  in late June and back to 20-24 in September, and Polymarket re-centres
+  the ladder every week around the latest level, so the label that keeps
+  winning ("25-49", four of the twelve sampled weeks) is simply the middle
+  of a ladder someone at Polymarket already centred on a forecast. "Bet
+  the middle bracket" is the market maker's own prior, not niche data, and
+  twelve events cannot separate it from luck. Bab el-Mandeb sits at the
+  uniform Brier from start to finish (0.166 against 0.167): the market
+  never learns, and a partial-week PortWatch count would be the only
+  information in it. At $0.2M of lifetime volume it will not pay for the
+  model.
+* **Monthly and daily accumulations.** Tornadoes, precipitation, the
+  global-temperature brackets, Claude downtime and the daily full-lid
+  binary all open at or worse than uniform (seed ladders in thin books).
+  Precipitation is still at uniform at mid-month (0.109 against 0.114) and
+  only resolves at the end; the accumulation to date and the 15-day
+  forecast are public and unused, on $0.3M of volume. The full-lid market
+  is a coin flip (0.22) until the day itself; the published schedule is
+  unused there too. The "hottest month" rank is the opposite case: 0.002
+  by mid-month, the crowd already reads the daily reanalysis, and the only
+  room is in the first days.
+* **Everything else** (flu, eggs, measles, approval, net worth, IPOs,
+  Rotten Tomatoes, box office, album sales, GPU prices, drought, the AI
+  leaderboard, the weekly charts) sharpens normally through its life and
+  shows negative blend gaps: the base rate adds nothing to those prices.
+  Box office is worth one note: the price at the market's open is at the
+  uniform Brier (0.160 against 0.162) and 0.099 by mid-life, so a
+  pageviews model placed on the first day competes with a seed ladder,
+  not with the tracking numbers that arrive later.
+
+Taken together: the base rate is already in the price everywhere it can
+be read (the Hormuz exception is the ladder's own centring). Where room exists it is the
+live count during the window, in markets too thin for anyone to have
+bothered: 5.5+ earthquakes late in the week, Ted Cruz's posts, Bab
+el-Mandeb transits, monthly precipitation, the full lid. Those are
+$0.2-1.2M-lifetime families, which is the honest size of this edge: a
+few dollars a day for a bot that reads a public feed and quotes
+minimum-size orders, in exactly the way section 17b's rewards rig does,
+and combinable with it: the open markets of these very families carry
+liquidity-reward pots today (full lid $50 a day per market, Bab
+el-Mandeb $5-51, 5.5+ quakes $1-30, Ted Cruz $1-6), so a quote that
+knows the count would be paid to rest there. The recipes below are
+ordered by that reading.
+
+### 19c. Recipes, in the order I would run them
+
+Everything below runs on your laptop against the resolved markets; the
+scoring is the `signal` command from 17d, and the decision rule is the
+one written there: a blend gap two standard errors above zero on markets
+the mapping was not fitted on, then the $50 live test of section 18
+restricted to those markets.
+
+1. **Earthquakes** (an afternoon). One request gives the whole catalog:
+
+   ```
+   curl -o quakes.csv "https://earthquake.usgs.gov/fdsnws/event/1/query?format=csv&starttime=2024-01-01&minmagnitude=5.5"
+   python -m pm_scanner counts --series 6pt5-earthquake-weekly --catalog quakes.csv --value-col mag --min-value 6.5 --check-only
+   python -m pm_scanner counts --series 6pt5-earthquake-weekly --catalog quakes.csv --value-col mag --min-value 6.5 --out q65.csv
+   python -m pm_scanner signal --csv q65.csv
+   python -m pm_scanner counts --series 5-5-earthquake --catalog quakes.csv --value-col mag --min-value 5.5 --out q55.csv && python -m pm_scanner signal --csv q55.csv
+   ```
+
+   The caveat is magnitude revision: USGS reviews magnitudes for hours to
+   days, and a 6.4 that becomes a 6.5 changes the count after the fact.
+   The catalog you download is the revised one, so the backtest is
+   slightly flattered; the `--check-only` step shows how often the final
+   catalog disagrees with the bracket that won, which bounds it.
+
+2. **Ship transits** (an afternoon). Download the daily chokepoint
+   transit-call file from PortWatch (portwatch.imf.org, "Daily Chokepoints"
+   dataset, CSV; one row per chokepoint per day), filter to the Strait of
+   Hormuz, and run with the count column:
+
+   ```
+   python -m pm_scanner counts --series ships-transit-the-strait-of-hormuz --catalog hormuz.csv --count-col n_total --check-only
+   python -m pm_scanner counts --series ships-transit-the-strait-of-hormuz --catalog hormuz.csv --count-col n_total --out hormuz.csv.signal.csv
+   python -m pm_scanner signal --csv hormuz.csv.signal.csv
+   ```
+
+   Here the honest point-in-time version is stricter than the catalog: a
+   day's count is published three to five days later, so the live version
+   of the model would know fewer days than the backtest assumes. Score it
+   twice, once as is and once with the decision time shifted by the lag,
+   and believe the second. The live AIS feed (aisstream.io is free) is the
+   niche data that closes that gap, and it can only be collected forward.
+
+3. **Posts** (an evening per account). On each tracked account's page at
+   xtracker.polymarket.com, "Export Data" gives the counted posts with
+   timestamps; save one CSV per account:
+
+   ```
+   python -m pm_scanner counts --series khamenei-daily-tweets --catalog khamenei.csv --check-only
+   python -m pm_scanner counts --series khamenei-daily-tweets --catalog khamenei.csv --out khamenei_signal.csv
+   python -m pm_scanner signal --csv khamenei_signal.csv
+   ```
+
+   and the same for `whitehouse-daily-tweets`, `zelenskyy-tweets`,
+   `ted-cruz-daily-tweets`, `nycmayor-tweets`, `cz-tweets`,
+   `trump-truth-social`, then `elon-tweets` last (section 15 says it is
+   the one with informed takers; it is also the one with $1.4B of volume).
+   The model's phase profile matters most here: posting follows a weekly
+   rhythm, and the default allocates the remaining count by the previous
+   eight weeks' hour-of-week pattern. `--no-profile` is the control.
+
+4. **Tornadoes** (a weekend). Build a catalog from SPC's daily preliminary
+   tornado reports (`spc.noaa.gov/climo/reports/YYMMDD_rpts_torn.csv`, one
+   file per day since 2004), run with `--monthly`, and apply the
+   preliminary-to-final ratio from NCEI's history as a fixed scale on the
+   catalog count before testing; the family is small (67 resolved
+   markets), so only a large gap would show.
+
+   Monthly precipitation has the same shape with a continuous total: the
+   agency's daily observations (KMA for Seoul, the NWS climate reports
+   for the US cities) are the catalog with `--count-col` holding the
+   millimetres, the remainder comes from Open-Meteo's 15-day
+   precipitation sum rather than the negative-binomial default, and the
+   headroom table says the market is at uniform until mid-month.
+
+5. **The regression families** (box office first, then GISTEMP, eggs,
+   IPOs) need a hand-built `market,time,p` file rather than `counts`: a
+   mapping from each market to the upstream series (film title to
+   Wikipedia article; month to ERA5 days; IPO to its 424B4), the
+   regression fitted strictly on years before the markets existed, and a
+   probability per bracket from the residual distribution. Box office is
+   the best of them: 1,220 resolved markets, a published method, and
+   pageviews that are archived hourly and cannot leak the future. It is
+   also the most work (about three hundred title mappings).
+
+6. **The full lid** is a daily binary rather than a count: a
+   `market,time,p` file from the previous evening's published guidance
+   (Factbase keeps the archive), with P(full lid by 6:30) read off the
+   same features in the earlier days of the series, scored at 9 AM ET on
+   the day. The market sits at a coin flip until the afternoon.
+
+### 19d. What to expect, honestly
+
+* The volume in these families is $1-15M over their lifetimes and the
+  books are thin; this is $50-500 money, which is what you have, and it
+  does not scale.
+* A positive result in a count family will come from the live count more
+  than from the base rate (the headroom table says how much of each is
+  there); that means a bot running daily, not a trade a week.
+* The posts families are the largest sample and the easiest data, but
+  they are the ones section 17c set aside; the base-rate model is a
+  different use than information processing, and the small accounts were
+  never measured. If the headroom table shows them already sharp at the
+  window start and sharper mid-window, that question is closed too.
+* Nothing here has been tested against outcomes yet. The tooling and the
+  Polymarket side are done and offline-tested (`tests/test_counts.py`);
+  the upstream pulls and the verdicts are the laptop's.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
@@ -1228,3 +1557,4 @@ with the same honesty as sections 12-16.
 * Niche survey (section 10): Gamma `/events` by tag with `start_date_min/max` windows and `exclude_tag_id=102127`, `/series`, CLOB `/books` and `/prices-history` (history is purged about a week after a market closes; `data-api.polymarket.com/trades` keeps trades longer), 29 Sep 2026. Weather market rules cite NOAA `weather.gov/wrh/timeseries?site=<ICAO>` (US stations and LLBG Tel Aviv) and Weather Underground daily history (other cities). Forecast data for the backtest: [Open-Meteo historical forecast API](https://open-meteo.com/en/docs/historical-forecast-api), [Open-Meteo ensemble API](https://open-meteo.com/en/docs/ensemble-api).
 * Section 17: Polymarket docs [Liquidity Rewards](https://docs.polymarket.com/programs/liquidity-rewards) (scoring formula, sampling, single-sided rule), [Maker Rebates](https://docs.polymarket.com/programs/maker-rebates), [Fees](https://docs.polymarket.com/trading/fees), [Market Details: liquidity reward settings](https://docs.polymarket.com/market-data/market-details#liquidity-reward-settings); CLOB `GET /rewards/markets/current` (paged, 18,600 markets on 30 Sep 2026); Gamma `/markets?condition_ids=` (20 per call; `closed=true` for resolved markets); help centre [Liquidity Rewards](https://help.polymarket.com/en/articles/13364466-liquidity-rewards) (payout at ~midnight UTC, $1 daily minimum, two-sided below 10c); reports in `data/ladder_snapshots_2026-09-30.txt`, `data/rewards_survey_2026-09-30.txt`, `data/rewards_survey_tiers_2026-09-30.txt`, `data/rewards_pocket_2026-09-30.txt`.
 * Section 18: Polymarket docs [Wallets and Authentication](https://docs.polymarket.com/trading/wallets-auth) (Deposit Wallets, Relayer API keys, `SecureClient.create`), [Place Orders](https://docs.polymarket.com/trading/place-orders) (post-only limit orders), [Manage Orders](https://docs.polymarket.com/trading/manage-orders), [Deposit](https://docs.polymarket.com/trading/bridge/deposit) (USDC on Polygon wrapped to pUSD), [Python SDK](https://docs.polymarket.com/getting-started/python) (`polymarket-client` 0.11); CLOB `GET /rewards/markets/{condition_id}` (`market_competitiveness`), orders-scoring and user-earnings endpoints via the SDK.
+* Section 19: Gamma `/series?slug=` and `/events?series_id=&closed=` for the 44 recurring series (events saved 1 Oct 2026; the trimmed offline fixture is `tests/fixtures/counts_events.json`); market rule texts quoted from the events' descriptions. Upstream feeds named: [USGS FDSN event web service](https://earthquake.usgs.gov/fdsnws/event/1/) (`query?format=csv&starttime=&minmagnitude=`), [IMF PortWatch](https://portwatch.imf.org/) (daily chokepoint transit calls), [SPC storm reports](https://www.spc.noaa.gov/climo/reports/) (`YYMMDD_rpts_torn.csv`) and the [NCEI tornado time series](https://www.ncei.noaa.gov/access/monitoring/tornadoes/time-series), [Wikimedia pageviews API](https://wikimedia.org/api/rest_v1/#/Pageviews%20data) and Mestyán, Yasseri, Kertész (2013), [Early Prediction of Movie Box Office Success Based on Wikipedia Activity Big Data](https://doi.org/10.1371/journal.pone.0071226), [Copernicus Climate Pulse](https://pulse.climate.copernicus.eu/) (ERA5 daily global temperature) and the [GISTEMP table](https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt), [USDA AMS Egg Markets Overview](https://www.ams.usda.gov/market-news/egg-market-news-reports) and [FRED APU0000708111](https://fred.stlouisfed.org/series/APU0000708111), [CDC FluView / FluSurv-NET](https://www.cdc.gov/fluview/index.html), [NHSN hospital respiratory data](https://data.cdc.gov/) and [WastewaterSCAN](https://data.wastewaterscan.org/), [SEC EDGAR full-text search](https://efts.sec.gov/LATEST/search-index) (424B4 filings) and [Jay Ritter's IPO data](https://site.warrington.ufl.edu/ritter/ipo-data/), [Factbase](https://factba.se/) (White House daily guidance archive), xtracker.polymarket.com "Export Data" (per tracked account). Public Truth Social archive checked and found to have a gap from October 2025 to April 2026: [stiles/trump-truth-social-archive](https://github.com/stiles/trump-truth-social-archive). Headroom report in `data/headroom_2026-10-01.txt`.
