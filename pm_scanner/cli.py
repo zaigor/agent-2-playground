@@ -563,6 +563,7 @@ def build_parser() -> argparse.ArgumentParser:
     sg.add_argument("--max-stale", type=float, default=24.0, help="drop rows whose last trade before `time` is older than this many hours")
     sg.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_trades"), help="where trade histories are cached")
     sg.add_argument("--fixtures", type=Path, default=None, help="offline: markets and tapes from DIR")
+    sg.add_argument("--fill-wait", type=float, default=0.0, help="also re-execute each paper trade at the first print after its row time on the side you would have needed, within this many hours (0 = off); the honest price in a thin market")
     sg.add_argument("--json", type=Path, default=None, help="also write every scored row to this JSON file")
 
     cr = sub.add_parser("crossings", help="test the count model against outcomes with no outside data: Polymarket closes each count bracket the moment the running count passes its ceiling, and those close times are a timestamped partial count (memo section 19e)")
@@ -778,6 +779,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"signal failed: {exc}", file=sys.stderr)
             return 2
         print(render_signal(report, args.horizon_min, args.edge))
+        if args.fill_wait > 0 and report.trades:
+            from .crossings import executable_fills
+
+            for f in executable_fills(report.scored, markets, trades_src, wait_hours=args.fill_wait, edge=args.edge, fee_rate=args.fee):
+                print(f"  re-executed at the first print after each row on the side needed (within {args.fill_wait:g} h): {f.filled} of {f.trades} trades found one, {f.taken} still cleared the edge, P&L {'-' if f.pnl_per_100 is None else f'{f.pnl_per_100:+.2f}'}" + (f" ± {f.pnl_per_100_se:.2f}" if f.pnl_per_100_se is not None else "") + f" per $100" + ("" if f.adverse_move is None else f"; fills {f.adverse_move * 100:+.1f}c against you on average"))
         if args.json:
             args.json.write_text(json.dumps(report.to_dict(), indent=1, default=str))
             print(f"\nwrote {args.json}")

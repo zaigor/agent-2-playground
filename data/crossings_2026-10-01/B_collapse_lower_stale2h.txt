@@ -1,0 +1,45 @@
+Bracket-crossing test, crossings dated by the price collapse, count = the lower bound: 419 windows in 7 series, 322 with usable early closes, 1359 decision times, 9868 rows; skipped windows/decisions: 83 too few trailing windows, 16 early close above the winner, 81 no early close.
+Signal backtest: 9868 rows in, 3980 scored on 1714 resolved markets; dropped 5162 price too stale, 671 look-ahead (after close), 55 no price yet.
+  Brier: signal 0.1531, market 0.1266, 50/50 blend 0.1210
+  market - signal: -0.0265 ± 0.0073   (positive = the signal is sharper; ± is one market-clustered se; 2 se = 0.0146 is the smallest gap this sample could show)
+  market - blend:  +0.0057 ± 0.0035   (positive = the signal adds information the price lacked, even if it loses alone)
+  markout 30 min after each row, in the signal's direction: +0.0083 ± 0.0011 per share
+  paper trades (|p - price| > 0.05 + fee, taker, held to expiry): 2358, $1176.72 staked per share, P&L +16.63 ± 2.86 per $100
+  reliability of the signal (bin: rows, mean p, outcome rate):
+    0.00-0.05: 2278, 0.00 -> 0.09  0.05-0.15: 323, 0.09 -> 0.20  0.15-0.30: 395, 0.22 -> 0.26  0.30-0.50: 301, 0.40 -> 0.30  0.50-0.70: 184, 0.60 -> 0.38  0.70-0.85: 119, 0.78 -> 0.42  0.85-0.95: 61, 0.90 -> 0.48  0.95-1.00: 319, 1.00 -> 0.71
+  (the ± above cluster by market; the tables below cluster by event, one ladder at one moment being one observation)
+  by series:
+  group                               win   dec  rows   Brier mkt/model        market-model        market-blend  trades            P&L/$100
+  cz-tweets                            23    25    72   0.0681 / 0.0682    -0.0001 ± 0.0113    +0.0049 ± 0.0057      24       +12.31 ± 9.36
+  khamenei-daily-tweets                14    21   126   0.1051 / 0.0739    +0.0312 ± 0.0256    +0.0276 ± 0.0152      42      +63.87 ± 37.33
+  nycmayor-tweets                      39    45   121   0.0241 / 0.0638    -0.0397 ± 0.0222    -0.0092 ± 0.0076      37       +15.24 ± 8.15
+  ted-cruz-daily-tweets                50   195   535   0.1288 / 0.1380    -0.0091 ± 0.0133    +0.0106 ± 0.0071     310       +22.43 ± 7.44
+  trump-truth-social                   61   333  1405   0.1329 / 0.1496    -0.0166 ± 0.0116    +0.0067 ± 0.0059     892       +15.54 ± 5.24
+  whitehouse-daily-tweets              51   390  1195   0.1357 / 0.1907    -0.0550 ± 0.0242    +0.0033 ± 0.0120     780       +16.53 ± 7.04
+  zelenskyy-tweets                     49   167   526   0.1236 / 0.1436    -0.0199 ± 0.0113    +0.0016 ± 0.0056     273        +9.96 ± 7.45
+  by window phase at the decision time:
+  group                               win   dec  rows   Brier mkt/model        market-model        market-blend  trades            P&L/$100
+  early (<1/3)                        193   402  1345   0.1160 / 0.1362    -0.0203 ± 0.0118    +0.0053 ± 0.0060     770       +13.55 ± 4.90
+  mid                                 211   475  1682   0.1315 / 0.1684    -0.0368 ± 0.0109    +0.0006 ± 0.0050    1073       +14.40 ± 3.91
+  late (>2/3)                         181   299   953   0.1330 / 0.1499    -0.0169 ± 0.0146    +0.0151 ± 0.0077     515       +26.89 ± 6.36
+  paper trades re-executed at the first print after the decision time on the side we need (within 6 h), decided again at that price:
+  group                              trades filled  taken            P&L/$100  fill vs last print
+  all                                  2358   1850   1692       +13.02 ± 3.91  +0.0285 against us
+  cz-tweets                              24     22     18       -1.56 ± 10.81  +0.0869 against us
+  khamenei-daily-tweets                  42     27     20       -2.28 ± 26.80  +0.1092 against us
+  nycmayor-tweets                        37     24     19       +18.22 ± 9.24  +0.0750 against us
+  ted-cruz-daily-tweets                 310    174    149       +18.05 ± 8.81  +0.0576 against us
+  trump-truth-social                    892    749    697       +13.41 ± 5.85  +0.0226 against us
+  whitehouse-daily-tweets               780    666    623       +16.19 ± 7.83  +0.0158 against us
+  zelenskyy-tweets                      273    188    166        -1.07 ± 8.22  +0.0453 against us
+  early (<1/3)                          770    515    466        +8.60 ± 6.22  +0.0298 against us
+  mid                                  1073    864    802       +12.03 ± 4.47  +0.0220 against us
+  late (>2/3)                           515    471    424       +21.19 ± 7.12  +0.0390 against us
+  hours from a crossed bracket's price collapse (first print under 10c that held) to its UMA close (median [q1, q3], n): how long the crowd had the crossing before the close dated it
+    cz-tweets                            10.7 [  3.5,  26.1]  n=33
+    khamenei-daily-tweets                 2.8 [  2.1,   6.8]  n=26
+    nycmayor-tweets                      44.8 [ 10.5,  78.0]  n=50
+    ted-cruz-daily-tweets                30.0 [ 10.6,  70.5]  n=143
+    trump-truth-social                   38.8 [ 12.5,  85.2]  n=246
+    whitehouse-daily-tweets              64.4 [ 25.3, 106.5]  n=146
+    zelenskyy-tweets                     26.1 [  6.5,  53.7]  n=113

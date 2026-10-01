@@ -266,11 +266,19 @@ python -m pm_scanner crossings --events-dir dumps/ --max-stale 72 --json crossin
 ```
 
 The report is the `signal` block plus event-clustered tables by series and by
-window phase, and the hours between the price collapse of each crossed bracket
-and its close (how stale the lower bound is). The count used is a lower bound
-and there is no phase profile, so the test is biased against the model: a
-positive result is conservative, a null one ambiguous. Earthquake, ship and
-weather brackets close only after the window, so this covers the posts families.
+window phase, every paper trade re-executed at the first print after the
+decision time on the side we would have needed (`--fill-wait`, the honest
+price in a thin ladder), and the hours between the price collapse of each
+crossed bracket and its close (how stale the lower bound is). `--timing close`
+dates a crossing by the UMA close (certain, one to three days stale);
+`--timing collapse` by the bracket's price collapse (fresher, not certain).
+`--count interval` spreads the count up to the ceiling of the lowest bracket
+still alive. The count is a lower bound and there is no phase profile, so the
+test is biased against the model. Earthquake, ship and weather brackets close
+only after the window, so this covers the posts families. Results and the
+re-scorable rows: `data/crossings_2026-10-01/`; the pre-registered close-dated
+test fails, the collapse-dated one shows a paper P&L of about +12 per $100
+that survives the fill check (memo 19e has the caveats).
 
 ## The one live command: `lp` (memo section 18)
 

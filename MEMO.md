@@ -1535,6 +1535,217 @@ restricted to those markets.
 * Nothing here has been tested against outcomes yet. The tooling and the
   Polymarket side are done and offline-tested (`tests/test_counts.py`);
   the upstream pulls and the verdicts are the laptop's.
+* One half of this could be tested from here after all, and was: 19e, below,
+  runs the model against outcomes on the posts families using Polymarket's
+  own bracket close times as the count.
+
+### 19e. Tested against outcomes from here (1 Oct): the brackets' own close times
+
+**Why it is possible after all.** Polymarket does not wait for the window to
+end to resolve a count bracket that can no longer win. In "Donald Trump #
+Truth Social posts September 11 - September 18, 2026" the "<20" market was
+resolved NO on the 14th at 01:57 UTC, "20-39" on the 15th at 01:57, "40-59" on
+the 16th at 04:22, "60-79" on the 18th at 00:18, each by UMA while the window
+was open; the winner (80-99) and the brackets above it closed after the window.
+Every early close is a public, timestamped fact about the running count: at
+that moment the count was at least the ceiling plus one. The sequence is a
+staircase lower bound on the count through the window, and Gamma carries it
+(`closedTime` per market) for every resolved window of every posts series:
+about 3,500 early closes in about 590 windows across the nine accounts.
+Earthquake, ship and weather brackets close only after their windows (USGS
+revises magnitudes, PortWatch publishes with a lag, monthly totals come from a
+report), so this covers the posts families only, which are also the ones whose
+own export this container cannot reach.
+
+**The test, written before the numbers.** `crossings` (new command) runs the
+model of `counts` at every early close of every consistent window, with two
+handicaps against it:
+
+* the count it uses is the lower bound (ceiling plus one); the true count at the
+  close time is higher by whatever accumulated during the proposer's and UMA's
+  lag, which the close-lag diagnostic measures from the price collapse;
+* no phase profile: the remainder is the mean of the last eight windows'
+  totals (winning-bracket midpoints, windows that had ended by the decision
+  time only) times the fraction of the window left, negative-binomial when the
+  totals are over-dispersed.
+
+Every bracket still open at the decision time gets a probability, scored by
+the `signal` harness of 17d against the last trade at or before that moment
+(dropped when older than 24 hours) and the resolution, with the market's own
+taker fee for the paper trade. Standard errors cluster by event (one ladder at
+one moment is one observation). Windows where an early close sits above the
+winning bracket (a bulk resolution, not a crossing) are excluded. The decision
+rule is 17d's: a blend gap two standard errors above zero in a family makes it a
+candidate for the live test; the model-minus-market gap and the paper P&L say
+whether the edge survives the taker fee. Because both handicaps work against
+the model, a positive result is conservative and a null one is ambiguous.
+
+**Two variants added after the first look, so not pre-registered.** The first
+run (White House and Ted Cruz, the two families whose tapes were cached)
+showed two things that changed the design. The close-lag diagnostic put the
+UMA close a median of 33 hours (Cruz) and 74 hours (White House) after the
+bracket's price had collapsed under 10c: the lower bound dated by the close is
+one to three days stale on a seven-day window, and the model's reliability
+table showed exactly that, its 0.9+ calls winning 57-87% because the true count
+had moved on. So:
+
+* `--timing collapse` dates each crossing by the bracket's price collapse (the
+  first print under 10c after the last one at or above it) instead of the UMA
+  close. It asks whether the rest of the ladder was priced consistently at the
+  moment the crowd itself marked a bracket dead. The bound is no longer
+  certain: a market can sell a bracket to nothing a little before the count
+  actually passes it, and the choice of "the collapse that held" looks at the
+  bracket's own later prices (never at the brackets being scored).
+* `--count interval` replaces the lower bound by the whole range from it to
+  the ceiling of the lowest bracket still alive (the crowd has not killed that
+  one, so the count has most likely not passed it), averaged. It uses only the
+  staircase of dead and alive brackets at the decision time.
+
+The pre-registered row is the first one in each table below; the variants are
+there to show how much of the result is the handicap and how much is the
+market. A tight-staleness run (last trade within two hours of the decision
+time, so the price is one someone could plausibly have hit) is the robustness
+check on the paper P&L.
+
+**What came out.** Seven accounts (Trump, the White House, Khamenei,
+Zelenskyy, Ted Cruz, the New York mayor, CZ): 419 resolved windows, 322 with
+usable early closes, about 1,360 decision times and 9,900 (bracket, moment)
+rows, 8,000 of them with a print inside the previous 24 hours. Pooled, with
+event-clustered standard errors (A is the pre-registered test):
+
+| variant | windows | decisions | rows scored | Brier market / model | market - model | market - blend | paper trades | P&L per $100 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A. close-dated, lower bound (pre-registered) | 322 | 1365 | 8182 of 9903 | 0.0905 / 0.1087 | -0.0182 ± 0.0032 | -0.0025 ± 0.0015 | 3318 | +4.4 ± 2.5 |
+| A, prints within 2 h | 322 | 1365 | 4482 of 9903 | 0.1055 / 0.1368 | -0.0313 ± 0.0048 | -0.0069 ± 0.0021 | 2165 | +0.4 ± 2.9 |
+| A, interval count | 322 | 1365 | 8182 of 9903 | 0.0905 / 0.1053 | -0.0149 ± 0.0029 | -0.0006 ± 0.0014 | 3480 | +9.2 ± 2.5 |
+| B. collapse-dated, lower bound | 322 | 1359 | 7951 of 9868 | 0.1015 / 0.1228 | -0.0213 ± 0.0056 | +0.0035 ± 0.0027 | 3851 | +15.7 ± 2.8 |
+| B, prints within 2 h | 322 | 1359 | 3980 of 9868 | 0.1266 / 0.1531 | -0.0265 ± 0.0088 | +0.0057 ± 0.0043 | 2358 | +16.6 ± 3.4 |
+| B, prints within 72 h | 322 | 1359 | 8965 of 9868 | 0.0981 / 0.1170 | -0.0188 ± 0.0051 | +0.0040 ± 0.0025 | 4191 | +16.5 ± 2.7 |
+| B, interval count | 322 | 1359 | 7951 of 9868 | 0.1015 / 0.1312 | -0.0297 ± 0.0061 | +0.0013 ± 0.0030 | 4127 | +15.7 ± 3.0 |
+
+The paper P&L in that table is taken at the last print before the decision
+time, which in a thin ladder is often a print nobody would fill at. The honest
+version re-executes each trade at the first print after the decision time on
+the side we would have needed (a taker buying YES for our YES, a taker selling
+it for our NO), within six hours, and decides again at that price:
+
+| variant | paper trades at the last print: n, P&L per $100 | re-executed at the next print on our side within 6 h: filled, taken, P&L per $100 | fill worse than the last print by |
+| --- | --- | --- | --- |
+| A. close-dated, lower bound (pre-registered) | 3318, +4.4 ± 2.5 | 2267, 1846, -2.0 ± 3.2 | 2.7c |
+| A, prints within 2 h | 2165, +0.4 ± 2.9 | 1745, 1494, -2.7 ± 3.5 | 1.9c |
+| B. collapse-dated, lower bound | 3851, +15.7 ± 2.8 | 2557, 2268, +11.7 ± 3.5 | 3.4c |
+| B, prints within 2 h | 2358, +16.6 ± 3.4 | 1850, 1692, +13.0 ± 3.9 | 2.8c |
+| B, prints within 72 h | 4191, +16.5 ± 2.7 | 2640, 2320, +11.6 ± 3.5 | 3.7c |
+| B, interval count | 4127, +15.7 ± 3.0 | 2696, 2408, +13.0 ± 3.7 | 3.1c |
+
+Reading it:
+
+* **A, the pre-registered test, fails.** The market's Brier is 0.018 better
+  than the model's, the blend gap is negative (mixing the model into the price
+  makes the price worse) and no family reaches the two-standard-error rule
+  (Khamenei at +0.012 ± 0.006 and Cruz at +0.004 ± 0.003 are the closest).
+  Its +4 per $100 at the last print is the stale-print artefact: at the next
+  print it is -2.0 ± 3.2, and with prints no older than two hours it is +0.4.
+  The reliability table says why: the model's 0.9+ calls win 87% and its
+  0.6-0.9 calls 53%. The count it holds is one to three days old (the lag
+  table below), so it keeps betting on brackets the count has already left.
+* **B, dated by the price collapse, is the first positive paper number in
+  this memo.** The market is still sharper on Brier (the handicapped model
+  stays overconfident) and the blend gap is positive but not at two standard
+  errors (+0.0035 ± 0.0027; +0.0040 ± 0.0025 with 72-hour prints), so the
+  17d criterion is not met here either. The paper P&L is another matter:
+  +15.7 ± 2.8 per $100 at the last print, **+11.7 ± 3.5 re-executed at the
+  next print on our side** (2,268 trades, fills 3.4c a share worse than the
+  last print), and it holds under every variation tried: prints within two
+  hours +13.0 ± 3.9, within 72 hours +11.6 ± 3.5, the interval count +13.0 ±
+  3.7.
+
+By family and by window phase (B; A alongside for the comparison):
+
+| series | windows | decisions | A: market - blend | A: P&L per $100 at the fill (trades taken) | B: market - blend | B: P&L per $100 at the fill (trades taken) |
+| --- | --- | --- | --- | --- | --- | --- |
+| cz-tweets | 27 | 31 | -0.0031 ± 0.0029 | -32.9 ± 14.5 (17) | +0.0019 ± 0.0022 | -1.3 ± 9.3 (23) |
+| khamenei-daily-tweets | 15 | 25 | +0.0117 ± 0.0062 | +10.0 ± 14.6 (18) | +0.0229 ± 0.0107 | +3.9 ± 22.0 (25) |
+| nycmayor-tweets | 49 | 71 | +0.0031 ± 0.0024 | +27.3 ± 9.9 (25) | +0.0023 ± 0.0055 | +15.5 ± 8.4 (37) |
+| ted-cruz-daily-tweets | 51 | 265 | +0.0037 ± 0.0032 | -6.9 ± 9.2 (207) | +0.0061 ± 0.0041 | +13.7 ± 7.9 (248) |
+| trump-truth-social | 61 | 356 | -0.0029 ± 0.0024 | +2.7 ± 4.5 (722) | +0.0037 ± 0.0047 | +12.1 ± 5.4 (926) |
+| whitehouse-daily-tweets | 51 | 428 | -0.0083 ± 0.0038 | -5.3 ± 6.7 (661) | +0.0003 ± 0.0083 | +14.9 ± 7.2 (766) |
+| zelenskyy-tweets | 49 | 181 | -0.0038 ± 0.0026 | -6.4 ± 8.8 (196) | +0.0019 ± 0.0035 | -1.0 ± 7.4 (243) |
+
+| window phase | windows | decisions | A: market - blend | A: P&L per $100 at the fill (trades taken) | B: market - blend | B: P&L per $100 at the fill (trades taken) |
+| --- | --- | --- | --- | --- | --- | --- |
+| early (<1/3) | 207 | 488 | +0.0021 ± 0.0017 | +2.2 ± 5.5 (389) | +0.0043 ± 0.0032 | +9.5 ± 4.9 (729) |
+| mid | 236 | 541 | -0.0036 ± 0.0020 | -1.3 ± 4.4 (819) | -0.0017 ± 0.0034 | +10.1 ± 4.2 (1043) |
+| late (>2/3) | 203 | 328 | -0.0060 ± 0.0028 | -5.3 ± 4.6 (638) | +0.0121 ± 0.0052 | +19.1 ± 6.4 (496) |
+
+Trump, the White House, Cruz and the mayor carry it; Zelenskyy and CZ show
+nothing after the fill; Khamenei has fifteen windows and is noise either way.
+It is largest late in the window, where the count bound is most informative.
+
+**Where the money comes from** (B, at the last print; the fill-adjusted
+figures are three to four cents a share worse):
+
+| trade | the bracket, relative to the count bound | trades | P&L per $100 | win rate | mean price |
+| --- | --- | --- | --- | --- | --- |
+| buy YES | above the bound | 1,638 | +47 | 0.27 | 0.18 |
+| buy NO | holds the bound | 655 | +23 | 0.17 | 0.33 |
+| buy YES | holds the bound | 167 | +25 | 0.80 | 0.64 |
+| buy NO | above the bound | 1,379 | +2 | 0.26 | 0.28 |
+
+The crowd anchors on the bracket the count is in right now (it prices that
+bracket at 33c when it wins 17% of the time) and underprices the brackets
+above it (18c for brackets that win 27%). "Count so far plus the remaining
+rate" is the arithmetic the price skips, which is 19a's hypothesis in one
+table; selling the brackets above the bound, the mirror image, earns nothing,
+so this is not a generic "fade the ladder" effect.
+
+How stale the bound is when the test is dated by the close (hours from a
+crossed bracket's price collapse to its UMA close):
+
+| series | hours from price collapse to UMA close: median [q1, q3] | n |
+| --- | --- | --- |
+| cz-tweets | 11 [4, 26] | 33 |
+| khamenei-daily-tweets | 3 [2, 7] | 26 |
+| nycmayor-tweets | 45 [11, 78] | 50 |
+| ted-cruz-daily-tweets | 30 [11, 71] | 143 |
+| trump-truth-social | 39 [12, 85] | 246 |
+| whitehouse-daily-tweets | 64 [25, 106] | 146 |
+| zelenskyy-tweets | 26 [7, 54] | 113 |
+
+**Musk's two series** (weekly and 48-hour, the liquid end of the family: 167
+and 90 windows with early closes) are scored separately once their 4,000 trade
+tapes have loaded; the line goes here when they have.
+
+**Why B is not yet a result to bank.**
+
+1. It is post hoc. The timing was changed after the first look, on A's lag
+   table. Six variants later it is one phenomenon rather than a lucky cell,
+   but the pre-registered test is A, and A fails.
+2. The collapse time is chosen knowing the collapse held (it looks at the
+   bracket's own later prints, never at the brackets scored), and a bracket
+   can be sold to nothing shortly before the count actually passes it. Live,
+   neither applies: the tracker is public and the count is read directly,
+   before the crowd kills the bracket. But it makes B a proxy for the live
+   signal, not the signal itself.
+3. Capacity. These ladders print 5-70 shares at 10-40c. The whole seven-family
+   sample staked $1,840 across 3,851 trades in seven months; at $50-500 this
+   is tens of dollars a month, as 19d said.
+4. The model's magnitudes are wrong even in B (a stale bound, no phase
+   profile): the P&L comes from the direction of the disagreement, filtered at
+   five cents plus the fee. A model with the real count and a phase profile
+   should be both sharper and more profitable, which is what the laptop run
+   with the tracker's export (19c, recipe 3) would show.
+
+**What this changes in the plan.** 19c's recipes stand, but the posts
+families move to the front and the first laptop run is the tracker export for
+Trump, the White House, Cruz and the mayor: `counts` with the real count, then
+`signal --fill-wait 6`. If that reproduces B's fill-adjusted P&L at two
+standard errors on data the model was not fitted on, the $50 test of section
+18 gets a second leg: at each tracker update that carries the count past a
+bracket ceiling, take the model's trades in those four ladders at taker, two to
+five dollars a trade, and rest the rest of the ladder as maker quotes where
+the reward pots pay. Until then the decision rule of 17d stands, and A, the
+test as written before the numbers, says no.
 
 ## Sources
 
@@ -1557,4 +1768,4 @@ restricted to those markets.
 * Niche survey (section 10): Gamma `/events` by tag with `start_date_min/max` windows and `exclude_tag_id=102127`, `/series`, CLOB `/books` and `/prices-history` (history is purged about a week after a market closes; `data-api.polymarket.com/trades` keeps trades longer), 29 Sep 2026. Weather market rules cite NOAA `weather.gov/wrh/timeseries?site=<ICAO>` (US stations and LLBG Tel Aviv) and Weather Underground daily history (other cities). Forecast data for the backtest: [Open-Meteo historical forecast API](https://open-meteo.com/en/docs/historical-forecast-api), [Open-Meteo ensemble API](https://open-meteo.com/en/docs/ensemble-api).
 * Section 17: Polymarket docs [Liquidity Rewards](https://docs.polymarket.com/programs/liquidity-rewards) (scoring formula, sampling, single-sided rule), [Maker Rebates](https://docs.polymarket.com/programs/maker-rebates), [Fees](https://docs.polymarket.com/trading/fees), [Market Details: liquidity reward settings](https://docs.polymarket.com/market-data/market-details#liquidity-reward-settings); CLOB `GET /rewards/markets/current` (paged, 18,600 markets on 30 Sep 2026); Gamma `/markets?condition_ids=` (20 per call; `closed=true` for resolved markets); help centre [Liquidity Rewards](https://help.polymarket.com/en/articles/13364466-liquidity-rewards) (payout at ~midnight UTC, $1 daily minimum, two-sided below 10c); reports in `data/ladder_snapshots_2026-09-30.txt`, `data/rewards_survey_2026-09-30.txt`, `data/rewards_survey_tiers_2026-09-30.txt`, `data/rewards_pocket_2026-09-30.txt`.
 * Section 18: Polymarket docs [Wallets and Authentication](https://docs.polymarket.com/trading/wallets-auth) (Deposit Wallets, Relayer API keys, `SecureClient.create`), [Place Orders](https://docs.polymarket.com/trading/place-orders) (post-only limit orders), [Manage Orders](https://docs.polymarket.com/trading/manage-orders), [Deposit](https://docs.polymarket.com/trading/bridge/deposit) (USDC on Polygon wrapped to pUSD), [Python SDK](https://docs.polymarket.com/getting-started/python) (`polymarket-client` 0.11); CLOB `GET /rewards/markets/{condition_id}` (`market_competitiveness`), orders-scoring and user-earnings endpoints via the SDK.
-* Section 19: Gamma `/series?slug=` and `/events?series_id=&closed=` for the 44 recurring series (events saved 1 Oct 2026; the trimmed offline fixture is `tests/fixtures/counts_events.json`); market rule texts quoted from the events' descriptions. Upstream feeds named: [USGS FDSN event web service](https://earthquake.usgs.gov/fdsnws/event/1/) (`query?format=csv&starttime=&minmagnitude=`), [IMF PortWatch](https://portwatch.imf.org/) (daily chokepoint transit calls), [SPC storm reports](https://www.spc.noaa.gov/climo/reports/) (`YYMMDD_rpts_torn.csv`) and the [NCEI tornado time series](https://www.ncei.noaa.gov/access/monitoring/tornadoes/time-series), [Wikimedia pageviews API](https://wikimedia.org/api/rest_v1/#/Pageviews%20data) and Mestyán, Yasseri, Kertész (2013), [Early Prediction of Movie Box Office Success Based on Wikipedia Activity Big Data](https://doi.org/10.1371/journal.pone.0071226), [Copernicus Climate Pulse](https://pulse.climate.copernicus.eu/) (ERA5 daily global temperature) and the [GISTEMP table](https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt), [USDA AMS Egg Markets Overview](https://www.ams.usda.gov/market-news/egg-market-news-reports) and [FRED APU0000708111](https://fred.stlouisfed.org/series/APU0000708111), [CDC FluView / FluSurv-NET](https://www.cdc.gov/fluview/index.html), [NHSN hospital respiratory data](https://data.cdc.gov/) and [WastewaterSCAN](https://data.wastewaterscan.org/), [SEC EDGAR full-text search](https://efts.sec.gov/LATEST/search-index) (424B4 filings) and [Jay Ritter's IPO data](https://site.warrington.ufl.edu/ritter/ipo-data/), [Factbase](https://factba.se/) (White House daily guidance archive), xtracker.polymarket.com "Export Data" (per tracked account). Public Truth Social archive checked and found to have a gap from October 2025 to April 2026: [stiles/trump-truth-social-archive](https://github.com/stiles/trump-truth-social-archive). Headroom report in `data/headroom_2026-10-01.txt`.
+* Section 19: Gamma `/series?slug=` and `/events?series_id=&closed=` for the 44 recurring series (events saved 1 Oct 2026; the trimmed offline fixture is `tests/fixtures/counts_events.json`); market rule texts quoted from the events' descriptions. Upstream feeds named: [USGS FDSN event web service](https://earthquake.usgs.gov/fdsnws/event/1/) (`query?format=csv&starttime=&minmagnitude=`), [IMF PortWatch](https://portwatch.imf.org/) (daily chokepoint transit calls), [SPC storm reports](https://www.spc.noaa.gov/climo/reports/) (`YYMMDD_rpts_torn.csv`) and the [NCEI tornado time series](https://www.ncei.noaa.gov/access/monitoring/tornadoes/time-series), [Wikimedia pageviews API](https://wikimedia.org/api/rest_v1/#/Pageviews%20data) and Mestyán, Yasseri, Kertész (2013), [Early Prediction of Movie Box Office Success Based on Wikipedia Activity Big Data](https://doi.org/10.1371/journal.pone.0071226), [Copernicus Climate Pulse](https://pulse.climate.copernicus.eu/) (ERA5 daily global temperature) and the [GISTEMP table](https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt), [USDA AMS Egg Markets Overview](https://www.ams.usda.gov/market-news/egg-market-news-reports) and [FRED APU0000708111](https://fred.stlouisfed.org/series/APU0000708111), [CDC FluView / FluSurv-NET](https://www.cdc.gov/fluview/index.html), [NHSN hospital respiratory data](https://data.cdc.gov/) and [WastewaterSCAN](https://data.wastewaterscan.org/), [SEC EDGAR full-text search](https://efts.sec.gov/LATEST/search-index) (424B4 filings) and [Jay Ritter's IPO data](https://site.warrington.ufl.edu/ritter/ipo-data/), [Factbase](https://factba.se/) (White House daily guidance archive), xtracker.polymarket.com "Export Data" (per tracked account). Public Truth Social archive checked and found to have a gap from October 2025 to April 2026: [stiles/trump-truth-social-archive](https://github.com/stiles/trump-truth-social-archive). Headroom report in `data/headroom_2026-10-01.txt`. Section 19e: per-market `closedTime` / `umaEndDate` from the same Gamma events (the early NO resolutions of count brackets), trade tapes from data-api `/trades`; reports and re-scorable rows in `data/crossings_2026-10-01/`.
