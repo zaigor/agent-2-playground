@@ -1204,7 +1204,7 @@ Pre-registered reading of the result, per day and per market:
   (someone is hunting the quotes), or the pUSD balance falling below the
   parked collateral for a reason the log does not explain.
 
-Whatever happens, the log and the earnings readings go into section 19,
+Whatever happens, the log and the earnings readings go into section 20,
 with the same honesty as sections 12-16.
 
 ## Sources

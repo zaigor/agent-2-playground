@@ -211,6 +211,43 @@ history can be scored; the report says how big a Brier gap the sample could
 have detected (two standard errors), which is the number to compare a small
 file against.
 
+### Count windows: `counts` and `headroom` (memo section 19)
+
+Dozens of recurring series are "how many X between A and B" ladders: posts on X and Truth
+Social per week (seven accounts), 6.5+ and 5.5+ earthquakes per week, ships through Hormuz and
+Bab el-Mandeb per week, tornadoes per month. `counts` turns a catalog of timestamped
+occurrences into the `market,time,p` CSV that `signal` scores, with a pre-registered model: the
+count so far is exact, the remainder is negative-binomial with the mean and dispersion of the
+previous eight windows, spread over the remaining time by those windows' phase profile.
+
+```
+# USGS catalog of every 5.5+ quake since 2024 (one request, on your laptop):
+#   https://earthquake.usgs.gov/fdsnws/event/1/query?format=csv&starttime=2024-01-01&minmagnitude=5.5
+python -m pm_scanner counts --series 6pt5-earthquake-weekly --catalog quakes.csv --value-col mag --min-value 6.5 --out quakes_signal.csv
+python -m pm_scanner signal --csv quakes_signal.csv
+
+# IMF PortWatch daily chokepoint counts (one row per day): the count column instead of one row per ship
+python -m pm_scanner counts --series ships-transit-the-strait-of-hormuz --catalog hormuz.csv --count-col n_total --out hormuz_signal.csv
+
+# xtracker "Export Data" CSV of an account's counted posts
+python -m pm_scanner counts --series khamenei-daily-tweets --catalog khamenei.csv --out khamenei_signal.csv
+python -m pm_scanner counts --series trump-truth-social --catalog export.csv --check-only     # does the catalog land in the winning bracket?
+```
+
+`--check-only` compares the catalog's count over each resolved window with the winning
+bracket first: a mismatch means the catalog is not what the tracker counts (replies, reposts,
+magnitude revisions, time zone) and the backtest would be meaningless.
+
+`headroom` needs no outside data. It scores the market's own price at the start, middle and
+late part of each window against the outcome, next to a uniform 1/k and a point-in-time
+climatology of how often each bracket label has won in the series. A positive blend gap means
+the crowd misprices the base rate and a catalog model has room; a market already at a tiny
+Brier at the window start leaves room only for the live count.
+
+```
+python -m pm_scanner headroom --series trump-truth-social,6pt5-earthquake-weekly,ships-transit-the-strait-of-hormuz --per-family 12
+```
+
 ## The one live command: `lp` (memo section 18)
 
 Everything above is read-only. `lp` is the test rig for the liquidity-reward
@@ -267,6 +304,7 @@ pm_scanner/
   ladder.py      ladder consistency: nested outcomes by number or date, violations net of fees, confirmed on books
   rewards.py     liquidity rewards: reward share of a small quote against the live book vs its adverse selection on the tape
   signal.py      generic backtest of a CSV of your own probabilities against the price at that time and the outcome
+  counts.py      count-window ladders: windows and brackets from the Gamma wording, catalog -> negative-binomial probabilities -> signal CSV; headroom of the market itself
   lp.py          the liquidity-reward test rig: minimum-size post-only quotes in unquoted rewarded markets, scoring and earnings read-back
   weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/flow/today
   cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather`, `flow`, `ladder`, `rewards`, `signal`, `lp` and `fee` commands

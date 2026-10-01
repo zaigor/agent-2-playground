@@ -245,6 +245,82 @@ def _run_weather(args, source) -> int:
         return 2
 
 
+def _run_counts(args, source) -> int:
+    import json as _json
+    from datetime import datetime as _dt, timezone as _tz
+
+    from .counts import build_signal_rows, check_catalog, count_markets, fetch_series_events, load_catalog, write_signal_csv
+
+    log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
+    events = _json.loads(args.events_json.read_text()) if args.events_json else fetch_series_events(source.http, args.series)
+    if not events:
+        print(f"no events for series `{args.series}`", file=sys.stderr)
+        return 2
+    markets = count_markets(events, monthly=args.monthly, log=log)
+    print(f"{args.series}: {len(events)} events, {len(markets)} markets with a readable window and bracket")
+    if not markets:
+        return 2
+    catalog, problems = load_catalog(args.catalog, time_col=args.time_col, value_col=args.value_col, min_value=args.min_value, count_col=args.count_col, tz=args.tz)
+    for pr in problems:
+        print(f"catalog: {pr}", file=sys.stderr)
+    if not catalog.times:
+        print("empty catalog", file=sys.stderr)
+        return 2
+    print(f"catalog {catalog.name}: {len(catalog.times)} rows, {_dt.fromtimestamp(catalog.first, tz=_tz.utc):%Y-%m-%d} .. {_dt.fromtimestamp(catalog.last, tz=_tz.utc):%Y-%m-%d %H:%M} UTC")
+    checks = check_catalog(markets, catalog)
+    if checks:
+        ok = sum(1 for c in checks if c["match"])
+        print(f"catalog vs winning bracket on {len(checks)} resolved windows: {ok} match, {len(checks) - ok} do not" + ("" if ok == len(checks) else "  <- a mismatch means the catalog is not what the tracker counts (replies, reposts, revisions, time zone)"))
+        for c in checks[-10:]:
+            print(f"  {c['window']}  catalog {c['count']:g}  winner {c['winner']}  {'ok' if c['match'] else 'MISMATCH'}")
+    else:
+        print("no resolved window is fully covered by the catalog, so the catalog could not be checked against outcomes")
+    if args.check_only:
+        return 0
+    hours = tuple(int(h) for h in args.hours.split(",") if h.strip())
+    rows, skipped = build_signal_rows(markets, catalog, k_windows=args.windows, profile=not args.no_profile, hours=hours, pre_days=args.pre_days, log=log)
+    write_signal_csv(rows, args.out)
+    print(f"wrote {len(rows)} rows to {args.out}; next: python -m pm_scanner signal --csv {args.out}")
+    return 0
+
+
+def _run_headroom(args, source) -> int:
+    import json as _json
+    from dataclasses import asdict as _asdict
+
+    from .counts import fetch_series_events, headroom, render_headroom
+    from .weather import LiveTrades
+
+    log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
+    slugs = [s.strip() for s in args.series.split(",") if s.strip()]
+    monthly = {s.strip() for s in args.monthly.split(",") if s.strip()}
+    trades_src = LiveTrades(cache_dir=args.cache_dir)
+    fams, rows_all = [], []
+    for slug in slugs:
+        if args.events_dir:
+            path = args.events_dir / f"{slug}.json"
+            events = _json.loads(path.read_text()) if path.exists() else []
+        else:
+            events = fetch_series_events(source.http, slug)
+        if not events:
+            log(f"{slug}: no events")
+            continue
+        try:
+            fam, rows = headroom(slug, events, trades_src, per_family=args.per_family, seed=args.seed, monthly=slug in monthly, log=log)
+        except Exception as exc:  # one broken series should not lose the others
+            log(f"{slug}: failed: {exc}")
+            continue
+        fams.append(fam)
+        rows_all.extend(rows)
+        log(render_headroom([fam]))
+        if args.json:
+            args.json.write_text(_json.dumps({"families": [f.to_dict() for f in fams], "rows": [_asdict(r) for r in rows_all]}, indent=1, default=str))
+    if not fams:
+        return 2
+    print(render_headroom(fams))
+    return 0
+
+
 def _run_lp(args, source) -> int:
     log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
     if args.budget > args.max_budget:
@@ -423,6 +499,34 @@ def build_parser() -> argparse.ArgumentParser:
     rw.add_argument("--min-days", type=float, default=7.0, help="books-only: list markets at least this many days from resolution")
     rw.add_argument("--fixtures", type=Path, default=None, help="unused: the survey needs live books and tapes")
     rw.add_argument("--json", type=Path, default=None, help="also write every sampled market's numbers to this JSON file")
+
+    ct = sub.add_parser("counts", help="turn a catalog of timestamped occurrences (posts, quakes, ship transits) into a signal CSV for a count-window series, to score with `signal`")
+    ct.add_argument("--series", required=True, help="Gamma series slug: trump-truth-social, 6pt5-earthquake-weekly, ships-transit-the-strait-of-hormuz, monthly-tornadoes-us, ...")
+    ct.add_argument("--catalog", type=Path, required=True, help="CSV with one row per occurrence (time column auto-detected: time/timestamp/created_at/date) or one row per day with --count-col")
+    ct.add_argument("--time-col", default=None, help="name of the time column when it is not obvious")
+    ct.add_argument("--value-col", default=None, help="keep only rows whose value is >= --min-value (e.g. --value-col mag --min-value 6.5)")
+    ct.add_argument("--min-value", type=float, default=None)
+    ct.add_argument("--count-col", default=None, help="pre-aggregated catalog: the column holding the count for that row's day")
+    ct.add_argument("--tz", default=None, help="IANA zone of naive timestamps in the catalog (default UTC)")
+    ct.add_argument("--windows", type=int, default=8, help="reference windows before each market window for the rate and dispersion")
+    ct.add_argument("--no-profile", action="store_true", help="allocate the remaining count uniformly in time instead of by the reference windows' phase profile")
+    ct.add_argument("--hours", default="12", help="UTC decision hours per day, comma-separated")
+    ct.add_argument("--pre-days", type=int, default=1, help="also quote this many days before the window opens")
+    ct.add_argument("--monthly", action="store_true", help="windows are the calendar months named in the questions (tornadoes, downtime)")
+    ct.add_argument("--events-json", type=Path, default=None, help="offline: the series' events from this JSON file instead of Gamma")
+    ct.add_argument("--out", type=Path, default=Path("counts_signal.csv"), help="signal CSV to write; then `python -m pm_scanner signal --csv OUT`")
+    ct.add_argument("--fixtures", type=Path, default=None, help=argparse.SUPPRESS)
+    ct.add_argument("--check-only", action="store_true", help="only compare the catalog's window counts with the winning brackets")
+
+    hr = sub.add_parser("headroom", help="how sharp count-window and ladder markets already are at the start, middle and late part of their window, against uniform and point-in-time base rates")
+    hr.add_argument("--series", required=True, help="comma-separated Gamma series slugs")
+    hr.add_argument("--per-family", type=int, default=12, help="resolved events sampled per series (each market is one trade-history request)")
+    hr.add_argument("--seed", type=int, default=7)
+    hr.add_argument("--monthly", default="monthly-tornadoes-us,claude-downtime", help="comma-separated slugs whose windows are calendar months")
+    hr.add_argument("--events-dir", type=Path, default=None, help="offline: <slug>.json event dumps in this directory instead of Gamma")
+    hr.add_argument("--cache-dir", type=Path, default=Path(".cache/pm_trades"), help="where trade histories are cached")
+    hr.add_argument("--fixtures", type=Path, default=None, help=argparse.SUPPRESS)
+    hr.add_argument("--json", type=Path, default=None, help="write families and rows here (updated after every series)")
 
     sg = sub.add_parser("signal", help="backtest your own probabilities (a CSV of market,time,p) against the market price at that time and the outcome")
     sg.add_argument("--csv", type=Path, required=True, help="columns: market (condition id, slug or Gamma id), time (ISO 8601 or unix), p (0-1), optional outcome, note")
@@ -634,6 +738,11 @@ def main(argv: list[str] | None = None) -> int:
             args.json.write_text(json.dumps(report.to_dict(), indent=1, default=str))
             print(f"\nwrote {args.json}")
         return 0
+
+    if args.cmd == "counts":
+        return _run_counts(args, source)
+    if args.cmd == "headroom":
+        return _run_headroom(args, source)
 
     if args.cmd == "lp":
         return _run_lp(args, source)
