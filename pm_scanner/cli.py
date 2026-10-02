@@ -252,6 +252,9 @@ def _run_counts(args, source) -> int:
     from .counts import build_signal_rows, check_catalog, count_markets, fetch_series_events, load_catalog, write_signal_csv
 
     log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
+    if not Path(args.catalog).is_file():
+        print(f"catalog not found: {args.catalog} (export the series' data first, then pass the CSV here)", file=sys.stderr)
+        return 2
     events = _json.loads(args.events_json.read_text()) if args.events_json else fetch_series_events(source.http, args.series)
     if not events:
         print(f"no events for series `{args.series}`", file=sys.stderr)

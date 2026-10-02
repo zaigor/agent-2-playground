@@ -206,3 +206,15 @@ def test_headroom_scores_market_against_uniform_and_climatology():
     assert start["market_minus_clim"] is None  # two events: no label has five earlier outcomes
     text = render_headroom([fam])
     assert "6pt5-earthquake-weekly" in text and "start" in text and "late" in text
+
+
+def test_parse_window_accepts_noon_parenthetical():
+    from datetime import datetime, timezone
+    from pm_scanner.counts import parse_window
+    text = ("If Elon Musk (@elonmusk), posts less than 40 times on X between May 31, 2024, 12:00 PM ET (noon) "
+            "and June 7, 2024, 12:00 PM ET this market will resolve to \"Yes\".")
+    w = parse_window(text)
+    assert w is not None
+    a, b = w
+    assert a == datetime(2024, 5, 31, 16, 0, tzinfo=timezone.utc)  # noon EDT
+    assert b == datetime(2024, 6, 7, 16, 0, tzinfo=timezone.utc)

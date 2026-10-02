@@ -55,8 +55,9 @@ MONTHS = "january|february|march|april|may|june|july|august|september|october|no
 _MONTH_NUM = {m: i for i, m in enumerate(MONTHS.split("|"), start=1)}
 
 # "between October 2, 12:00 PM ET and October 9, 2026, 12:00 PM ET" / "from October 1 12:00 PM ET to October 3, 2026 12:00 PM ET"
+# / "between May 31, 2024, 12:00 PM ET (noon) and June 7, 2024, 12:00 PM ET" (the 2024 Musk ladders)
 _RANGE_ET = re.compile(
-    rf"(?:between|from)\s+({MONTHS})\s+(\d{{1,2}})(?:st|nd|rd|th)?,?(?:\s+(\d{{4}}))?,?\s+(\d{{1,2}}):(\d{{2}})\s*(AM|PM)\s*(?:ET|EST|EDT),?"
+    rf"(?:between|from)\s+({MONTHS})\s+(\d{{1,2}})(?:st|nd|rd|th)?,?(?:\s+(\d{{4}}))?,?\s+(\d{{1,2}}):(\d{{2}})\s*(AM|PM)\s*(?:ET|EST|EDT)(?:\s*\([^)]*\))?,?"
     rf"\s+(?:and|to|through)\s+({MONTHS})\s+(\d{{1,2}})(?:st|nd|rd|th)?,?(?:\s+(\d{{4}}))?,?\s+(\d{{1,2}}):(\d{{2}})\s*(AM|PM)\s*(?:ET|EST|EDT)",
     re.I,
 )
