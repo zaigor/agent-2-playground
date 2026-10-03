@@ -99,3 +99,65 @@ def test_quoter_places_recentres_retires_filled_sides_and_cancels_at_end(tmp_pat
 def test_lp_refuses_budget_above_the_cap(capsys):
     assert main(["lp", "--budget", "500", "--max-budget", "50"]) == 2
     assert "hard cap" in capsys.readouterr().err
+
+
+def test_describe_reads_the_sdk_approvals_dataclass():
+    """The SDK's `missing` is a dataclass with erc20/erc1155 tuples, not a list (the first live
+    --check on 3 Oct reported "'MissingTradingApprovals' object is not iterable")."""
+    from dataclasses import dataclass
+
+    from pm_scanner.lp import LiveExchange
+
+    @dataclass(frozen=True)
+    class Missing:
+        erc20: tuple = ()
+        erc1155: tuple = ()
+
+    @dataclass(frozen=True)
+    class State:
+        missing: Missing
+        is_fully_approved: bool
+
+    @dataclass
+    class Balance:
+        balance: str
+        allowances: dict
+
+    class Client:
+        wallet = "0xabc"
+        wallet_type = "DEPOSIT_WALLET"
+
+        def get_balance_allowance(self, asset_type):
+            return Balance("29000000", {"0xe1": "1"})
+
+        def get_trading_approvals_state(self):
+            return State(Missing(), True)
+
+        def is_gasless_ready(self):
+            return True
+
+    out = LiveExchange(Client()).describe()
+    assert out["approvals_ok"] is True and out["approvals_missing"] == [] and "approvals_error" not in out
+    assert out["collateral_balance"] == 29.0
+
+    class Short(Client):
+        def get_trading_approvals_state(self):
+            return State(Missing(erc20=("usdc->ctf",)), False)
+
+    out = LiveExchange(Short()).describe()
+    assert out["approvals_ok"] is False and out["approvals_missing"] == ["usdc->ctf"]
+
+
+def test_choose_markets_explains_an_empty_plan():
+    from pm_scanner.lp import choose_markets
+    from pm_scanner.rewards import PocketRow
+
+    import inspect
+
+    fields = list(inspect.signature(PocketRow).parameters)
+    base = {f: 0.0 for f in fields}
+    base.update(condition_id="c1", question="Will X happen?", url="", rate_per_day=40.0, max_spread=3.0, min_size=50.0, mid=0.5, spread=0.02, days_to_end=30.0, reward_low=40.0, reward_high=40.0)
+    row = PocketRow(**{k: v for k, v in base.items() if k in fields})
+    reasons: dict = {}
+    plans = choose_markets([row], {}, budget=25.0, max_markets=3, reasons=reasons)
+    assert plans == [] and reasons["not on Gamma or not accepting orders"] == 1 and reasons["per-market cap $"] == 13.33

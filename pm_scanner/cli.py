@@ -363,17 +363,23 @@ def _run_xtracker(args) -> int:
         files = catalog_files(args.compare)
         print(compare_exports(h, files) if files else f"compare: no CSV files at {args.compare}")
     if args.stats:
-        print("open windows, the tracker's own count next to the catalog's (a gap here means the API hides posts the tracker counts):")
-        for tr_ in user.get("trackings") or []:
+        try:
+            trackings = tr.trackings(args.handle) or (user.get("trackings") or [])
+        except HttpError:
+            trackings = user.get("trackings") or []
+        trackings = sorted(trackings, key=lambda t: str(t.get("startDate", "")))
+        print(f"{len(trackings)} trackings ({sum(1 for t in trackings if t.get('isActive'))} open): the tracker's own record next to the catalog's count for the same window")
+        print("  (a past window whose tracker count is above the catalog's means the posts route no longer holds posts the tracker counted)")
+        for tr_ in trackings:
             try:
                 full, _ = tr.get(f"/api/trackings/{tr_.get('id')}", {"includeStats": "true"})
             except HttpError as exc:
                 print(f"  {tr_.get('title', tr_.get('id'))}: {exc}")
                 continue
             a, b = _parse_dt(str(full.get("startDate") or "")), _parse_dt(str(full.get("endDate") or ""))
-            ours = sum(1 for t in times if a is not None and b is not None and a.replace(tzinfo=a.tzinfo or _tz.utc) <= t < b.replace(tzinfo=b.tzinfo or _tz.utc))
-            stats = {k: v for k, v in full.items() if k not in ("id", "userId", "title", "startDate", "endDate", "marketLink", "isActive", "createdAt", "updatedAt", "description")}
-            print(f"  {str(full.get('title', ''))[:60]:60} {str(full.get('startDate', ''))[:16]} .. {str(full.get('endDate', ''))[:16]}  catalog {ours}  tracker {_json.dumps(stats, default=str)[:200]}")
+            ours = sum(1 for t in times if a is not None and b is not None and a.replace(tzinfo=a.tzinfo or _tz.utc) <= t < b.replace(tzinfo=b.tzinfo or _tz.utc) + _td(minutes=1))
+            stats = {k: v for k, v in full.items() if k not in ("id", "userId", "title", "startDate", "endDate", "marketLink", "isActive", "createdAt", "updatedAt", "description", "user") and v not in (None, {}, [])}
+            print(f"  {'open  ' if full.get('isActive') else 'closed'} {str(full.get('startDate', ''))[:16]} .. {str(full.get('endDate', ''))[:16]}  catalog {ours:4d}  tracker {_json.dumps(stats, default=str)[:600]}")
     series = SERIES_BY_HANDLE.get(args.handle.lower(), "<series>")
     print(f"wrote {out}; next: python -m pm_scanner counts --series {series} --catalog {out} --check-only")
     return 0
@@ -470,7 +476,10 @@ def _run_lp(args, source) -> int:
         only = parse_only(args.only)
         cand = [r for r in rows if only is None or r.condition_id in only]
         markets = gamma_markets_by_condition(source.http, [r.condition_id for r in cand[:400]])
-        plans = choose_markets(cand, markets, budget=args.budget, max_markets=1 if args.smoke else args.markets, min_days=args.min_days, max_spread=args.max_spread, min_reward=args.min_reward, only=only, per_market=args.per_market)
+        reasons: dict[str, int] = {}
+        plans = choose_markets(cand, markets, budget=args.budget, max_markets=1 if args.smoke else args.markets, min_days=args.min_days, max_spread=args.max_spread, min_reward=args.min_reward, only=only, per_market=args.per_market, reasons=reasons)
+        if not plans and reasons:
+            log("no market fits; why each candidate was passed over: " + ", ".join(f"{k}: {v}" for k, v in reasons.items()) + " (a small budget wants --smoke or --markets 1, which lifts the per-market cap, or --per-market)")
     except Exception as exc:
         print(f"lp failed: {exc}", file=sys.stderr)
         return 2

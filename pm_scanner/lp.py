@@ -95,26 +95,53 @@ def make_plan(row: PocketRow, market: PolyMarket, tick: float = 0.01, mid: float
     )
 
 
-def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, budget: float, max_markets: int, min_days: float = 7.0, max_spread: float = 0.5, min_reward: float = 20.0, exclude_words: tuple[str, ...] = EXCLUDE_WORDS, only: set[str] | None = None, per_market: float = 0.0) -> list[QuotePlan]:
+def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, budget: float, max_markets: int, min_days: float = 7.0, max_spread: float = 0.5, min_reward: float = 20.0, exclude_words: tuple[str, ...] = EXCLUDE_WORDS, only: set[str] | None = None, per_market: float = 0.0, reasons: dict[str, int] | None = None) -> list[QuotePlan]:
     """The best pots that fit the budget: long-dated, not too wide, not news-driven families.
     `per_market` caps the collateral of one market (0 = 1.6 × budget / max_markets, so a
-    50-share market does not swallow a budget meant for three 20-share ones)."""
+    50-share market does not swallow a budget meant for three 20-share ones). `reasons`, when
+    given, collects why each candidate was passed over."""
     plans: list[QuotePlan] = []
     spent = 0.0
     cap = per_market if per_market > 0 else 1.6 * budget / max(1, max_markets)
+    if reasons is not None:
+        reasons["per-market cap $"] = round(cap, 2)
+
+    def skip(why: str) -> None:
+        if reasons is not None:
+            reasons[why] = reasons.get(why, 0) + 1
+
     for r in sorted(rows, key=lambda r: -r.reward_low):
         if only is not None and r.condition_id not in only:
             continue
         if only is None:
-            if r.days_to_end is None or r.days_to_end < min_days or r.spread > max_spread or not 0.05 <= r.mid <= 0.95 or r.reward_low < min_reward:
+            if r.days_to_end is None or r.days_to_end < min_days:
+                skip(f"ends within {min_days:g} days")
+                continue
+            if r.spread > max_spread:
+                skip(f"book spread above {max_spread:g}")
+                continue
+            if not 0.05 <= r.mid <= 0.95:
+                skip("mid outside 0.05..0.95")
+                continue
+            if r.reward_low < min_reward:
+                skip(f"modelled reward below ${min_reward:g}/day")
                 continue
             if any(w in r.question.lower() for w in exclude_words):
+                skip("excluded family")
                 continue
         m = markets.get(r.condition_id)
         if m is None or not m.accepting_orders:
+            skip("not on Gamma or not accepting orders")
             continue
         p = make_plan(r, m)
-        if p is None or spent + p.collateral > budget or (only is None and p.collateral > cap):
+        if p is None:
+            skip("no token ids")
+            continue
+        if only is None and p.collateral > cap:
+            skip(f"minimum quote needs more than the per-market cap (${cap:.2f})")
+            continue
+        if spent + p.collateral > budget:
+            skip("over the remaining budget")
             continue
         plans.append(p)
         spent += p.collateral
@@ -224,7 +251,9 @@ class LiveExchange:
         try:
             st = c.get_trading_approvals_state()
             out["approvals_ok"] = bool(st.is_fully_approved)
-            out["approvals_missing"] = [str(x) for x in st.missing]
+            miss = st.missing
+            items = list(miss) if isinstance(miss, (list, tuple)) else [*getattr(miss, "erc20", ()), *getattr(miss, "erc1155", ())]
+            out["approvals_missing"] = [str(x) for x in items]
         except Exception as exc:  # noqa: BLE001
             out["approvals_error"] = str(exc)
         try:

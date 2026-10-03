@@ -1809,17 +1809,27 @@ window they cover: the White House 54 of 54 (tracked since 15 Jan 2026, 6,062
 posts), Ted Cruz 54 of 54 (since 12 Mar, 3,544), the NYC mayor 52 of 52 (since
 16 Mar, 1,075; 26 to 39 posts a week, so one bracket, 20-39, wins every week
 and the ladder has nothing to price). Trump's Truth Social catalog (since 21
-Jan, 5,391 posts) matches 48 of 65 windows and undercounts the other 17: in
-the week of 28 Aug to 4 Sep it holds 168 posts and 180-199 won. The posts
-route returned everything the account record counts, so the gap is between
-what the tracker's database holds now and what it counted at resolution; the
-natural reading is posts deleted after being counted (the market rules count a
-captured post whether or not it is later deleted, and Truth Social deletions
-come in bursts), which would leave most weeks exact and a few short. Until the
-mismatched weeks are explained, Trump's series is scored with the knowledge
-that its backtest count runs low in those weeks, which biases the model
-towards lower brackets there, not towards profit. Also held: ZelenskyyUa 2,393
-posts, Cobratate 881, cz_binance 643, khamenei_ir 155.
+Jan, 5,391 posts) matches 48 of 65 windows and undercounts the other 17, every
+one of them on the low side. Nine of the seventeen sit one to four posts under
+the floor of the bracket that won (97 against 100-119, 99 against 100-119, 138
+against 140-159, 198 against 200+, 158 against 160-179, 119 against 120-139
+twice, 139 against 140-159, 156 against 160-179): with 20-post brackets, a
+steady loss of a few posts a week flips exactly the weeks that happened to
+land just under a boundary and leaves the rest looking exact, so the 48
+matches do not mean 48 complete weeks. Two bursts are missing outright: 12 to
+22 May (the catalog holds 100 and 68 in two overlapping weeks that resolved
+200+) and 11 to 21 Aug (141 and 145 against 200+), with smaller gaps around 28
+Jul and 28 Aug. The posts route returned everything the account record counts,
+so the gap is between what the tracker's database holds now and what it
+counted at resolution. The natural reading is posts deleted after being
+counted (the market rules count a captured post whether or not it is later
+deleted, and Truth Social deletions come in bursts); `xtracker --stats` reads
+every tracking, past ones included, with `includeStats=true` and prints the
+tracker's own record next to the catalog's count, which is the direct test.
+Until then Trump's series is the one posts family whose backtest count runs
+low, which biases the model towards lower brackets there, not towards profit;
+the live count the tracker shows is still exact at decision time. Also held:
+ZelenskyyUa 2,393 posts, Cobratate 881, cz_binance 643, khamenei_ir 155.
 
 **The pre-registered run.** `counts --out` wrote 21,494 decision rows for the
 Musk ladders (daily at 12:00 UTC plus the day before each window opens; 1,374
@@ -1831,6 +1841,22 @@ seconds. Its result, against B's proxy numbers (+0.0018 ± 0.0007 blend gap,
 +10.8 ± 1.8 per $100 at executable prices), goes in section 20 together with
 the `lp --check` output. The account exists, holds $29 of USDC, and the four
 environment variables are set on the laptop; nothing has been sent.
+
+## 20. The live account (3 Oct): the credentials check
+
+`lp --check` with the four variables set, from the laptop, sending nothing: the
+account is `0x66FE…34c8`, wallet type `DEPOSIT_WALLET` (Polymarket's own
+proxy, so orders go through the gasless relayer and the signer never holds
+MATIC), collateral balance $29.00, token allowances already at the maximum on
+the four exchange contracts, `gasless_ready` true. The approvals line failed on
+my side (`'MissingTradingApprovals' object is not iterable`: the SDK returns a
+dataclass with `erc20` and `erc1155` tuples, not a list), fixed the same
+evening; the allowances say the approvals are in place. The quote plan found
+nothing at `--budget 25 --markets 3` because the per-market cap is 1.6 × 25 / 3
+= $13.33 and a minimum-size two-sided quote in a 20-share market parks about
+$19, so at this budget the rig runs one market at a time: `--smoke` (section
+18c) is the next command, first as `--check --smoke`, then live for two hours.
+The rig now says which filter stopped each candidate when the plan is empty.
 
 ## Sources
 
