@@ -1803,10 +1803,23 @@ resolution counts: replies and reposts included, the noon New York boundary as
 parsed, nothing to adjust. The weekly pace since August runs 158 to 310 posts
 per UTC week; the 4 downloaded windows ran at about 245 a week.
 
-**Accounts the tracker holds** (3 Oct): elonmusk 12,913 posts, WhiteHouse
-6,061, realDonaldTrump 5,391 (Truth Social), tedcruz 3,544, ZelenskyyUa 2,393,
-NYCMayor 1,075, Cobratate 881, cz_binance 643, khamenei_ir 155. Every posts
-series in 19a can now be run with its real count the same way.
+**The other four accounts, same evening.** Each fetch returned exactly the
+total the tracker holds, and three of the four catalogs match every resolved
+window they cover: the White House 54 of 54 (tracked since 15 Jan 2026, 6,062
+posts), Ted Cruz 54 of 54 (since 12 Mar, 3,544), the NYC mayor 52 of 52 (since
+16 Mar, 1,075; 26 to 39 posts a week, so one bracket, 20-39, wins every week
+and the ladder has nothing to price). Trump's Truth Social catalog (since 21
+Jan, 5,391 posts) matches 48 of 65 windows and undercounts the other 17: in
+the week of 28 Aug to 4 Sep it holds 168 posts and 180-199 won. The posts
+route returned everything the account record counts, so the gap is between
+what the tracker's database holds now and what it counted at resolution; the
+natural reading is posts deleted after being counted (the market rules count a
+captured post whether or not it is later deleted, and Truth Social deletions
+come in bursts), which would leave most weeks exact and a few short. Until the
+mismatched weeks are explained, Trump's series is scored with the knowledge
+that its backtest count runs low in those weeks, which biases the model
+towards lower brackets there, not towards profit. Also held: ZelenskyyUa 2,393
+posts, Cobratate 881, cz_binance 643, khamenei_ir 155.
 
 **The pre-registered run.** `counts --out` wrote 21,494 decision rows for the
 Musk ladders (daily at 12:00 UTC plus the day before each window opens; 1,374

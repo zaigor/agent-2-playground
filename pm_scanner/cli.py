@@ -275,8 +275,14 @@ def _run_counts(args, source) -> int:
     if checks:
         ok = sum(1 for c in checks if c["match"])
         print(f"catalog vs winning bracket on {len(checks)} resolved windows: {ok} match, {len(checks) - ok} do not" + ("" if ok == len(checks) else "  <- a mismatch means the catalog is not what the tracker counts (replies, reposts, revisions, time zone)"))
-        for c in checks[-10:]:
+        shown = checks[-10:]
+        for c in shown:
             print(f"  {c['window']}  catalog {c['count']:g}  winner {c['winner']}  {'ok' if c['match'] else 'MISMATCH'}")
+        bad = [c for c in checks[:-10] if not c["match"]]
+        if bad:
+            print(f"  earlier mismatches ({len(bad)}):")
+            for c in bad:
+                print(f"  {c['window']}  catalog {c['count']:g}  winner {c['winner']}  MISMATCH")
     else:
         print("no resolved window is fully covered by the catalog, so the catalog could not be checked against outcomes (it is checked on windows that start after the catalog's first row and end before its last)")
     if args.check_only:
@@ -356,6 +362,18 @@ def _run_xtracker(args) -> int:
     if args.compare:
         files = catalog_files(args.compare)
         print(compare_exports(h, files) if files else f"compare: no CSV files at {args.compare}")
+    if args.stats:
+        print("open windows, the tracker's own count next to the catalog's (a gap here means the API hides posts the tracker counts):")
+        for tr_ in user.get("trackings") or []:
+            try:
+                full, _ = tr.get(f"/api/trackings/{tr_.get('id')}", {"includeStats": "true"})
+            except HttpError as exc:
+                print(f"  {tr_.get('title', tr_.get('id'))}: {exc}")
+                continue
+            a, b = _parse_dt(str(full.get("startDate") or "")), _parse_dt(str(full.get("endDate") or ""))
+            ours = sum(1 for t in times if a is not None and b is not None and a.replace(tzinfo=a.tzinfo or _tz.utc) <= t < b.replace(tzinfo=b.tzinfo or _tz.utc))
+            stats = {k: v for k, v in full.items() if k not in ("id", "userId", "title", "startDate", "endDate", "marketLink", "isActive", "createdAt", "updatedAt", "description")}
+            print(f"  {str(full.get('title', ''))[:60]:60} {str(full.get('startDate', ''))[:16]} .. {str(full.get('endDate', ''))[:16]}  catalog {ours}  tracker {_json.dumps(stats, default=str)[:200]}")
     series = SERIES_BY_HANDLE.get(args.handle.lower(), "<series>")
     print(f"wrote {out}; next: python -m pm_scanner counts --series {series} --catalog {out} --check-only")
     return 0
@@ -633,6 +651,7 @@ def build_parser() -> argparse.ArgumentParser:
     xt.add_argument("--pause", type=float, default=0.15, help="seconds between requests")
     xt.add_argument("--raw-dir", type=Path, default=None, help="also keep every raw response here (JSON per request)")
     xt.add_argument("--compare", type=Path, default=None, help="folder of the site's own Posts exports: line up their `Posted At (EST)` with the API's time on the shared posts")
+    xt.add_argument("--stats", action="store_true", help="also print the tracker's own live count for each open window next to the catalog's")
     xt.add_argument("--verbose", action="store_true", help="log every request")
     xt.add_argument("--base-url", default="https://xtracker.polymarket.com", help=argparse.SUPPRESS)
 
