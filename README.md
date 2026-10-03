@@ -244,7 +244,12 @@ windows are deduplicated by post id, and `Posted At (EST)` is read as New York t
 
 `--check-only` compares the catalog's count over each resolved window with the winning
 bracket first: a mismatch means the catalog is not what the tracker counts (replies, reposts,
-magnitude revisions, time zone) and the backtest would be meaningless.
+magnitude revisions, time zone) and the backtest would be meaningless. On 3 Oct 2026 the X
+accounts matched every resolved window (Musk 94 of 94, White House 54, Cruz 54, NYC mayor 52);
+Trump's Truth Social catalog missed 17 of 65 because the tracker's scraper has gaps (memo 19f).
+With the real count, the Musk model was not sharper than the market: market minus blend
+-0.0002 ± 0.0003, re-executed P&L +3.71 ± 2.16 per $100, both under the pre-registered bar
+(memo 19g).
 
 `headroom` needs no outside data. It scores the market's own price at the start, middle and
 late part of each window against the outcome, next to a uniform 1/k and a point-in-time

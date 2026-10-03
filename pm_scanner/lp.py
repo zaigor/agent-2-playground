@@ -164,6 +164,16 @@ class Order:
 
 
 class Exchange(Protocol):
+    def approve(self) -> dict[str, Any]:
+        """Grant whatever trading approvals the SDK lists as missing (a relayed, gasless
+        transaction on a deposit wallet; an on-chain transaction from the signer on an EOA)."""
+        before = self.describe()
+        if before.get("approvals_ok"):
+            return {"submitted": False, "missing_before": [], "note": "every approval was already in place"}
+        self.client.setup_trading_approvals()
+        after = self.describe()
+        return {"submitted": True, "missing_before": before.get("approvals_missing", []), "missing_after": after.get("approvals_missing", []), "approvals_ok": after.get("approvals_ok")}
+
     def top_of_book(self, token: str) -> tuple[float | None, float | None]: ...
     def place(self, token: str, price: float, size: float) -> str | None: ...
     def cancel(self, order_ids: list[str]) -> None: ...
@@ -218,6 +228,25 @@ class PaperExchange:
         return {}
 
 
+QUOTING_CONTRACTS = frozenset({"standard_exchange", "neg_risk_exchange", "collateral_adapter", "neg_risk_collateral_adapter", "exchange_v3", "protocol_v2_router", "conditional_tokens"})
+
+
+def _contract_names(client) -> dict[str, str]:
+    """Polymarket contract address (lower-case) -> its name in the SDK's environment config."""
+    try:
+        cfg = client._ctx.environment_config  # noqa: SLF001
+    except Exception:  # noqa: BLE001
+        return {}
+    out: dict[str, str] = {}
+    for name in dir(cfg):
+        if name.startswith("_"):
+            continue
+        v = getattr(cfg, name, None)
+        if isinstance(v, str) and len(v) == 42 and v.lower().startswith("0x"):
+            out[v.lower()] = name
+    return out
+
+
 class LiveExchange:
     """The official `polymarket-client` SecureClient behind the small interface above.
     Every order is a post-only GTC limit order; nothing here can take liquidity."""
@@ -253,7 +282,15 @@ class LiveExchange:
             out["approvals_ok"] = bool(st.is_fully_approved)
             miss = st.missing
             items = list(miss) if isinstance(miss, (list, tuple)) else [*getattr(miss, "erc20", ()), *getattr(miss, "erc1155", ())]
-            out["approvals_missing"] = [str(x) for x in items]
+            names = _contract_names(c)
+            missing = []
+            for x in items:
+                spender = str(getattr(x, "spender", None) or getattr(x, "operator", "") or "").lower()
+                missing.append(names.get(spender, spender or str(x)))
+            out["approvals_missing"] = missing
+            # the SDK's list includes contracts this rig never calls (the perpetuals deposit); what
+            # resting an order needs is the exchanges and the collateral adapters
+            out["approvals_ok_for_quoting"] = not any(m in QUOTING_CONTRACTS or m.startswith("0x") for m in missing)
         except Exception as exc:  # noqa: BLE001
             out["approvals_error"] = str(exc)
         try:

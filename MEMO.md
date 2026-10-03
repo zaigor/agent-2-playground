@@ -1818,45 +1818,106 @@ steady loss of a few posts a week flips exactly the weeks that happened to
 land just under a boundary and leaves the rest looking exact, so the 48
 matches do not mean 48 complete weeks. Two bursts are missing outright: 12 to
 22 May (the catalog holds 100 and 68 in two overlapping weeks that resolved
-200+) and 11 to 21 Aug (141 and 145 against 200+), with smaller gaps around 28
-Jul and 28 Aug. The posts route returned everything the account record counts,
-so the gap is between what the tracker's database holds now and what it
-counted at resolution. The natural reading is posts deleted after being
-counted (the market rules count a captured post whether or not it is later
-deleted, and Truth Social deletions come in bursts); `xtracker --stats` reads
-every tracking, past ones included, with `includeStats=true` and prints the
-tracker's own record next to the catalog's count, which is the direct test.
-Until then Trump's series is the one posts family whose backtest count runs
-low, which biases the model towards lower brackets there, not towards profit;
-the live count the tracker shows is still exact at decision time. Also held:
-ZelenskyyUa 2,393 posts, Cobratate 881, cz_binance 643, khamenei_ir 155.
+200+) and 11 to 21 Aug (141 and 145 against 200+).
+
+Deleted posts were my first reading; the tracker's own records rule it out.
+`xtracker --stats` reads each of the 73 Trump trackings with
+`includeStats=true` (the record carries `total`, `pace`, `percentComplete` and
+an hourly `daily` series), and the tracker's total equals the catalog's count
+on every one of them, the mismatched weeks included: the tracker itself holds
+100 posts for 12 to 19 May and 68 for 15 to 22 May, and zero, a whole week of
+nothing, for 19 to 26 May. Trump did not fall silent for a week; the tracker's
+Truth Social import did. Truth Social has no public API, so the tracker
+scrapes it, and the scraper has gaps: a full outage in mid-May, a partial one
+in mid-August, and a steady leak of a few posts a week the rest of the time
+(the near-boundary misses). The markets resolved on the true count anyway,
+which means the resolver counted from Truth Social itself when the tracker was
+short. Two consequences. The Trump catalog is a lower bound, not the count,
+so its backtest is not run for a verdict; and for Truth Social the tracker's
+live number is also a lower bound, which is a risk to anyone pricing off it,
+not an edge for us. The X accounts have none of this: their tracker runs on
+the X API and matched every window. Also held: ZelenskyyUa 2,393 posts,
+Cobratate 881, cz_binance 643, khamenei_ir 155.
 
 **The pre-registered run.** `counts --out` wrote 21,494 decision rows for the
 Musk ladders (daily at 12:00 UTC plus the day before each window opens; 1,374
 decision times before the catalog has eight reference windows and 442 after
-its last post were skipped). `signal --fill-wait 6` on those rows is the test
-of 19e: it needs one trade tape per resolved market from data-api, about one a
-second, cached on disk, so the first run takes most of an hour and later runs
-seconds. Its result, against B's proxy numbers (+0.0018 ± 0.0007 blend gap,
-+10.8 ± 1.8 per $100 at executable prices), goes in section 20 together with
-the `lp --check` output. The account exists, holds $29 of USDC, and the four
-environment variables are set on the laptop; nothing has been sent.
+its last post were skipped). `signal --fill-wait 6` scored them against one
+trade tape per resolved market (about one tape a second from data-api, cached
+on disk, so the first run took most of an hour and the rerun seconds).
 
-## 20. The live account (3 Oct): the credentials check
+### 19g. The verdict (3 Oct): with the real count, the model does not beat the market
+
+The numbers, on 14,727 rows across 2,580 resolved Musk markets (5,395 rows
+fell after the market's last print, 745 had a price older than a day, 482 had
+no price yet, 145 markets are still open):
+
+| | real count, 12:00 UTC daily | B's proxy (19e), at the crossings | rule (17d) |
+|---|---|---|---|
+| Brier, signal / market / blend | 0.0346 / 0.0324 / 0.0326 | | |
+| market minus signal | **-0.0022 ± 0.0006** | | |
+| market minus blend | **-0.0002 ± 0.0003** | +0.0018 ± 0.0007 | >= 2 se above zero |
+| markout, 30 min, signal's direction | +0.0001 ± 0.0001 per share | | |
+| paper trades, at the last print | 2,323 trades, +4.26 ± 2.12 per $100 | | |
+| re-executed at the first print after, within 6 h | 2,319 found one, 2,152 still cleared the edge, **+3.71 ± 2.16 per $100**, fills 0.3c against | +10.8 ± 1.8 | positive at 2 se |
+
+Both halves of the rule fail. The market is sharper than the model by 3.7
+standard errors, the blend adds nothing the price did not have, and the
+re-executed P&L is positive at 1.7 standard errors, under the bar, with a
+confidence interval that reaches from -0.6 to +8.0 per $100. The reliability
+table says why: the model is overconfident in its tails. Rows it put at 0.95
+to 1.00 resolved YES 75% of the time (36 rows), 0.70 to 0.85 came in at 44%,
+0.30 to 0.50 at 21%. The remainder distribution (negative binomial on the
+trailing eight weeks, allocated by the hour-of-week profile) is too narrow for
+an account that posts in bursts; the market, which watches the same public
+count, prices those bursts better. Fixing the dispersion on these outcomes
+would be fitting on the test set, and is not done.
+
+**Why the proxy looked better.** B's decision times were the bracket closes:
+the moments the running count crossed a ceiling, when the market has to
+reprice a whole rung of the ladder. The real-count model decides at noon UTC
+every day, when nothing in particular has happened. If B's +10.8 was real, it
+was a timing effect at the crossings, not count information, because the
+count is public on the tracker and the market has it; A, the close-dated
+variant written down before the numbers, said no, and B was post hoc. The
+tie-breaker has now spoken for A.
+
+**What this decides.** Per 17d and 19e: no taker leg in Musk's ladder, and the
+$29 on the account goes only to the liquidity-reward test of section 18, as
+the smoke test first. The posts catalogs stay useful for what they proved
+tonight: the tracker is exact for X accounts, so a count model can be run on
+the White House and Cruz for information with the same recipe, and the
+pre-registered control (`counts --no-profile`, uniform allocation) can be
+scored to see whether the phase profile helped or hurt. Neither changes the
+decision unless it clears the same bar on a sample this size.
+
+## 20. The live account (3 Oct): the credentials check and the smoke plan
 
 `lp --check` with the four variables set, from the laptop, sending nothing: the
 account is `0x66FE…34c8`, wallet type `DEPOSIT_WALLET` (Polymarket's own
 proxy, so orders go through the gasless relayer and the signer never holds
 MATIC), collateral balance $29.00, token allowances already at the maximum on
-the four exchange contracts, `gasless_ready` true. The approvals line failed on
-my side (`'MissingTradingApprovals' object is not iterable`: the SDK returns a
-dataclass with `erc20` and `erc1155` tuples, not a list), fixed the same
-evening; the allowances say the approvals are in place. The quote plan found
-nothing at `--budget 25 --markets 3` because the per-market cap is 1.6 × 25 / 3
-= $13.33 and a minimum-size two-sided quote in a 20-share market parks about
-$19, so at this budget the rig runs one market at a time: `--smoke` (section
-18c) is the next command, first as `--check --smoke`, then live for two hours.
-The rig now says which filter stopped each candidate when the plan is empty.
+the four exchange contracts, `gasless_ready` true. The SDK's approvals check
+first failed on my side (`'MissingTradingApprovals' object is not iterable`:
+it returns a dataclass with `erc20` and `erc1155` tuples), then, fixed, listed
+one missing approval: the collateral token for the perpetuals deposit contract
+(`perps_deposit_contract` in the SDK's environment config), which this rig
+never calls. The six that matter for resting orders (the standard and
+negative-risk exchanges, the two collateral adapters, the v2 router and the v3
+exchange) are granted. `--check` now names each missing approval and reports
+`approvals_ok_for_quoting` separately; `--approve` grants the rest through the
+relayer if that ever becomes necessary.
+
+The quote plan found nothing at `--budget 25 --markets 3` because the
+per-market cap is 1.6 × 25 / 3 = $13.33 and a minimum-size two-sided quote in
+a 20-share market parks about $19; the rig now says which filter stopped each
+candidate. At `--smoke --budget 25` it picked one market: "Will EU emergency
+diesel stocks be at least 34M tonnes at end …", mid 0.30, our bid 0.28 and ask
+0.33, 20 shares a side, $19.00 of collateral, 28 days to resolution, a pot the
+rewards model puts at $200 a day with nobody else inside the max spread. The
+next command is that smoke test live for two hours (section 18c), watched,
+with `--cancel-all` ready; its log and the next day's `--earnings` read go
+here.
 
 ## Sources
 

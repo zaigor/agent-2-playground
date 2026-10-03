@@ -455,7 +455,7 @@ def _run_lp(args, source) -> int:
         print(f"refusing: --budget {args.budget:g} is above the hard cap {args.max_budget:g} (MAX_BUDGET_USD)", file=sys.stderr)
         return 2
     exchange = None
-    if args.live or args.check or args.earnings or args.cancel_all:
+    if args.live or args.check or args.earnings or args.cancel_all or args.approve:
         try:
             exchange = LiveExchange.from_env()
         except Exception as exc:
@@ -468,6 +468,9 @@ def _run_lp(args, source) -> int:
         if args.earnings:
             e = exchange.earnings(args.earnings)
             print(json.dumps({"date": args.earnings, "total": round(sum(e.values()), 4), "by_market": e}, indent=1))
+            return 0
+        if args.approve:
+            print(json.dumps(exchange.approve(), indent=1))
             return 0
         print(json.dumps(exchange.describe(), indent=1))
     now = utcnow()
@@ -718,6 +721,7 @@ def build_parser() -> argparse.ArgumentParser:
     lp.add_argument("--pull-before-end-hours", type=float, default=48.0, help="cancel a market's quotes this long before its end date")
     lp.add_argument("--log", type=Path, default=Path("lp.jsonl"), help="JSONL record of every order, fill, scoring read and earnings read")
     lp.add_argument("--check", action="store_true", help="live credentials: print wallet, balance, approvals and the plan, send nothing")
+    lp.add_argument("--approve", action="store_true", help="live: grant the trading approvals the SDK lists as missing (gasless on a deposit wallet) and exit; not needed when approvals_ok_for_quoting is true")
     lp.add_argument("--earnings", default=None, help="live: print the day's reward earnings (YYYY-MM-DD) and exit")
     lp.add_argument("--cancel-all", action="store_true", help="live: cancel every open order on the account and exit")
     lp.add_argument("--max-budget", type=float, default=float(os.environ.get("MAX_BUDGET_USD", "50")), help="hard cap; --budget above this is refused (env MAX_BUDGET_USD)")
