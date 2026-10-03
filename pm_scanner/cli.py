@@ -253,7 +253,8 @@ def _run_counts(args, source) -> int:
 
     log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
     if not catalog_files(args.catalog):
-        print(f"catalog not found: {args.catalog} (export the series' data first, then pass the CSV, a folder of CSVs or a glob here)", file=sys.stderr)
+        what = "has no CSV files yet" if Path(args.catalog).is_dir() else "not found"
+        print(f"catalog {args.catalog}: {what} (export the series' data first, then pass the CSV, a folder of CSVs or a glob here)", file=sys.stderr)
         return 2
     events = _json.loads(args.events_json.read_text()) if args.events_json else fetch_series_events(source.http, args.series)
     if not events:
