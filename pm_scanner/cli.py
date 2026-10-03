@@ -249,11 +249,11 @@ def _run_counts(args, source) -> int:
     import json as _json
     from datetime import datetime as _dt, timezone as _tz
 
-    from .counts import build_signal_rows, check_catalog, count_markets, fetch_series_events, load_catalog, write_signal_csv
+    from .counts import build_signal_rows, catalog_files, check_catalog, count_markets, fetch_series_events, load_catalog, write_signal_csv
 
     log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
-    if not Path(args.catalog).is_file():
-        print(f"catalog not found: {args.catalog} (export the series' data first, then pass the CSV here)", file=sys.stderr)
+    if not catalog_files(args.catalog):
+        print(f"catalog not found: {args.catalog} (export the series' data first, then pass the CSV, a folder of CSVs or a glob here)", file=sys.stderr)
         return 2
     events = _json.loads(args.events_json.read_text()) if args.events_json else fetch_series_events(source.http, args.series)
     if not events:
@@ -532,7 +532,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     ct = sub.add_parser("counts", help="turn a catalog of timestamped occurrences (posts, quakes, ship transits) into a signal CSV for a count-window series, to score with `signal`")
     ct.add_argument("--series", required=True, help="Gamma series slug: trump-truth-social, 6pt5-earthquake-weekly, ships-transit-the-strait-of-hormuz, monthly-tornadoes-us, ...")
-    ct.add_argument("--catalog", type=Path, required=True, help="CSV with one row per occurrence (time column auto-detected: time/timestamp/created_at/date) or one row per day with --count-col")
+    ct.add_argument("--catalog", type=Path, required=True, help="CSV with one row per occurrence (time column auto-detected), a folder of such CSVs or a glob (the post tracker's per-window Posts exports; repeated ids are dropped), or one row per day with --count-col")
     ct.add_argument("--time-col", default=None, help="name of the time column when it is not obvious")
     ct.add_argument("--value-col", default=None, help="keep only rows whose value is >= --min-value (e.g. --value-col mag --min-value 6.5)")
     ct.add_argument("--min-value", type=float, default=None)

@@ -218,3 +218,31 @@ def test_parse_window_accepts_noon_parenthetical():
     a, b = w
     assert a == datetime(2024, 5, 31, 16, 0, tzinfo=timezone.utc)  # noon EDT
     assert b == datetime(2024, 6, 7, 16, 0, tzinfo=timezone.utc)
+
+
+def test_load_catalog_reads_tracker_posts_exports(tmp_path):
+    """The tracker's per-window "Posts" export: unquoted `M/D/YYYY, h:mm:ss PM` timestamps that split
+    into two CSV fields, quoted multi-line content, ET times labelled EST, and overlapping windows."""
+    from datetime import datetime, timezone
+    from pm_scanner.counts import load_catalog
+    head = "Post ID,User,Content,Posted At (EST),Imported At (EST)\n"
+    a = tmp_path / "elonmusk-Sep_29___Oct_6-posts.csv"
+    b = tmp_path / "elonmusk-Oct_2___Oct_9-posts.csv"
+    a.write_text(head
+        + '2106454808676716916,elonmusk,"Starship deploying Starlink V3 satellites https://pbs.twimg.com/x.jpg",10/3/2026, 2:42:17 PM,10/3/2026, 2:45:30 PM\n'
+        + '2106454043895964113,elonmusk,"Falcon 9 flew more missions, in ONE YEAR\n\nthan the Shuttle",10/3/2026, 2:39:15 PM,10/3/2026, 2:45:30 PM\n'
+        + '2106000000000000001,elonmusk,"noon edge",10/1/2026, 12:00:00 PM,10/1/2026, 12:03:00 PM\n', encoding="utf-8")
+    b.write_text(head
+        + '2106454808676716916,elonmusk,"Starship deploying Starlink V3 satellites https://pbs.twimg.com/x.jpg",10/3/2026, 2:42:17 PM,10/3/2026, 2:45:30 PM\n'
+        + '2106999999999999999,elonmusk,"later",10/5/2026, 9:00:00 AM,10/5/2026, 9:02:00 AM\n', encoding="utf-8")
+    cat, notes = load_catalog(tmp_path)
+    assert len(cat.times) == 4, notes                      # 5 rows, one repeated id
+    assert any("repeated ids dropped" in n for n in notes) and any("America/New_York" in n for n in notes)
+    assert not [n for n in notes if "unreadable" in n]
+    noon_et = datetime(2026, 10, 1, 16, 0, tzinfo=timezone.utc).timestamp()   # 12:00 EDT
+    assert cat.count(noon_et, noon_et + 1) == 1                               # the edge post is in, not before
+    assert cat.count(datetime(2026, 10, 3, 18, 0, tzinfo=timezone.utc).timestamp(), datetime(2026, 10, 3, 19, 0, tzinfo=timezone.utc).timestamp()) == 2
+    one, _ = load_catalog(a)
+    assert len(one.times) == 3
+    fixed, _ = load_catalog(a, tz="Etc/GMT+5")                                # fixed EST moves everything an hour
+    assert fixed.times[0] == one.times[0] + 3600

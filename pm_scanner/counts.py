@@ -179,29 +179,84 @@ def in_bracket(n: int, br: tuple[int, int | None]) -> bool:
 # --------------------------------------------------------------------------- #
 
 _TIME_COLS = ("time", "timestamp", "created_at", "createdat", "datetime", "date", "utc", "origin_time", "ts")
+_ID_COLS = ("post id", "post_id", "postid", "id", "tweet id", "tweet_id", "status_id", "event_id", "eventid")
+_DATE_ONLY = re.compile(r"^\s*\d{1,2}/\d{1,2}/\d{4}\s*$")
+_CLOCK_ONLY = re.compile(r"^\s*\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?\s*$", re.I)
+_NAIVE_FORMATS = (
+    "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M",
+    "%m/%d/%Y, %I:%M:%S %p", "%m/%d/%Y, %I:%M %p", "%m/%d/%Y %I:%M:%S %p", "%m/%d/%Y %I:%M %p",  # the post tracker: "10/3/2026, 2:42:17 PM"
+    "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M", "%m/%d/%Y", "%Y/%m/%d", "%d-%b-%Y",
+)
 
 
-def _parse_ts(text: str) -> float | None:
+def _parse_dt(text: str) -> datetime | None:
+    """A datetime from the text; naive when the text carries no zone, None when unreadable."""
     t = (text or "").strip()
     if not t:
         return None
     if re.fullmatch(r"\d{9,13}(\.\d+)?", t):
         v = float(t)
-        return v / 1000.0 if v > 1e11 else v
+        return datetime.fromtimestamp(v / 1000.0 if v > 1e11 else v, tz=UTC)
     try:
-        dt = datetime.fromisoformat(t.replace("Z", "+00:00").replace(" UTC", "+00:00"))
+        return datetime.fromisoformat(t.replace("Z", "+00:00").replace(" UTC", "+00:00"))
     except ValueError:
-        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%m/%d/%Y %H:%M", "%m/%d/%Y", "%Y/%m/%d", "%d-%b-%Y"):
-            try:
-                dt = datetime.strptime(t, fmt)
-                break
-            except ValueError:
-                continue
-        else:
-            return None
+        pass
+    for fmt in _NAIVE_FORMATS:
+        try:
+            return datetime.strptime(t, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _parse_ts(text: str, zone: ZoneInfo | None = None) -> float | None:
+    """Unix seconds; a naive timestamp is read in `zone` (UTC when None)."""
+    dt = _parse_dt(text)
+    if dt is None:
+        return None
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=UTC)
+        dt = dt.replace(tzinfo=zone or UTC)
     return dt.timestamp()
+
+
+def _repair_row(row: list[str], n: int) -> list[str]:
+    """Re-join a `M/D/YYYY, h:mm:ss PM` timestamp that an unquoted comma split into two fields
+    (the post tracker's export does this for both of its time columns)."""
+    while len(row) > n:
+        for k in range(len(row) - 1):
+            if _DATE_ONLY.match(row[k]) and _CLOCK_ONLY.match(row[k + 1]):
+                row = row[:k] + [row[k].strip() + ", " + row[k + 1].strip()] + row[k + 2 :]
+                break
+        else:
+            break
+    return row
+
+
+def _pick_time_col(cols: dict[str, str]) -> str | None:
+    for c in _TIME_COLS:
+        if c in cols:
+            return cols[c]
+    for key in ("posted", "created", "published", "origin"):
+        for lc, c in cols.items():
+            if key in lc and "import" not in lc:
+                return c
+    for lc, c in cols.items():
+        if ("time" in lc or "date" in lc) and not any(x in lc for x in ("import", "update", "resolved")):
+            return c
+    return None
+
+
+def catalog_files(path: Path | str) -> list[Path]:
+    """The CSV files a `--catalog` argument names: one file, every CSV in a directory, or a glob."""
+    text = str(path)
+    p = Path(text)
+    if p.is_dir():
+        return sorted(f for f in p.iterdir() if f.is_file() and f.suffix.lower() in (".csv", ".tsv", ".txt"))
+    if any(ch in text for ch in "*?["):
+        import glob as _glob
+
+        return sorted(Path(f) for f in _glob.glob(text) if Path(f).is_file())
+    return [p] if p.is_file() else []
 
 
 @dataclass
@@ -240,56 +295,84 @@ class Catalog:
         return self.times[-1] if self.times else None
 
 
-def load_catalog(path: Path, *, time_col: str | None = None, value_col: str | None = None, min_value: float | None = None, count_col: str | None = None, tz: str | None = None) -> tuple[Catalog, list[str]]:
-    """Read a CSV of occurrences. `value_col`/`min_value` keep rows at or above a threshold
-    (magnitude 6.5); `count_col` reads pre-aggregated rows (one per day with a count). Naive
-    timestamps are UTC unless `tz` names a zone."""
+def load_catalog(path: Path | str, *, time_col: str | None = None, value_col: str | None = None, min_value: float | None = None, count_col: str | None = None, tz: str | None = None) -> tuple[Catalog, list[str]]:
+    """Read a CSV of occurrences, or every CSV in a directory / glob (the tracker's per-window
+    "Posts" exports), dropping repeated ids. `value_col`/`min_value` keep rows at or above a
+    threshold (magnitude 6.5); `count_col` reads pre-aggregated rows (one per day with a count).
+    Naive timestamps are UTC unless `tz` names a zone, or the time column's name says ET."""
     problems: list[str] = []
+    notes: list[str] = []
     times: list[float] = []
     weights: list[float] = []
     zone = ZoneInfo(tz) if tz else None
-    with Path(path).open(newline="", encoding="utf-8-sig") as fh:
-        reader = csv.DictReader(fh)
-        cols = {c.strip().lower(): c for c in reader.fieldnames or []}
-        tcol = cols.get((time_col or "").lower()) if time_col else next((cols[c] for c in _TIME_COLS if c in cols), None)
-        if tcol is None:
-            return Catalog([], [], Path(path).name), [f"no time column (have: {', '.join(cols) or 'none'}); pass --time-col"]
-        vcol = cols.get(value_col.lower()) if value_col else None
-        if value_col and vcol is None:
-            return Catalog([], [], Path(path).name), [f"value column `{value_col}` not found"]
-        ccol = cols.get(count_col.lower()) if count_col else None
-        if count_col and ccol is None:
-            return Catalog([], [], Path(path).name), [f"count column `{count_col}` not found"]
-        for i, rec in enumerate(reader, start=2):
-            ts_text = rec.get(tcol) or ""
-            if zone and ts_text and not re.search(r"[zZ]$|[+-]\d{2}:?\d{2}$", ts_text.strip()) and not re.fullmatch(r"\d{9,13}(\.\d+)?", ts_text.strip()):
-                try:
-                    naive = datetime.fromisoformat(ts_text.strip())
-                    ts = naive.replace(tzinfo=zone).timestamp() if naive.tzinfo is None else naive.timestamp()
-                except ValueError:
-                    ts = _parse_ts(ts_text)
-            else:
-                ts = _parse_ts(ts_text)
-            if ts is None:
-                problems.append(f"line {i}: unreadable time `{ts_text}`")
-                continue
-            if vcol is not None and min_value is not None:
-                try:
-                    if float(rec.get(vcol) or "nan") < min_value:
+    files = catalog_files(path)
+    if not files:
+        return Catalog([], [], Path(str(path)).name), [f"no catalog file at {path}"]
+    seen_ids: set[str] = set()
+    dupes = 0
+    tz_noted = False
+    for fpath in files:
+        with fpath.open(newline="", encoding="utf-8-sig") as fh:
+            reader = csv.reader(fh)
+            header = [h.strip() for h in next(reader, [])]
+            cols = {c.lower(): c for c in header}
+            tcol = cols.get((time_col or "").lower()) if time_col else _pick_time_col(cols)
+            if tcol is None:
+                return Catalog([], [], fpath.name), [f"{fpath.name}: no time column (have: {', '.join(header) or 'none'}); pass --time-col"]
+            vcol = cols.get(value_col.lower()) if value_col else None
+            if value_col and vcol is None:
+                return Catalog([], [], fpath.name), [f"{fpath.name}: value column `{value_col}` not found"]
+            ccol = cols.get(count_col.lower()) if count_col else None
+            if count_col and ccol is None:
+                return Catalog([], [], fpath.name), [f"{fpath.name}: count column `{count_col}` not found"]
+            idcol = next((cols[c] for c in _ID_COLS if c in cols), None)
+            fzone = zone
+            if fzone is None and re.search(r"\((?:est|edt|et)\)|\b(?:est|edt)\b", tcol.lower()):
+                fzone = ET
+                if not tz_noted:
+                    notes.append(f"time zone: `{tcol}` read as America/New_York (pass --tz to override)")
+                    tz_noted = True
+            ti = header.index(tcol)
+            for i, row in enumerate(reader, start=2):
+                if not row or all(not c.strip() for c in row):
+                    continue
+                if len(row) > len(header):
+                    row = _repair_row(row, len(header))
+                rec = dict(zip(header, row))
+                if idcol is not None:
+                    pid = (rec.get(idcol) or "").strip()
+                    if pid:
+                        if pid in seen_ids:
+                            dupes += 1
+                            continue
+                        seen_ids.add(pid)
+                ts_text = rec.get(tcol) or (row[ti] if ti < len(row) else "")
+                ts = _parse_ts(ts_text, fzone)
+                if ts is None:
+                    problems.append(f"{fpath.name} line {i}: unreadable time `{ts_text}`")
+                    continue
+                if vcol is not None and min_value is not None:
+                    try:
+                        if float(rec.get(vcol) or "nan") < min_value:
+                            continue
+                    except ValueError:
+                        problems.append(f"{fpath.name} line {i}: value `{rec.get(vcol)}` is not a number")
                         continue
-                except ValueError:
-                    problems.append(f"line {i}: value `{rec.get(vcol)}` is not a number")
-                    continue
-            w = 1.0
-            if ccol is not None:
-                try:
-                    w = float(rec.get(ccol) or 0)
-                except ValueError:
-                    problems.append(f"line {i}: count `{rec.get(ccol)}` is not a number")
-                    continue
-            times.append(ts)
-            weights.append(w)
-    return Catalog(times, weights, Path(path).name), problems[:50]
+                w = 1.0
+                if ccol is not None:
+                    try:
+                        w = float(rec.get(ccol) or 0)
+                    except ValueError:
+                        problems.append(f"{fpath.name} line {i}: count `{rec.get(ccol)}` is not a number")
+                        continue
+                times.append(ts)
+                weights.append(w)
+    if len(files) > 1:
+        notes.append(f"{len(files)} files merged" + (f", {dupes} repeated ids dropped" if dupes else ""))
+    elif dupes:
+        notes.append(f"{dupes} repeated ids dropped")
+    name = Path(str(path)).name if len(files) != 1 else files[0].name
+    return Catalog(times, weights, name), notes + problems[:50]
 
 
 # --------------------------------------------------------------------------- #
