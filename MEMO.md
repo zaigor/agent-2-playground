@@ -1471,14 +1471,21 @@ restricted to those markets.
    and believe the second. The live AIS feed (aisstream.io is free) is the
    niche data that closes that gap, and it can only be collected forward.
 
-3. **Posts** (an evening per account). On each tracked account's page at
-   xtracker.polymarket.com, "Export Data" gives the counted posts with
-   timestamps; save one CSV per account:
+3. **Posts** (an hour per account, 3 Oct: minutes). The tracker's page only
+   downloads one window at a time, built in the browser, but the site's own
+   JavaScript calls a JSON API nobody documents (`/api/users/<handle>`,
+   `/api/users/<handle>/posts?limit=&startDate=&endDate=`,
+   `/api/trackings/<id>?includeStats=true`); `xtracker` walks it from the
+   day the tracker started following the account (Musk: 18 Nov 2025, 12,913
+   posts held on 3 Oct 2026, so about 45 weekly windows) and writes one row
+   per post with the post's UTC time:
 
    ```
-   python -m pm_scanner counts --series khamenei-daily-tweets --catalog khamenei.csv --check-only
-   python -m pm_scanner counts --series khamenei-daily-tweets --catalog khamenei.csv --out khamenei_signal.csv
-   python -m pm_scanner signal --csv khamenei_signal.csv
+   python -m pm_scanner xtracker --list
+   python -m pm_scanner xtracker elonmusk                          # -> xtracker/elonmusk.csv
+   python -m pm_scanner counts --series elon-tweets --catalog xtracker/elonmusk.csv --check-only
+   python -m pm_scanner counts --series elon-tweets --catalog xtracker/elonmusk.csv --out elon_signal.csv
+   python -m pm_scanner signal --csv elon_signal.csv --fill-wait 6
    ```
 
    and the same for `whitehouse-daily-tweets`, `zelenskyy-tweets`,

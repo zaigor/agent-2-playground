@@ -229,10 +229,18 @@ python -m pm_scanner signal --csv quakes_signal.csv
 # IMF PortWatch daily chokepoint counts (one row per day): the count column instead of one row per ship
 python -m pm_scanner counts --series ships-transit-the-strait-of-hormuz --catalog hormuz.csv --count-col n_total --out hormuz_signal.csv
 
-# xtracker "Export Data" CSV of an account's counted posts
-python -m pm_scanner counts --series khamenei-daily-tweets --catalog khamenei.csv --out khamenei_signal.csv
-python -m pm_scanner counts --series trump-truth-social --catalog export.csv --check-only     # does the catalog land in the winning bracket?
+# posts: pull an account's whole counted history from xtracker.polymarket.com (the counter the
+# ladders resolve on; its JSON routes are read off the site's own code, see pm_scanner/xtracker.py)
+python -m pm_scanner xtracker --list                      # the tracked accounts and their handles
+python -m pm_scanner xtracker elonmusk                    # -> xtracker/elonmusk.csv, one row per post, UTC
+python -m pm_scanner counts --series elon-tweets --catalog xtracker/elonmusk.csv --check-only     # does the catalog land in the winning bracket?
+python -m pm_scanner counts --series elon-tweets --catalog xtracker/elonmusk.csv --out elon_signal.csv
+python -m pm_scanner signal --csv elon_signal.csv --fill-wait 6
 ```
+
+`--catalog` also takes a folder or glob of the site's per-window "Posts" downloads (overlapping
+windows are deduplicated by post id, and `Posted At (EST)` is read as New York time unless
+`--tz` says otherwise); `xtracker --compare <that folder>` lines the two up on the posts they share.
 
 `--check-only` compares the catalog's count over each resolved window with the winning
 bracket first: a mismatch means the catalog is not what the tracker counts (replies, reposts,
@@ -338,6 +346,7 @@ pm_scanner/
   rewards.py     liquidity rewards: reward share of a small quote against the live book vs its adverse selection on the tape
   signal.py      generic backtest of a CSV of your own probabilities against the price at that time and the outcome
   crossings.py   bracket-crossing test: early bracket closes as a timestamped count lower bound, scored against outcomes with `signal`
+  xtracker.py    xtracker.polymarket.com's JSON routes: an account's whole counted-post history as a catalog CSV
   counts.py      count-window ladders: windows and brackets from the Gamma wording, catalog -> negative-binomial probabilities -> signal CSV; headroom of the market itself
   lp.py          the liquidity-reward test rig: minimum-size post-only quotes in unquoted rewarded markets, scoring and earnings read-back
   weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/flow/today

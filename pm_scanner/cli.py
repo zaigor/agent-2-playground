@@ -288,6 +288,79 @@ def _run_counts(args, source) -> int:
     return 0
 
 
+SERIES_BY_HANDLE = {  # tracker handle (lower-case) -> Gamma series slug, for the next-step hint
+    "elonmusk": "elon-tweets", "realdonaldtrump": "trump-truth-social", "whitehouse": "whitehouse-daily-tweets",
+    "tedcruz": "ted-cruz-daily-tweets", "nycmayor": "nycmayor-tweets", "zelenskyyua": "zelenskyy-tweets",
+    "cz_binance": "cz-tweets", "khamenei_irna": "khamenei-daily-tweets",
+}
+
+
+def _run_xtracker(args) -> int:
+    import json as _json
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+
+    from .counts import _parse_dt, catalog_files
+    from .http import HttpError
+    from .xtracker import Tracker, compare_exports, harvest, parse_when, weekly_table, write_posts_csv
+
+    log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
+    tr = Tracker(pause=args.pause, base_url=args.base_url)
+    if not args.list and not args.handle:
+        print("give the account's handle (python -m pm_scanner xtracker elonmusk) or --list", file=sys.stderr)
+        return 2
+    try:
+        if args.list:
+            users = tr.users()
+            print(f"{len(users)} tracked accounts (handle, platform, name, posts held):")
+            for u in sorted(users, key=lambda u: str(u.get("handle", "")).lower()):
+                n = (u.get("_count") or {}).get("posts", "")
+                print(f"  {str(u.get('handle', '')):26} {str(u.get('platform', '')):14} {str(u.get('name', ''))[:40]:40} {n}")
+            return 0
+        user = tr.user(args.handle)
+    except HttpError as exc:
+        print(f"xtracker failed: {exc}", file=sys.stderr)
+        return 2
+    if not user or not user.get("handle"):
+        print(f"no tracked account `{args.handle}` (python -m pm_scanner xtracker --list shows them)", file=sys.stderr)
+        return 2
+    created = _parse_dt(str(user.get("createdAt") or ""))
+    if created is not None and created.tzinfo is None:
+        created = created.replace(tzinfo=_tz.utc)
+    total = (user.get("_count") or {}).get("posts")
+    now = _dt.now(_tz.utc)
+    print(f"{user.get('handle')} ({user.get('platform', '?')}): tracked since {created:%Y-%m-%d}, {total} posts held, {len(user.get('trackings') or [])} active windows" if created else f"{user.get('handle')}: {total} posts held")
+    since = parse_when(args.since) if args.since else ((created - _td(days=30)) if created else now - _td(days=400))
+    until = parse_when(args.until) if args.until else now + _td(days=1)
+    out = args.out or Path("xtracker") / f"{args.handle}.csv"
+    log(f"fetching {since:%Y-%m-%d} .. {until:%Y-%m-%d} in {args.chunk_days:g}-day chunks, up to {args.limit} posts a request")
+    try:
+        h = harvest(tr.posts_fetcher(args.handle, raw_dir=args.raw_dir), since, until, chunk=_td(days=args.chunk_days), limit=args.limit, log=log if args.verbose else None)
+    except HttpError as exc:
+        print(f"xtracker failed after {exc}", file=sys.stderr)
+        return 2
+    for note in h.notes:
+        print(f"note: {note}")
+    times = h.times()
+    if not times:
+        print(f"no posts came back ({h.requests} requests); the first record, if any, was: {_json.dumps(next(iter(h.posts.values()), None), default=str)[:300]}", file=sys.stderr)
+        return 2
+    n = write_posts_csv(h, out)
+    print(f"{n} posts, {times[0]:%Y-%m-%d %H:%M} .. {times[-1]:%Y-%m-%d %H:%M} UTC, {h.requests} requests; post time read from `{h.time_field}`")
+    if isinstance(total, int) and n < total:
+        print(f"the account record holds {total} posts, {total - n} more than came back (posts before {since:%Y-%m-%d}? pass an earlier --since)")
+    first = next(iter(h.posts.values()))
+    shown = {k: (v[:60] + "..." if isinstance(v, str) and len(v) > 60 else v) for k, v in first.items()}
+    print(f"one record, for checking the fields: {_json.dumps(shown, default=str)}")
+    print("posts per UTC week (Monday to Monday), last 8 whole weeks:")
+    print(weekly_table(times))
+    if args.compare:
+        files = catalog_files(args.compare)
+        print(compare_exports(h, files) if files else f"compare: no CSV files at {args.compare}")
+    series = SERIES_BY_HANDLE.get(args.handle.lower(), "<series>")
+    print(f"wrote {out}; next: python -m pm_scanner counts --series {series} --catalog {out} --check-only")
+    return 0
+
+
 def _run_headroom(args, source) -> int:
     import json as _json
     from dataclasses import asdict as _asdict
@@ -549,6 +622,20 @@ def build_parser() -> argparse.ArgumentParser:
     ct.add_argument("--fixtures", type=Path, default=None, help=argparse.SUPPRESS)
     ct.add_argument("--check-only", action="store_true", help="only compare the catalog's window counts with the winning brackets")
 
+    xt = sub.add_parser("xtracker", help="pull an account's whole counted-post history from xtracker.polymarket.com (the counter Polymarket resolves the posts ladders on) into a catalog CSV for `counts`")
+    xt.add_argument("handle", nargs="?", default=None, help="the account as the tracker names it: elonmusk, realDonaldTrump, WhiteHouse, tedcruz, NYCMayor, ... (--list shows them)")
+    xt.add_argument("--list", action="store_true", help="list the tracked accounts and exit")
+    xt.add_argument("--out", type=Path, default=None, help="catalog CSV to write (default xtracker/<handle>.csv)")
+    xt.add_argument("--since", default=None, help="first day to fetch, UTC (default: a month before the tracker started following the account)")
+    xt.add_argument("--until", default=None, help="last day to fetch (default: now)")
+    xt.add_argument("--chunk-days", type=float, default=7.0, help="days per request before any halving")
+    xt.add_argument("--limit", type=int, default=500, help="posts asked for per request (a server cap is detected and worked around)")
+    xt.add_argument("--pause", type=float, default=0.15, help="seconds between requests")
+    xt.add_argument("--raw-dir", type=Path, default=None, help="also keep every raw response here (JSON per request)")
+    xt.add_argument("--compare", type=Path, default=None, help="folder of the site's own Posts exports: line up their `Posted At (EST)` with the API's time on the shared posts")
+    xt.add_argument("--verbose", action="store_true", help="log every request")
+    xt.add_argument("--base-url", default="https://xtracker.polymarket.com", help=argparse.SUPPRESS)
+
     hr = sub.add_parser("headroom", help="how sharp count-window and ladder markets already are at the start, middle and late part of their window, against uniform and point-in-time base rates")
     hr.add_argument("--series", required=True, help="comma-separated Gamma series slugs")
     hr.add_argument("--per-family", type=int, default=12, help="resolved events sampled per series (each market is one trade-history request)")
@@ -635,6 +722,9 @@ def main(argv: list[str] | None = None) -> int:
         summary = summarize(args.log)
         print(json.dumps(summary, indent=2) if args.json else render_summary(summary))
         return 0
+
+    if args.cmd == "xtracker":
+        return _run_xtracker(args)
 
     source = FixtureSource(args.fixtures) if args.fixtures else LiveSource()
 
