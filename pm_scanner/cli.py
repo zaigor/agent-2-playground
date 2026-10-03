@@ -278,7 +278,7 @@ def _run_counts(args, source) -> int:
         for c in checks[-10:]:
             print(f"  {c['window']}  catalog {c['count']:g}  winner {c['winner']}  {'ok' if c['match'] else 'MISMATCH'}")
     else:
-        print("no resolved window is fully covered by the catalog, so the catalog could not be checked against outcomes")
+        print("no resolved window is fully covered by the catalog, so the catalog could not be checked against outcomes (it is checked on windows that start after the catalog's first row and end before its last)")
     if args.check_only:
         return 0
     hours = tuple(int(h) for h in args.hours.split(",") if h.strip())

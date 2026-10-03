@@ -555,14 +555,15 @@ def check_catalog(markets: list[CountMarket], catalog: Catalog) -> list[dict[str
     bracket? The first thing to look at: if it does not, the catalog is not what the tracker
     counts (replies, reposts, magnitude revisions, time zone)."""
     out: list[dict[str, Any]] = []
+    first = catalog.first if catalog.first is not None else float("inf")
     last = catalog.last or 0.0
     by_window: dict[tuple[datetime, datetime], list[CountMarket]] = defaultdict(list)
     for m in markets:
         by_window[m.window].append(m)
     for (a, b), group in sorted(by_window.items()):
         winners = [m for m in group if m.resolved_yes]
-        if len(winners) != 1 or b.timestamp() > last:
-            continue
+        if len(winners) != 1 or a.timestamp() < first or b.timestamp() > last:
+            continue  # unresolved, ambiguous, or not fully inside the catalog's range
         n = catalog.count(a.timestamp(), b.timestamp())
         out.append({"window": f"{a:%Y-%m-%d %H:%M} .. {b:%Y-%m-%d %H:%M}", "count": n, "winner": winners[0].label, "bracket": winners[0].bracket, "match": in_bracket(int(round(n)), winners[0].bracket)})
     return out
