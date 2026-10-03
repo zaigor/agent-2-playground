@@ -302,6 +302,9 @@ class LiveTrades:
         self.cache_dir = Path(cache_dir) if cache_dir else None
         self.pause = pause
 
+    def cached(self, condition_id: str) -> bool:
+        return bool(self.cache_dir) and (self.cache_dir / f"{condition_id}.json").exists()
+
     def trades(self, condition_id: str, closed: bool = True) -> list[dict[str, Any]]:
         path = self.cache_dir / f"{condition_id}.json" if self.cache_dir else None
         if path and path.exists():

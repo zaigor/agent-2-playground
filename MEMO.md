@@ -1777,6 +1777,48 @@ quotes where the reward pots pay. Until then the decision rule of 17d stands:
 B meets it on Musk's series, A, the test as written before the numbers, says
 no, and the laptop run with the real count is what breaks the tie.
 
+### 19f. The real count (3 Oct, laptop): the tracker's own API, and the catalog matches 94 of 94 windows
+
+**The data source.** xtracker.polymarket.com, the counter every posts ladder
+resolves on, has no documented API and its "Posts" button only downloads one
+window at a time, built in the browser. Its own JavaScript, read off the
+Next.js bundle, calls a small JSON API: `/api/users` (ten tracked accounts),
+`/api/users/<handle>` (the record, the active windows with their exact start
+and end, the total posts held), `/api/users/<handle>/posts?limit=&startDate=&endDate=`
+(the counted posts, with the post's own `createdAt` in UTC and an
+`importedAt`), `/api/trackings/<id>?includeStats=true`. The `xtracker`
+command walks the posts route from the day the tracker started following the
+account and writes one row per post (`pm_scanner/xtracker.py`). Musk's history
+came back in 59 requests: 12,913 posts, exactly the total the account record
+holds, from 31 Oct 2025 to the minute of the run, no page cap in the way. The
+browser exports agree with the API to the minute on all 280 posts both hold
+when their "Posted At (EST)" is read as New York time, so the label means the
+local zone, not fixed EST.
+
+**The check that had to pass first.** `counts --check-only` compares the
+catalog's count over every resolved window the catalog fully covers with the
+bracket that won: 94 windows, 94 matches, 0 mismatches, through the week that
+closed on 2 Oct (222 posts, winner 220-239). The catalog is exactly what the
+resolution counts: replies and reposts included, the noon New York boundary as
+parsed, nothing to adjust. The weekly pace since August runs 158 to 310 posts
+per UTC week; the 4 downloaded windows ran at about 245 a week.
+
+**Accounts the tracker holds** (3 Oct): elonmusk 12,913 posts, WhiteHouse
+6,061, realDonaldTrump 5,391 (Truth Social), tedcruz 3,544, ZelenskyyUa 2,393,
+NYCMayor 1,075, Cobratate 881, cz_binance 643, khamenei_ir 155. Every posts
+series in 19a can now be run with its real count the same way.
+
+**The pre-registered run.** `counts --out` wrote 21,494 decision rows for the
+Musk ladders (daily at 12:00 UTC plus the day before each window opens; 1,374
+decision times before the catalog has eight reference windows and 442 after
+its last post were skipped). `signal --fill-wait 6` on those rows is the test
+of 19e: it needs one trade tape per resolved market from data-api, about one a
+second, cached on disk, so the first run takes most of an hour and later runs
+seconds. Its result, against B's proxy numbers (+0.0018 ± 0.0007 blend gap,
++10.8 ± 1.8 per $100 at executable prices), goes in section 20 together with
+the `lp --check` output. The account exists, holds $29 of USDC, and the four
+environment variables are set on the laptop; nothing has been sent.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)

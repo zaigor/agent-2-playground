@@ -868,6 +868,10 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 resolver, trades_src = GammaResolver(source.http), LiveTrades(cache_dir=args.cache_dir)
             markets = resolver.resolve([r.market for r in rows])
+            if not args.fixtures:
+                need = {k for k in {r.market for r in rows} if k in markets and markets[k].resolved_yes is not None}
+                have = sum(1 for k in need if trades_src.cached(markets[k].condition_id or markets[k].id))
+                log(f"{len(markets)} of {len({r.market for r in rows})} markets found, {len(need)} resolved; {len(need) - have} trade tapes to fetch at about one a second (cached in {args.cache_dir}, so a stopped run resumes where it was)")
             report = score_signal(rows, markets, trades_src, horizon_min=args.horizon_min, edge=args.edge, fee_rate=args.fee, max_stale_hours=args.max_stale, log=log)
         except Exception as exc:
             print(f"signal failed: {exc}", file=sys.stderr)

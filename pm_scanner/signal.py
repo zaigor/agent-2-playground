@@ -231,7 +231,15 @@ def score_signal(rows: list[SignalRow], markets: dict[str, PolyMarket], trades_s
     by_market: dict[str, list[SignalRow]] = defaultdict(list)
     for r in rows:
         by_market[r.market].append(r)
-    for key, group in by_market.items():
+    import time as _time
+
+    t0 = _time.monotonic()
+    fetched = 0
+    for i, (key, group) in enumerate(by_market.items(), 1):
+        if log and i % 100 == 0:
+            el = _time.monotonic() - t0
+            left = (len(by_market) - i) * el / i
+            log(f"tapes: {i} of {len(by_market)} markets, {fetched} fetched this run (the rest came from the cache), {el / 60:.0f} min so far, about {left / 60:.0f} min left")
         m = markets.get(key)
         if m is None:
             dropped["market not found"] += len(group)
@@ -242,6 +250,8 @@ def score_signal(rows: list[SignalRow], markets: dict[str, PolyMarket], trades_s
             dropped["unresolved"] += len(group)
             warnings.append(f"{key}: not resolved yet ({m.question[:50]})")
             continue
+        cached = getattr(trades_source, "cached", None)
+        fetched += 0 if cached is None or cached(m.condition_id or m.id) else 1
         trades = trades_source.trades(m.condition_id or m.id, closed=True)
         series = yes_price_series(trades, m.outcomes)
         if len(series) < 2:
