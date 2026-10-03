@@ -1151,9 +1151,13 @@ Purpose: prove the pipe, not the thesis. One market, the minimum size, two
 hours.
 
 ```
-python -m pm_scanner lp                 # dry run: the plan from public books
-python -m pm_scanner lp --smoke --live  # one market, 2 hours, then cancel
+python -m pm_scanner lp --smoke                        # dry run: the one market it would quote
+python -m pm_scanner lp --smoke --live --only <condition id from the dry run>   # 2 hours, then cancel
 ```
+
+(Since 3 Oct a live run must name its market with `--only`: the first smoke run
+quoted a different market than its dry run twenty minutes earlier, two pots
+being equal, see section 20.)
 
 What "the system plays as expected" means, in order:
 
@@ -1918,6 +1922,53 @@ rewards model puts at $200 a day with nobody else inside the max spread. The
 next command is that smoke test live for two hours (section 18c), watched,
 with `--cancel-all` ready; its log and the next day's `--earnings` read go
 here.
+
+**The smoke run (3 Oct, 23:47 UTC), three minutes long.** Run as `lp --live
+--smoke --budget 25` with the laptop kept awake. What happened, from the log:
+
+* 23:47:56. The plan was not the EU diesel market of the dry run twenty
+  minutes earlier but "Rain during the Bahrain Grand Prix?": mid 0.895, 8.2
+  days to resolution, a $200-a-day pot with nobody else inside the max spread.
+  The two pots were equal and the sort was stable on input order, so the live
+  run quoted whichever came first; and "rain" was not on the exclusion list
+  that keeps the rig out of weather. Both orders were accepted with ids: a YES
+  bid at 0.87 and a NO bid at 0.08 (a YES ask at 0.92), 20 shares each, $19.00
+  parked. The scoring read at the same second said 0 of 2 scoring. The
+  approvals read timed out on the RPC; the allowances line stood.
+* 23:48:57. The YES bid was hit for 15.31 shares at 0.87, $13.32, sixty-one
+  seconds after it was placed, in a book where nobody else had been quoting
+  inside the spread. That is the abort condition written in 18d ("any fill in
+  a market whose book was empty when quoting started"). The rig cancelled the
+  rest of the bid and kept the ask.
+* 23:50:58. The mid read 0.88 and the rig re-centred: it pulled the ask, then
+  crashed trying to cancel the ask a second time with an id it had already
+  cleared (a stale flag; the SDK rightly refused a `None`). The `finally`
+  block ran `cancel_all` before the traceback, so no order was left open. Two
+  things about that mid: our own two quotes had defined the 0.895 the rig was
+  centred on, and once the bid side was gone the "move" was partly the book
+  without us. The rig now reads the mid from everyone else's orders and holds
+  its quotes when nobody else is in the book.
+
+Against the checklist of 18c: point 2 passed (two live orders, ids, on the
+book); point 3 is not established (one reading at placement said 0 of 2, the
+checklist asked for ten minutes, and the run did not get there); points 4 and
+6 did not arise; point 5 happened through the exception path and should be
+confirmed on the site. The thing the test did establish is the one 17d feared:
+a lone minimum-size quote in an unquoted rewarded market is taken within a
+minute, at the moment the market moves against that side. Whether the pot
+would have paid for it was never measured. Outcome of the money: $13.32 is in
+15.31 YES shares of a weather market resolving in eight days, marked about
+flat at the 0.88 mid; its disposal and the final P&L go here when known.
+
+Changed after the fact, none of it pre-registered: the re-centre crash fixed
+with a regression test; the mid taken from other people's orders; "rain",
+"snow", "storm", "wind", "flood" and "grand prix" added to the exclusion
+list; the mid band for a candidate tightened from 0.05–0.95 to 0.15–0.85 (a
+bid at 0.87 risks 87 cents to earn 13 against whoever learns of a drier
+forecast first); equal pots broken by days to resolution, longer first; and a
+live run must name its market with `--only` so that what is quoted is what
+the dry run showed. Whether to run the smoke test again at all is a decision
+for the morning, with the fill above as its first data point.
 
 ## Sources
 

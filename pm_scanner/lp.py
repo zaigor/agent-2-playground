@@ -28,7 +28,26 @@ from typing import Any, Protocol
 from .polymarket import PolyMarket
 from .rewards import PocketRow
 
-EXCLUDE_WORDS = ("temperature", "weather", "earthquake", "video", "posts from", "tweets", "views", "hurricane", "category", "precipitation")
+EXCLUDE_WORDS = ("temperature", "weather", "earthquake", "video", "posts from", "tweets", "views", "hurricane", "category", "precipitation", "rain", "snow", "storm", "wind", "flood", "grand prix")
+
+
+def best_prices(bids: list[tuple[float, float]], asks: list[tuple[float, float]], own_bids: list[tuple[float, float]] | None = None, own_asks: list[tuple[float, float]] | None = None) -> tuple[float | None, float | None]:
+    """Best bid and ask of everyone else: our own resting orders are subtracted from their levels.
+    Alone in a book, our two quotes would otherwise define the mid we re-centre on, and a fill on
+    one side would read as a move (the smoke test of 3 Oct chased itself that way)."""
+
+    def others(levels: list[tuple[float, float]], own: list[tuple[float, float]] | None) -> list[float]:
+        out = []
+        for price, size in levels:
+            for op, osz in own or ():
+                if abs(op - price) < 1e-9:
+                    size -= osz
+            if size > 1e-6:
+                out.append(price)
+        return out
+
+    b, a = others(bids, own_bids), others(asks, own_asks)
+    return (max(b) if b else None, min(a) if a else None)
 
 
 def floor_tick(x: float, tick: float) -> float:
@@ -110,7 +129,7 @@ def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, bud
         if reasons is not None:
             reasons[why] = reasons.get(why, 0) + 1
 
-    for r in sorted(rows, key=lambda r: -r.reward_low):
+    for r in sorted(rows, key=lambda r: (-r.reward_low, -(r.days_to_end or 0.0))):  # equal pots: the longer-dated first
         if only is not None and r.condition_id not in only:
             continue
         if only is None:
@@ -120,8 +139,8 @@ def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, bud
             if r.spread > max_spread:
                 skip(f"book spread above {max_spread:g}")
                 continue
-            if not 0.05 <= r.mid <= 0.95:
-                skip("mid outside 0.05..0.95")
+            if not 0.15 <= r.mid <= 0.85:
+                skip("mid outside 0.15..0.85 (near-certain markets: the bid risks 85c to earn 15c against whoever knows first)")
                 continue
             if r.reward_low < min_reward:
                 skip(f"modelled reward below ${min_reward:g}/day")
@@ -174,7 +193,7 @@ class Exchange(Protocol):
         after = self.describe()
         return {"submitted": True, "missing_before": before.get("approvals_missing", []), "missing_after": after.get("approvals_missing", []), "approvals_ok": after.get("approvals_ok")}
 
-    def top_of_book(self, token: str) -> tuple[float | None, float | None]: ...
+    def top_of_book(self, token: str, own_bids: list[tuple[float, float]] | None = None, own_asks: list[tuple[float, float]] | None = None) -> tuple[float | None, float | None]: ...
     def place(self, token: str, price: float, size: float) -> str | None: ...
     def cancel(self, order_ids: list[str]) -> None: ...
     def cancel_all(self) -> None: ...
@@ -194,10 +213,10 @@ class PaperExchange:
         self.n = 0
         self.log: list[tuple[str, Any]] = []
 
-    def top_of_book(self, token: str) -> tuple[float | None, float | None]:
+    def top_of_book(self, token: str, own_bids=None, own_asks=None) -> tuple[float | None, float | None]:
         if self.book_fn is not None:
             return self.book_fn(token)
-        return self.books.get(token, (None, None))
+        return self.books.get(token, (None, None))  # the paper books are other people's orders already
 
     def place(self, token: str, price: float, size: float) -> str | None:
         self.n += 1
@@ -299,11 +318,9 @@ class LiveExchange:
             out["gasless_error"] = str(exc)
         return out
 
-    def top_of_book(self, token: str) -> tuple[float | None, float | None]:
+    def top_of_book(self, token: str, own_bids=None, own_asks=None) -> tuple[float | None, float | None]:
         ob = self.client.get_order_book(token_id=token)
-        bids = [float(l.price) for l in ob.bids]
-        asks = [float(l.price) for l in ob.asks]
-        return (max(bids) if bids else None, min(asks) if asks else None)
+        return best_prices([(float(l.price), float(l.size)) for l in ob.bids], [(float(l.price), float(l.size)) for l in ob.asks], own_bids, own_asks)
 
     def place(self, token: str, price: float, size: float) -> str | None:
         r = self.client.place_limit_order(token_id=token, side="BUY", price=f"{price:.4f}".rstrip("0").rstrip("."), size=f"{size:g}", post_only=True)
@@ -444,24 +461,30 @@ class Quoter:
                 st.stopped = "both sides filled"
                 self.log("stop", market=p.question[:60], reason=st.stopped)
                 continue
-            bb, ba = self.x.top_of_book(p.yes_token)
-            if bb is None or ba is None:
-                self.log("error", market=p.question[:60], error="one-sided or empty book, waiting")
-                continue
-            mid = (bb + ba) / 2.0
             have_bid = st.bid_id is not None and st.bid_id in open_by_id
             have_ask = st.ask_id is not None and st.ask_id in open_by_id
+            own_bids = [(o.price, o.size - o.matched) for o in (open_by_id[st.bid_id],)] if have_bid else []
+            own_asks = [(round(1.0 - o.price, 4), o.size - o.matched) for o in (open_by_id[st.ask_id],)] if have_ask else []
+            bb, ba = self.x.top_of_book(p.yes_token, own_bids, own_asks)
+            if bb is None or ba is None:
+                if st.quoted_mid is None:
+                    self.log("error", market=p.question[:60], error="one-sided or empty book, waiting")
+                    continue
+                mid = st.quoted_mid  # nobody else is quoting: keep our quotes where they are
+            else:
+                mid = (bb + ba) / 2.0
             need_bid, need_ask = not st.bid_done and not have_bid, not st.ask_done and not have_ask
             moved = st.quoted_mid is None or abs(mid - st.quoted_mid) >= self.recentre_ticks * p.tick - 1e-9
             if moved and (have_bid or have_ask):
                 self._pull(st, f"re-centre: mid {st.quoted_mid} -> {round(mid, 4)}")
                 st.replaced += 1
+                have_bid = have_ask = False  # pulled: the ids are gone (the 3 Oct run cancelled a None here)
                 need_bid, need_ask = not st.bid_done, not st.ask_done
             if need_bid or need_ask:
-                if need_bid and have_bid:
-                    self.x.cancel([st.bid_id]); st.bid_id = None  # type: ignore[list-item]
-                if need_ask and have_ask:
-                    self.x.cancel([st.ask_id]); st.ask_id = None  # type: ignore[list-item]
+                if need_bid and have_bid and st.bid_id:
+                    self.x.cancel([st.bid_id]); st.bid_id = None
+                if need_ask and have_ask and st.ask_id:
+                    self.x.cancel([st.ask_id]); st.ask_id = None
                 self._post(st, mid)
             summary["active"] += 1
         return summary

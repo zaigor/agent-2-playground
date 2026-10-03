@@ -492,6 +492,9 @@ def _run_lp(args, source) -> int:
     if not args.live:
         print("\ndry run: nothing sent. Add --live (with POLY_* in the environment) to rest these quotes.")
         return 0
+    if args.live and not args.check and only is None:
+        print("live run: name the market(s) to quote with --only <condition id,...> from the plan above, so what is quoted is what you saw in the dry run (the 3 Oct smoke run quoted a different market than its dry run, the pots being equal)", file=sys.stderr)
+        return 2
     hours = 2.0 if args.smoke and args.hours == 72.0 else args.hours
     q = Quoter(exchange, plans, log_path=args.log, pull_before_end_hours=args.pull_before_end_hours)
     print(f"\nquoting {len(plans)} market(s) for {hours:g}h, checking every {args.interval:g}s; Ctrl-C cancels everything and exits")

@@ -308,7 +308,7 @@ pulls quotes 48 hours before a market ends, and cancels everything on exit.
 pip install -e ".[trade]"                       # the official polymarket-client SDK
 python -m pm_scanner lp                         # dry run: the plan, priced from public books, nothing sent
 python -m pm_scanner lp --check                 # with POLY_* set: wallet type, balance, approvals, the plan
-python -m pm_scanner lp --smoke --live          # one market, two hours, then cancel: does the CLOB score it?
+python -m pm_scanner lp --smoke --live --only <condition id>          # one market, two hours, then cancel: does the CLOB score it?
 python -m pm_scanner lp --live --budget 50 --markets 3 --hours 72 --log lp.jsonl
 python -m pm_scanner lp --earnings 2026-10-01   # the day's reward accrual per market
 python -m pm_scanner lp --cancel-all

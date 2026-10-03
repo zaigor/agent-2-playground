@@ -161,3 +161,52 @@ def test_choose_markets_explains_an_empty_plan():
     reasons: dict = {}
     plans = choose_markets([row], {}, budget=25.0, max_markets=3, reasons=reasons)
     assert plans == [] and reasons["not on Gamma or not accepting orders"] == 1 and reasons["per-market cap $"] == 13.33
+
+
+class StrictPaperExchange(PaperExchange):
+    """Cancels like the SDK: an order id must be a string (the 3 Oct smoke run died on a None)."""
+
+    def cancel(self, order_ids):
+        assert all(isinstance(i, str) for i in order_ids), order_ids
+        super().cancel(order_ids)
+
+
+def test_quoter_survives_a_partial_fill_followed_by_a_move(tmp_path):
+    books = {"y": (0.25, 0.35)}
+    x = StrictPaperExchange(books)
+    q = Quoter(x, [_plan()], log_path=tmp_path / "lp.jsonl", clock=lambda: 0.0, printer=lambda s: None)
+    q.step()
+    bid = next(o for o in x.orders.values() if o.token == "y")
+    bid.matched = 15.3  # partly filled, the rest still resting
+    q.step()
+    st = q.states[0]
+    assert st.bid_done and st.bid_filled == 15.3 and st.bid_id is None and [o.token for o in x.orders.values()] == ["n"]
+    books["y"] = (0.22, 0.35)  # the others' mid moves two ticks: the ask is re-centred, the bid is not re-posted
+    q.step()
+    assert st.replaced == 1 and st.bid_id is None and st.ask_id is not None
+    assert [o.token for o in x.orders.values()] == ["n"] and not st.stopped
+
+
+def test_best_prices_ignores_our_own_orders():
+    from pm_scanner.lp import best_prices
+
+    bids = [(0.87, 20.0), (0.80, 100.0)]
+    asks = [(0.92, 20.0), (0.97, 50.0)]
+    assert best_prices(bids, asks) == (0.87, 0.92)
+    assert best_prices(bids, asks, own_bids=[(0.87, 20.0)], own_asks=[(0.92, 20.0)]) == (0.80, 0.97)
+    assert best_prices([(0.87, 35.0)], asks, own_bids=[(0.87, 20.0)], own_asks=[(0.92, 20.0)]) == (0.87, 0.97)  # someone joined our level
+    assert best_prices([(0.87, 20.0)], [(0.92, 20.0)], own_bids=[(0.87, 20.0)], own_asks=[(0.92, 20.0)]) == (None, None)
+
+
+def test_quoter_holds_its_quotes_when_nobody_else_is_in_the_book(tmp_path):
+    seen = {"calls": 0}
+
+    def book(token):
+        seen["calls"] += 1
+        return (0.25, 0.35) if seen["calls"] == 1 else (None, None)
+
+    x = StrictPaperExchange(book_fn=book)
+    q = Quoter(x, [_plan()], log_path=tmp_path / "lp.jsonl", clock=lambda: 0.0, printer=lambda s: None)
+    q.step()
+    q.step()
+    assert q.states[0].replaced == 0 and len(x.orders) == 2
