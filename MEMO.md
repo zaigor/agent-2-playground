@@ -2428,10 +2428,13 @@ in the command and never in code, 0 turning it off, per CLAUDE.md.
 portfolio page showed both orders resting unfilled (0 of 50 each) and asked
 what that says, and whether to quote a second market with the cash left. The
 CLOB book for the YES token at this reading: bids 0.30 (6 shares), 0.29
-(3,418), 0.28 (968), 0.27 (450), 0.26 (725, ours among them); asks 0.31
-(822, ours among them), 0.32 (2,430), 0.33 (786). Mid 0.305, two ticks above
-the 0.285 quoted at the start: our YES ask at 0.31 is at the top of the ask
-side and the YES bid at 0.26 has 4,842 shares ahead of it. A dry run of the
+(3,418), 0.28 (968), 0.27 (450, ours among them), 0.26 (725); asks 0.31
+(822), 0.32 (2,430), 0.33 (786, ours among them). Mid 0.305, half a tick
+from the 0.30 quoted at the 15:13 restart (next entry but one), so no
+re-centre was due: our YES bid at 0.27 has 4,392 shares ahead of it and our
+YES ask at 0.33 has 3,252. (First written as if the quotes were still the
+14:41 pair at 0.26 and 0.31; corrected the same evening, once the log showed
+the restart.) A dry run of the
 chooser on the market alone now reads pot $184, modelled $1.3 to $3.7 a day
 for our quote, 1,733 score-weighted shares inside the spread on the thinner
 side, exit $1.06; at 14:30 it read $177, $3.4 to $7.6, 259 and $1.04. The
@@ -2464,9 +2467,24 @@ re-read's $1.3 to $3.7; the pot $184 then $188 a day; Polymarket's
 competitiveness figure 7.65 then 7.26, against 3.03 at the start, which is
 the crowd of the previous entry in Polymarket's own number. The two order
 ids in the scoring line are not the two placed at 14:41, yet `grep -c
-re-centre lp.out` read 0: the orders were replaced by something other than a
-logged re-centre (a restart by the loop after a crash, or by hand), to be
-settled from lp.jsonl, which keeps every run's lines.
+re-centre lp.out` read 0; lp.jsonl settled it, next entry.
+
+**18e, the restart on the new code (4 Oct, 15:13 UTC; read from lp.jsonl at
+18:45).** The user had followed the restart instructions straight away. The
+first run's `end` line is at 15:08:29 UTC (the stop cancelled the 0.26 bid
+and the 0.69 NO bid, no fills, `away` 0, nothing replaced); the second run's
+`start` line at 15:13:11 UTC on the new code (lp.out carries the `abort
+rules:` line, no traceback): mid 0.30, YES bid 0.27, NO bid 0.67 (a YES ask
+at 0.33), 50 shares a side, $47.00 parked, exit $1.06, 7.0 days of prices,
+0.71 moves a day, 281 score-weighted shares inside, pot $177, modelled $5.1
+to $12.5 a day at that minute (a higher figure than 14:30's: the mid had
+moved and the inside was still thin). Placed at 15:13:12: 0x647f… (YES bid
+0.27) and 0x93a9… (NO bid 0.67), the two ids in every scoring line since.
+`pgrep` shows the inhibit, the loop and the rig alive. So the ids changed
+by the user's own restart, five minutes of no quotes between 15:08 and
+15:13, and the 18:34 book's mid of 0.305 was half a tick from the quoted
+0.30, which is why no re-centre was logged. The market's earnings for the
+day, $0.31 by 18:37, count both runs.
 
 ## Sources
 
