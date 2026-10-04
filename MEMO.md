@@ -2098,6 +2098,33 @@ budget tripped the cap before the command noticed it only had to cancel.
 Cancelling, reading earnings and approving size no quote, so they now skip
 the cap; with a cap in the environment the plain command works as written.
 
+**The three-day test (section 18d), the plan before the start (4 Oct, after
+the second run's pair was merged).** The account, read by `--check` and not
+from memory: collateral $109.38, allowances at the maximum, gasless ready,
+only the perpetuals approval missing (unused here). The dry run at
+`--markets 3 --budget 60` chose, by reward rate and then days to resolution:
+
+| rate/day | mid | bid | ask | collateral | exit $ | days | market |
+|---|---|---|---|---|---|---|---|
+| 117 | 0.64 | 0.61 | 0.67 | 18.80 | 0.64 | 89 | Alphabet third-largest company by market cap on 31 Dec 2026 |
+| 100 | 0.56 | 0.52 | 0.59 | 18.60 | 1.47 | 270 | Russia captures all of Kostyantynivka by 30 Jun 2027 |
+| 100 | 0.29 | 0.26 | 0.33 | 18.60 | 1.55 | 58 | Russia captures the Royal Café Alex in Kostyantynivka by 30 Nov 2026 |
+
+$56.00 parked in three markets, every exit under the $2 cap, so the live gate
+lets the plan through as it stands. Seen before the start and left as the rig
+chose it, so not a change: the second and third markets resolve on the same
+battle, and one headline can fill both on the same side, which by today's
+books would cost $1.47 + $1.55 = $3.02 to undo; the test is of the rig's own
+choices, and hand-picking around that would make it a test of mine. The live
+command names the three condition ids with `--only`, ends at
+`--until 2026-10-07T10:00` (13:00 in Jerusalem on the Tuesday), and runs in
+`tmux` under `systemd-inhibit` in a restart loop. One property of that loop,
+noted now: a restart re-measures the exits from the live book, and if any of
+the three is then above the cap the whole run refuses and the loop retries
+every five minutes, quoting nothing until the book recovers or the end time
+passes; the refusal shows in the tmux pane, not in `lp.jsonl`. The start
+time, the fills and the morning readings go here as they happen.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
