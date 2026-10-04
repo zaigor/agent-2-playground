@@ -444,14 +444,16 @@ class Quoter:
             return None
         return st.plan.days_to_end * 24.0 - (self.clock() - self.started) / 3600.0
 
-    def _post(self, st: MarketState, mid: float) -> None:
+    def _post(self, st: MarketState, mid: float, *, want_bid: bool = True, want_ask: bool = True) -> None:
+        """Place the sides asked for and not yet retired; a side already resting is never posted
+        twice (an id would be overwritten and the first order orphaned on the book)."""
         p = st.plan
         bid, no_bid = quote_prices(mid, p.half_spread, p.tick)
         try:
-            if not st.bid_done:
+            if want_bid and not st.bid_done and st.bid_id is None:
                 st.bid_id = self.x.place(p.yes_token, bid, p.size)
                 self.log("place", market=p.question[:60], side="YES bid", price=bid, size=p.size, order_id=st.bid_id)
-            if not st.ask_done:
+            if want_ask and not st.ask_done and st.ask_id is None:
                 st.ask_id = self.x.place(p.no_token, no_bid, p.size)
                 self.log("place", market=p.question[:60], side="NO bid (YES ask)", price=no_bid, yes_ask=round(1 - no_bid, 4), size=p.size, order_id=st.ask_id)
             st.quoted_mid = mid
@@ -535,7 +537,7 @@ class Quoter:
                     self.x.cancel([st.bid_id]); st.bid_id = None
                 if need_ask and have_ask and st.ask_id:
                     self.x.cancel([st.ask_id]); st.ask_id = None
-                self._post(st, mid)
+                self._post(st, mid, want_bid=need_bid, want_ask=need_ask)
             summary["active"] += 1
         return summary
 
