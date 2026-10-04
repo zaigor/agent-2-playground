@@ -1294,6 +1294,21 @@ Expected if it passes: $1 to $2 a day per market, $3 to $6 a day on three,
 which is a rate of return on $57 parked and not an income; whether it scales
 to twenty markets is the week's question, not this one's.
 
+(Amended at 14:21 UTC, still before the start. The deep books carry larger
+reward minimums: of 433 candidates with 200 or more score-weighted shares
+inside the spread on the thinner side, the pots ask 50, 100 or 200 shares a
+side, so one market parks $47 to $190, not $19. At `--markets 1 --budget 60`
+the per-market cap is $96 and the 50-share markets fit; three do not. The
+chooser's order by modelled reward, with the default caps, gave at 14:20
+UTC: Anthropic's market cap between $2.25T and $2.5T at IPO ($179 pot,
+modelled $4.79 a day, mid 0.28, 50 shares, $47.50 parked, exit $1.04, 204
+inside, 0.7 moves a day, 454 days), then the $1.75T–$2.0T bracket ($104,
+$2.09, exit $0.95, 383 inside, 0.9 a day), then Kazem Gharibabadi attending
+a US–Iran meeting ($50, $1.63, exit $1.02, 370 inside, 2.0 a day, 88 days).
+The $2.0T–$2.25T bracket (954 inside, 0.1 moves a day, exit $1.56, $1.67 a
+day) is the calmest book on the list. The fills are 2.5 times the earlier
+size; the exit column already counts that. The `--until` is 48 hours on.)
+
 ## 19. Niche public data (1 Oct): what exists, which markets price against it, how much room the price leaves
 
 You asked for open data that is too niche to be obvious, where the link
