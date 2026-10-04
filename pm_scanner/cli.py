@@ -11,7 +11,7 @@ from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
 from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
 from .ladder import render_ladder_report, scan_ladders, summarize_snapshots
 from .history import week_fetcher
-from .lp import LiveExchange, PaperExchange, Quoter, cheap_reason, choose_markets, depth_blockers, exit_blockers, history_blockers, merge_preview, parse_only, positions_report, render_plan, render_positions
+from .lp import LiveExchange, PaperExchange, Quoter, append_record, cheap_reason, choose_markets, depth_blockers, exit_blockers, history_blockers, merge_preview, parse_only, positions_report, read_log, refusal_streak, render_plan, render_positions
 from .rewards import gamma_markets_by_condition, render_pocket, render_rewards, rewards_pocket, rewards_survey
 from .signal import FixtureResolver, GammaResolver, load_signal_csv, render_signal, score_signal
 from .flow import MakerConfig, family_flow, maker_backtest, render_family_flow, render_maker, sampled_market_ids
@@ -450,6 +450,26 @@ def _run_crossings(args, source) -> int:
     return 0
 
 
+def _refuse_live(args, blockers: list[str], why: str, *, now: datetime | None = None) -> int:
+    """A live run the gate will not start. Returns 2 so a restart loop tries again later, and
+    writes a `refused` line to the log; once the loop has been refused at every try for
+    --max-refusal-hours (memo 18e's third abort rule) it writes an `abort` line and returns 0,
+    which ends an `until` loop. --max-refusal-hours 0 keeps the old behaviour: refuse forever."""
+    for b in blockers:
+        print(b, file=sys.stderr)
+    print(f"live run refused: {why}", file=sys.stderr)
+    if not args.log:
+        return 2
+    append_record(args.log, "refused", blockers=blockers)
+    streak = refusal_streak(read_log(args.log), now or utcnow(), max_gap_hours=max(args.max_refusal_hours, 1.0))
+    if args.max_refusal_hours > 0 and streak >= args.max_refusal_hours:
+        reason = f"the live gate has refused every restart for {streak:.1f}h, over --max-refusal-hours {args.max_refusal_hours:g}"
+        append_record(args.log, "abort", reason=reason, blockers=blockers)
+        print(f"abort: {reason}; exiting 0 so the restart loop stops. Nothing is resting; read --positions, then decide (a new market needs a new dry run and its id in --only)", file=sys.stderr)
+        return 0
+    return 2
+
+
 def _run_lp(args, source) -> int:
     log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
     housekeeping = args.cancel_all or args.earnings or args.approve or args.positions or args.merge  # no quote is sized, so the budget is not read
@@ -531,6 +551,8 @@ def _run_lp(args, source) -> int:
         return 2
     print(render_plan(plans))
     if not plans:
+        if args.live and only is not None and not args.check:
+            return _refuse_live(args, [f"no plan for --only {args.only}: " + (", ".join(f"{k}: {v}" for k, v in reasons.items()) or "not in today's rewarded markets")], "the named market no longer makes a plan (its pot gone, or a filter it passed before now fails); pick another from a fresh dry run")
         return 1
     if not args.live:
         print("\ndry run: nothing sent. Add --live (with POLY_* in the environment) to rest these quotes.")
@@ -540,22 +562,13 @@ def _run_lp(args, source) -> int:
         return 2
     blockers = exit_blockers(plans, args.max_exit)
     if blockers:
-        for b in blockers:
-            print(b, file=sys.stderr)
-        print(f"live run refused: a fill in that book could not be undone for --max-exit ${args.max_exit:g} or less; pick another market, or raise --max-exit if you accept that loss (the 3 Oct smoke run's fill cost $3 to undo at once and $4.60 by morning)", file=sys.stderr)
-        return 2
+        return _refuse_live(args, blockers, f"a fill in that book could not be undone for --max-exit ${args.max_exit:g} or less; pick another market, or raise --max-exit if you accept that loss (the 3 Oct smoke run's fill cost $3 to undo at once and $4.60 by morning)")
     blockers = history_blockers(plans, args.min_age, args.max_moves)
     if blockers:
-        for b in blockers:
-            print(b, file=sys.stderr)
-        print(f"live run refused: the market is too young or its price too restless for --min-age {args.min_age:g} / --max-moves {args.max_moves:g}; pick another market, or lower --min-age / raise --max-moves in the command if you accept that risk (4 Oct: two one-day-old markets, 45c and 20c of travel on day one, one fill in ninety minutes costing $3.87)", file=sys.stderr)
-        return 2
+        return _refuse_live(args, blockers, f"the market is too young or its price too restless for --min-age {args.min_age:g} / --max-moves {args.max_moves:g}; pick another market, or lower --min-age / raise --max-moves in the command if you accept that risk (4 Oct: two one-day-old markets, 45c and 20c of travel on day one, one fill in ninety minutes costing $3.87)")
     blockers = depth_blockers(plans, args.min_depth)
     if blockers:
-        for b in blockers:
-            print(b, file=sys.stderr)
-        print(f"live run refused: the book is thinner inside the max spread than --min-depth {args.min_depth:g} asks; pick another market, or lower --min-depth in the command (4 Oct: in books of a few 20-share orders the mid was whoever last placed one)", file=sys.stderr)
-        return 2
+        return _refuse_live(args, blockers, f"the book is thinner inside the max spread than --min-depth {args.min_depth:g} asks; pick another market, or lower --min-depth in the command (4 Oct: in books of a few 20-share orders the mid was whoever last placed one)")
     hours = 2.0 if args.smoke and args.hours == 72.0 else args.hours
     if args.until:
         until = datetime.fromisoformat(args.until.replace("Z", "+00:00"))
@@ -579,12 +592,16 @@ def _run_lp(args, source) -> int:
                     held[pos.condition_id], held_px[pos.condition_id] = (yes, no + pos.shares), (yes_px, pos.avg_price)
         except Exception as exc:  # noqa: BLE001
             print(f"warning: could not read held positions ({exc}); a side filled by an earlier run would be quoted again", file=sys.stderr)
-    q = Quoter(exchange, plans, log_path=args.log, pull_before_end_hours=args.pull_before_end_hours, recentre_confirm=args.recentre_confirm, held=held, held_prices=held_px)
+    q = Quoter(exchange, plans, log_path=args.log, pull_before_end_hours=args.pull_before_end_hours, recentre_confirm=args.recentre_confirm, held=held, held_prices=held_px,
+               abort_fills=args.abort_fills, abort_loss=args.abort_loss)
     print(f"\nquoting {len(plans)} market(s) for {hours:.1f}h, checking every {args.interval:g}s; Ctrl-C cancels everything and exits")
+    print(f"abort rules: {args.abort_fills} fills in one market, a fill losing over ${args.abort_loss:g} if sold now, a restart refused for {args.max_refusal_hours:g}h; each ends the run (exit 0, so a restart loop stops) and leaves the positions for --positions")
     try:
         q.run(hours=hours, interval=args.interval)
     except KeyboardInterrupt:
         print("\nstopped; open orders cancelled")
+    if q.aborted:
+        print(f"\naborted: {q.aborted}. Open orders cancelled; the positions stay (read them with --positions). Exiting 0 so a restart loop stops; a new run is a decision, not a retry.")
     return 0
 
 
@@ -820,6 +837,9 @@ def build_parser() -> argparse.ArgumentParser:
     lp.add_argument("--min-age", type=float, default=6.5, help="candidate markets: at least this many days of price history on the CLOB (the week it returns reads as about 7; a new market is still finding its price); a live run refuses a younger one")
     lp.add_argument("--min-depth", type=float, default=0.0, help="candidate markets: at least this many score-weighted shares of other people's orders already inside the max spread on the thinner side (0 = off; hundreds = the deep calm books of section 18e, where the mid is real and a fill is cheap to undo); a live run refuses a plan under it")
     lp.add_argument("--max-moves", type=float, default=2.0, help="candidate markets: at most this many 10-minute moves of 3c or more per day over the past week's prices (each one could have filled a quote 3c from the mid); a live run refuses a plan above it")
+    lp.add_argument("--abort-fills", type=int, default=2, help="abort rule (memo 18e): end the whole run once one market has been filled this many times (0 = never)")
+    lp.add_argument("--abort-loss", type=float, default=2.0, help="abort rule (memo 18e): end the whole run on any fill whose loss_if_sold_now is above this many dollars (0 = never)")
+    lp.add_argument("--max-refusal-hours", type=float, default=1.0, help="abort rule (memo 18e): once a live run has been refused by the gate at every restart for this long, exit 0 so an `until` loop stops instead of retrying forever (0 = keep retrying)")
     lp.add_argument("--max-budget", type=float, default=float(os.environ.get("MAX_BUDGET_USD", "50")), help="hard cap; --budget above this is refused (env MAX_BUDGET_USD)")
     lp.add_argument("--fixtures", type=Path, default=None, help="unused: this command needs live data")
 

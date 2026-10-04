@@ -469,6 +469,58 @@ class LiveExchange:
 
 
 # --------------------------------------------------------------------------- #
+# The log, and the third abort rule
+# --------------------------------------------------------------------------- #
+
+def append_record(path: Path, kind: str, **data: Any) -> dict[str, Any]:
+    """One JSONL line in the rig's log, written outside a run (a refusal at a restart)."""
+    rec = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "kind": kind, **data}
+    with Path(path).open("a") as fh:
+        fh.write(json.dumps(rec, default=str) + "\n")
+    return rec
+
+
+def read_log(path: Path) -> list[dict[str, Any]]:
+    """The log's records, malformed lines skipped; empty when there is no log yet."""
+    out: list[dict[str, Any]] = []
+    try:
+        lines = Path(path).read_text().splitlines()
+    except OSError:
+        return out
+    for line in lines:
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(rec, dict) and "ts" in rec:
+            out.append(rec)
+    return out
+
+
+def refusal_streak(records: list[dict[str, Any]], now: datetime, *, max_gap_hours: float = 1.0) -> float:
+    """Hours since the first of the trailing run of `refused` records, 0 when the last record is
+    anything else. A restart loop that is refused every five minutes writes one `refused` line
+    per try; the streak is read from the newest backwards and stops at a gap over `max_gap_hours`,
+    so a streak left by a loop killed days ago does not count against a fresh start."""
+    hours = 0.0
+    later: datetime | None = None
+    for rec in reversed(records):
+        if rec.get("kind") != "refused":
+            break
+        try:
+            ts = datetime.fromisoformat(str(rec["ts"]))
+        except (KeyError, ValueError):
+            break
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        if later is not None and (later - ts).total_seconds() > max_gap_hours * 3600.0:
+            break
+        hours = max(0.0, (now - ts).total_seconds() / 3600.0)
+        later = ts
+    return hours
+
+
+# --------------------------------------------------------------------------- #
 # The quoter
 # --------------------------------------------------------------------------- #
 
@@ -488,19 +540,27 @@ class MarketState:
     ask_fill_px: float | None = None  # the same for the NO shares
     away: int = 0  # consecutive steps the others' mid has read a tick or more from where we quoted
     replaced: int = 0
+    fills: int = 0  # fill events this run (a side is retired on its first, so at most two)
     stopped: str = ""
 
 
 class Quoter:
     def __init__(self, exchange: Exchange, plans: list[QuotePlan], *, log_path: Path | None = None, pull_before_end_hours: float = 48.0, recentre_ticks: float = 1.0, recentre_confirm: int = 3, clock=time.time, printer=print,
-                 held: dict[str, tuple[float, float]] | None = None, held_prices: dict[str, tuple[float | None, float | None]] | None = None) -> None:
+                 held: dict[str, tuple[float, float]] | None = None, held_prices: dict[str, tuple[float | None, float | None]] | None = None,
+                 abort_fills: int = 2, abort_loss: float = 2.0) -> None:
         """`held` maps a condition id to (YES shares, NO shares) the account already holds, so a
         run restarted after a crash never adds to a side that was filled before it died;
         `held_prices` gives what those shares cost per share, which caps the other side (see
         `_post`). `recentre_confirm` is how many consecutive steps the others' mid must read a tick
         or more away before the quotes follow it: in a book of a few 20-share orders the mid is
         whoever last placed one (4 Oct: Caedrel's mid read 0.38, 0.36, 0.425 on three successive
-        minutes; Topuria's 0.465 then 0.575, and back to 0.47 within three)."""
+        minutes; Topuria's 0.465 then 0.575, and back to 0.47 within three).
+
+        `abort_fills` and `abort_loss` are the pre-registered abort rules of memo section 18e,
+        run by the rig itself: the run ends, every quote cancelled, when one market has been
+        filled that many times (0 = never), or when any fill's `loss_if_sold_now` is above that
+        many dollars (0 = never). An aborted run returns normally, so a restart loop around it
+        stops too; the positions stay for the user to read with --positions."""
         self.x = exchange
         self.states = [MarketState(p) for p in plans]
         for st in self.states:
@@ -520,13 +580,16 @@ class Quoter:
         self.clock = clock
         self.printer = printer
         self.started = clock()
+        self.abort_fills = max(0, int(abort_fills))
+        self.abort_loss = max(0.0, float(abort_loss))
+        self.aborted = ""
 
     def log(self, kind: str, **data: Any) -> None:
         rec = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "kind": kind, **data}
         if self.log_path:
             with self.log_path.open("a") as fh:
                 fh.write(json.dumps(rec, default=str) + "\n")
-        if kind in ("place", "cancel", "fill", "stop", "scoring", "earnings", "pots", "error", "start", "end"):
+        if kind in ("place", "cancel", "fill", "stop", "abort", "scoring", "earnings", "pots", "error", "start", "end"):
             self.printer(json.dumps(rec, default=str))
 
     def _hours_left(self, st: MarketState) -> float | None:
@@ -615,7 +678,14 @@ class Quoter:
                         resting = st.bid_px if side == "bid" else st.ask_px  # the 4 Oct log printed the plan's 0.60 for a NO bid resting at 0.68
                         entry = resting if resting is not None else (p.bid if side == "bid" else p.no_bid)
                         setattr(st, f"{side}_fill_px", entry)
-                        self.log("fill", market=p.question[:60], side=side, shares=matched, price=entry, **self._exit_now(p, side, matched, entry))
+                        st.fills += 1
+                        exit_now = self._exit_now(p, side, matched, entry)
+                        self.log("fill", market=p.question[:60], side=side, shares=matched, price=entry, **exit_now)
+                        loss = exit_now.get("loss_if_sold_now")
+                        if self.abort_loss > 0 and loss is not None and loss > self.abort_loss + 1e-9 and not self.aborted:
+                            self.aborted = f"a fill of {matched:g} {side} shares at {entry} in {p.question[:40]!r} loses ${loss:.2f} if sold now, over --abort-loss ${self.abort_loss:g}"
+                        if self.abort_fills > 0 and st.fills >= self.abort_fills and not self.aborted:
+                            self.aborted = f"{st.fills} fills in {p.question[:40]!r}, the --abort-fills {self.abort_fills} limit"
                         if o is not None:  # partially filled and still resting: take the rest down, never average in
                             self.x.cancel([oid])
                             open_by_id.pop(oid, None)
@@ -656,6 +726,13 @@ class Quoter:
                     self.x.cancel([st.ask_id]); st.ask_id = None
                 self._post(st, mid, want_bid=need_bid, want_ask=need_ask)
             summary["active"] += 1
+        if self.aborted and any(not st.stopped or st.bid_id or st.ask_id for st in self.states):
+            for st in self.states:
+                self._pull(st, "abort: " + self.aborted)
+                if not st.stopped:
+                    st.stopped = "abort"
+            self.log("abort", reason=self.aborted, fills={st.plan.question[:40]: st.fills for st in self.states})
+            summary["active"], summary["stopped"] = 0, len(self.states)
         return summary
 
     def report(self, date: str) -> None:

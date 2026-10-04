@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from pathlib import Path
 
 from pm_scanner.cli import main
-from pm_scanner.lp import PaperExchange, QuotePlan, Quoter, choose_markets, exit_blockers, make_plan, quote_prices, render_plan
+from pm_scanner.lp import PaperExchange, QuotePlan, Quoter, append_record, choose_markets, exit_blockers, make_plan, quote_prices, read_log, refusal_streak, render_plan
 from pm_scanner.polymarket import Book, Level, parse_market
 from pm_scanner.rewards import PocketRow
 from pm_scanner.unwind import unwind_into
@@ -428,7 +429,8 @@ def test_quoter_never_completes_a_pair_above_a_dollar_and_waits_before_following
     only after it has read away for `recentre_confirm` consecutive steps."""
     books = {"y": (0.44, 0.49)}  # mid 0.465: YES bid 0.44, NO bid 0.51
     x = StrictPaperExchange(books)
-    q = Quoter(x, [_plan(mid=0.465)], log_path=tmp_path / "lp.jsonl", clock=lambda: 0.0, printer=lambda s: None, recentre_confirm=3)
+    # abort_loss=0: by this paper book the replayed fill loses over $2 if sold, which the rig now aborts on (tested below); here the inventory rules are the subject
+    q = Quoter(x, [_plan(mid=0.465)], log_path=tmp_path / "lp.jsonl", clock=lambda: 0.0, printer=lambda s: None, recentre_confirm=3, abort_loss=0.0)
     q.step()
     st = q.states[0]
     assert sorted(o.price for o in x.orders.values()) == [0.44, 0.51]
@@ -484,3 +486,91 @@ def test_deep_books_can_be_asked_for_and_the_live_gate_holds_the_line():
     assert named[0].inside == 0.0 and "0 score-weighted shares" in depth_blockers(named, 200)[0] and depth_blockers(named, 0) == []
     text = render_plan(plans)
     assert " inside " in text and "   709 " in text and "unquoted pocket" in text
+
+
+def test_quoter_aborts_the_whole_run_on_a_costly_fill_or_a_second_fill(tmp_path):
+    """Memo 18e's abort rules, run by the rig: a fill that would lose over --abort-loss if sold now,
+    or --abort-fills fills in one market, cancels every quote in every market and ends the run,
+    which also ends an `until` loop around it (a normal return is exit 0). Before 4 Oct these
+    were rules for the person reading the log."""
+    plan_b = QuotePlan("0xb", "Q2", "yb", "nb", 0.01, 20.0, 0.0225, 0.30, 0.27, 0.67, 18.8, 100.0, 100.0, 100.0, 30.0)
+    # 1. the loss rule, inside run(): the YES bid fills into a book that has fallen away
+    books = {"y": (0.25, 0.35), "yb": (0.25, 0.35)}
+    x = StrictPaperExchange(books)
+    clock = [0.0]
+    q = Quoter(x, [_plan(), plan_b], log_path=tmp_path / "abort.jsonl", clock=lambda: clock[0], printer=lambda s: None, recentre_confirm=1)
+
+    def sleep(_s):
+        clock[0] += 60.0
+        if clock[0] == 60.0:
+            next(o for o in x.orders.values() if o.token == "y").matched = 20.0
+            books["y"] = (0.10, 0.35)  # 20 bought at 0.27, the bids now at 0.10: $3.5 to undo
+
+    q.run(hours=1.0, interval=60.0, sleep=sleep)
+    recs = [json.loads(l) for l in (tmp_path / "abort.jsonl").read_text().splitlines()]
+    kinds = [r["kind"] for r in recs]
+    assert clock[0] == 120.0, "the run ended at the abort, not at the hour"
+    assert kinds.index("fill") < kinds.index("abort") < kinds.index("end") and kinds[-1] == "end"
+    fill = next(r for r in recs if r["kind"] == "fill")
+    assert fill["loss_if_sold_now"] > 2.0 and "over --abort-loss $2" in q.aborted and str(fill["loss_if_sold_now"]) in q.aborted
+    assert x.orders == {} and q.states[1].stopped == "abort" and q.states[0].stopped == "abort"
+    abort = next(r for r in recs if r["kind"] == "abort")
+    assert abort["fills"] == {"Q": 1, "Q2": 0}
+    # 2. the fills rule: a second fill in one market ends the other market's quotes too
+    x2 = StrictPaperExchange({"y": (0.25, 0.35), "yb": (0.25, 0.35)})
+    q2 = Quoter(x2, [_plan(), plan_b], log_path=tmp_path / "fills.jsonl", clock=lambda: 0.0, printer=lambda s: None, recentre_confirm=1, abort_loss=0.0)
+    q2.step()
+    assert len(x2.orders) == 4
+    next(o for o in x2.orders.values() if o.token == "y").matched = 20.0
+    s2 = q2.step()
+    assert q2.states[0].fills == 1 and not q2.aborted and len(x2.orders) == 3 and s2["active"] == 2
+    x2.orders.pop(next(o.id for o in x2.orders.values() if o.token == "n"))  # the NO bid fills: the second fill
+    s2 = q2.step()
+    assert q2.states[0].fills == 2 and "2 fills" in q2.aborted and "--abort-fills 2" in q2.aborted
+    assert x2.orders == {} and q2.states[0].stopped == "both sides filled" and q2.states[1].stopped == "abort" and s2 == {"active": 0, "stopped": 2}
+    cancels = [json.loads(l) for l in (tmp_path / "fills.jsonl").read_text().splitlines() if '"cancel"' in l]
+    assert cancels[-1]["market"] == "Q2" and cancels[-1]["reason"].startswith("abort: 2 fills")
+    # 3. both rules off: the old behaviour, the other market keeps quoting
+    x3 = StrictPaperExchange({"y": (0.25, 0.35), "yb": (0.25, 0.35)})
+    q3 = Quoter(x3, [_plan(), plan_b], clock=lambda: 0.0, printer=lambda s: None, recentre_confirm=1, abort_fills=0, abort_loss=0.0)
+    q3.step()
+    next(o for o in x3.orders.values() if o.token == "y").matched = 20.0
+    q3.step()
+    x3.orders.pop(next(o.id for o in x3.orders.values() if o.token == "n"))
+    q3.step()
+    assert not q3.aborted and q3.states[0].stopped == "both sides filled" and sorted(o.token for o in x3.orders.values()) == ["nb", "yb"]
+
+
+def test_a_refusal_streak_over_an_hour_ends_the_restart_loop(tmp_path):
+    """Memo 18e's third abort rule: an `until` loop retries a refused live run every five minutes;
+    each refusal is written to the log, and once the streak is older than --max-refusal-hours the
+    CLI exits 0 (the loop's stop) with an `abort` line. A streak left by a loop killed days ago
+    does not count: the streak breaks at a gap over an hour."""
+    from pm_scanner.cli import _refuse_live
+
+    now = datetime(2026, 10, 5, 12, 0, tzinfo=timezone.utc)
+    ts = lambda minutes: {"ts": (now - timedelta(minutes=minutes)).isoformat(timespec="seconds"), "kind": "refused"}  # noqa: E731
+    assert refusal_streak([], now) == 0.0
+    assert refusal_streak([ts(90), {"ts": (now - timedelta(minutes=80)).isoformat(), "kind": "end"}], now) == 0.0
+    assert round(refusal_streak([ts(65), ts(60), ts(55), ts(5)], now), 2) == 1.08
+    assert round(refusal_streak([ts(30 * 60), ts(50), ts(45)], now), 2) == 0.83  # the gap of 29 hours breaks the streak
+    assert round(refusal_streak([ts(50), ts(45)], now, max_gap_hours=0.01), 2) == 0.75  # a tighter gap rule keeps only the newest
+    log = tmp_path / "lp.jsonl"
+    args = SimpleNamespace(log=log, max_refusal_hours=1.0)
+    assert _refuse_live(args, ["b1"], "why") == 2
+    assert [r["kind"] for r in read_log(log)] == ["refused"] and read_log(log)[0]["blockers"] == ["b1"]
+    # a streak that began 70 minutes ago: this refusal is the one that ends the loop
+    real_now = datetime.now(timezone.utc)
+    log.write_text(json.dumps({"ts": (real_now - timedelta(minutes=70)).isoformat(timespec="seconds"), "kind": "refused", "blockers": ["b0"]}) + "\n" + json.dumps({"ts": (real_now - timedelta(minutes=35)).isoformat(timespec="seconds"), "kind": "refused", "blockers": ["b0"]}) + "\n")
+    assert _refuse_live(args, ["b1"], "why") == 0
+    recs = read_log(log)
+    assert [r["kind"] for r in recs] == ["refused", "refused", "refused", "abort"] and "over --max-refusal-hours 1" in recs[-1]["reason"]
+    # the rule off, or a stale streak from days ago: an ordinary refusal
+    assert _refuse_live(SimpleNamespace(log=log, max_refusal_hours=0.0), ["b1"], "why") == 2
+    log.write_text(json.dumps({"ts": (real_now - timedelta(days=3)).isoformat(timespec="seconds"), "kind": "refused", "blockers": ["old"]}) + "\n")
+    assert _refuse_live(args, ["b1"], "why") == 2 and [r["kind"] for r in read_log(log)] == ["refused", "refused"]
+    assert _refuse_live(SimpleNamespace(log=None, max_refusal_hours=1.0), ["b1"], "why") == 2
+    # the helpers tolerate a missing or dirty log
+    assert read_log(tmp_path / "none.jsonl") == []
+    (tmp_path / "dirty.jsonl").write_text("not json\n" + json.dumps({"ts": "2026-10-05T11:00:00+00:00", "kind": "refused"}) + "\n")
+    assert len(read_log(tmp_path / "dirty.jsonl")) == 1 and append_record(tmp_path / "dirty.jsonl", "refused", blockers=[])["kind"] == "refused"

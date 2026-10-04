@@ -344,7 +344,14 @@ for `--recentre-confirm` consecutive checks (3), because in a book of a few
 20-share orders the mid is whoever last placed one (4 Oct: sold YES at 0.49,
 mid read 11c higher a minute later, bought YES at 0.55, a loss locked by
 construction). What a position is worth is what the bids pay
-(`--positions`); the site's midpoint mark is not money.
+(`--positions`); the site's midpoint mark is not money. The abort rules of
+memo section 18e run in the rig itself: `--abort-fills 2` (a second fill in
+one market), `--abort-loss 2` (a fill that would lose over $2 if sold straight
+back) and `--max-refusal-hours 1` (a restart loop refused by the live gate for
+an hour, each refusal written to the log) each cancel every quote, write an
+`abort` line and end the run with exit 0, so an `until` loop around it stops
+too. The positions are left for `--positions`; a new run is a decision, not a
+retry. A cap is moved in the command, never in code, and 0 turns one off.
 
 Credentials come from the environment only (`.env.example`): the signer key
 of a fresh wallet, the Polymarket account wallet address and a Relayer API

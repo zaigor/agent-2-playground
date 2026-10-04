@@ -1309,6 +1309,13 @@ The $2.0T–$2.25T bracket (954 inside, 0.1 moves a day, exit $1.56, $1.67 a
 day) is the calmest book on the list. The fills are 2.5 times the earlier
 size; the exit column already counts that. The `--until` is 48 hours on.)
 
+(Amended at 15:03 UTC, during the run, at the user's request. The three abort
+rules above are now run by the rig: `--abort-fills 2` and `--abort-loss 2`
+are checked on every fill and end the whole run, `--max-refusal-hours 1` is
+checked at every refused restart. The rules are unchanged; what changed is
+who applies them. The run started at 14:41 UTC carries the old code until it
+is restarted; see section 20.)
+
 ## 19. Niche public data (1 Oct): what exists, which markets price against it, how much room the price leaves
 
 You asked for open data that is too niche to be obvious, where the link
@@ -2394,6 +2401,28 @@ of the test's own has been earned yet (the market's line reads $0.00).
 Abort rules in force, from the pre-registration above: two fills in the
 market, any fill with `loss_if_sold_now` over $2, a gate refusal at a
 restart lasting over an hour.
+
+**18e, the abort rules automated (4 Oct, about 15:03 UTC, during the run).**
+The user asked that the three abort rules be run by the rig rather than by
+whoever reads the log: an autonomous system is the aim. Done in the code at
+that hour, the rules unchanged from the pre-registration. `--abort-fills 2`
+and `--abort-loss 2` are checked by the quoter on every fill; either cancels
+every quote in every market, writes an `abort` line and ends the run with a
+normal exit, which also ends the `until` loop around it. `--max-refusal-hours
+1` is checked at every refused restart: each refusal now writes a `refused`
+line to the log, and once the trailing streak of refusals is an hour old the
+command writes `abort` and exits 0 instead of 2, so the loop stops; a streak
+with a gap over an hour (a loop killed days ago) does not count. A run named
+with `--only` whose market no longer makes a plan is now a refusal of the
+same kind, where before it was an endless five-minute retry. What the old
+code already did: two fills in the one market stopped it as "both sides
+filled", and with one market that ended the run and the loop. What it did
+not: a single costly fill kept the run going, and a refused restart retried
+forever. The run started at 14:41 UTC is on the old code until it is stopped
+and started again (stop, `git pull`, the same check, the same live command;
+a minute without quotes costs about a minute's share of the day's pot).
+Not pre-registered: the automation, not the rules. Each cap is a flag, moved
+in the command and never in code, 0 turning it off, per CLAUDE.md.
 
 ## Sources
 

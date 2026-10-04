@@ -26,6 +26,11 @@ and section 20 before changing it or advising a live run.
   a held side caps the other so a pair never costs more than $1, and a
   re-centre waits for `--recentre-confirm` readings. (4 Oct: the rig sold YES
   at 0.49, followed an 11c one-minute spike and bought YES at 0.55.)
+- **The abort rules run in the rig.** `--abort-fills 2`, `--abort-loss 2` and
+  `--max-refusal-hours 1` (memo 18e) end a run and its restart loop on their
+  own, with an `abort` line in the log. They are moved in the command, never
+  in code, and after an abort a new run is a decision written in the memo,
+  not a retry.
 - **Public information only.** Nothing from inside a resolution source, no VPN,
   no terms-of-service circumvention.
 - **Record outcomes in MEMO.md** the day they happen: fills, disposals, final
