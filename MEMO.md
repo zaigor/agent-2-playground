@@ -2194,6 +2194,21 @@ pot, mid 0.48, exit $1.25, 2.0 a day, 256 days), $37.60 parked. Whether to
 run those two at `--max-moves 3`, or wait for a day with a quieter pocket,
 is the user's call, and the restart's record goes here.
 
+**The stop, from the log and the feed.** The fill line: 12:35:09 UTC, the café
+market's bid, 20 shares at 0.26, with `sell_now` 3.65 and `loss_if_sold_now`
+1.55 read from the book at that second; by 13:12 the bids paid $1.33 (a loss
+of $3.87), and at the stop, after `--cancel-all` ("all open orders
+cancelled"), $2.49 with 45 shares bid at 0.13 (a loss of $2.71). Three
+readings of the same 20 shares within an hour, $1.33 to $3.65: the book of a
+one-day-old market is not a price, it is whoever happens to be there. No
+other fill in the first start. At 13:31 UTC the chooser at `--max-moves 3`
+found a third market alongside Caedrel and Topuria, "Will Claude Fable's
+output price be at or below $40 in 2026" ($50 pot, mid 0.20, 2.4 moves a day
+at the 13:05 read, 89 days), $56.40 parked across the three; the user was
+told that one is a market on Anthropic's prices picked with Anthropic's
+model, that the quote is two-sided and that nothing non-public went into it,
+and left to decide whether to include it.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
