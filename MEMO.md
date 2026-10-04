@@ -1959,6 +1959,11 @@ minute, at the moment the market moves against that side. Whether the pot
 would have paid for it was never measured. Outcome of the money: $13.32 is in
 15.31 YES shares of a weather market resolving in eight days, marked about
 flat at the 0.88 mid; its disposal and the final P&L go here when known.
+Morning of 4 Oct: `--cancel-all` confirmed nothing open; the site showed the
+15.3 shares at an average of 87c marked at 76.5c, value $11.71, down $1.61
+(12%), cash $15.68, portfolio $27.39. The seller who hit the bid was followed
+by an eleven-cent fall overnight, which is what memo 14 said weather takers
+look like.
 
 Changed after the fact, none of it pre-registered: the re-centre crash fixed
 with a regression test; the mid taken from other people's orders; "rain",
