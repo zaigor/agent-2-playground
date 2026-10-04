@@ -2486,6 +2486,112 @@ by the user's own restart, five minutes of no quotes between 15:08 and
 0.30, which is why no re-centre was logged. The market's earnings for the
 day, $0.31 by 18:37, count both runs.
 
+**18e, the fill (4 Oct, 19:56:31 UTC; read from the public tape at 21:19 UTC,
+the rig's own `fill` line and `--positions` still to be pasted).** The
+data-api tape for the market: at 19:56:31 one seller sold 3,191.95 YES
+shares at an average of 0.2844, a single print that cleared the bid side
+from 0.30 to 0.27, and in the same second a 50-share print at YES 0.27
+(recorded as a NO buy at 0.73), which is the size and price of our bid. The
+selling went on: 220 and 50 shares at 0.27 by 19:58, 50 at 0.26 at 19:58:43,
+520 at 0.26 and 50 at 0.25 by 20:04, 90 and 235 at 0.24 and 0.25 at 20:52;
+the one-minute mids read 0.30 at 19:54, 0.275 at 19:57, 0.255 at 20:05,
+0.26 at 20:24, 0.24 at 20:54; gamma's best bid and ask at 21:19 UTC 0.23 and
+0.25. The two hours before held the mid at 0.30 to 0.305 with two small buys
+at 0.30 and 0.31 (19:27, 19:28): nothing approached the bid before the
+print that took it. The replay below marks the fill at $1.25 against the mid
+ten minutes later and $2.00 against the mid an hour later, 50 shares less a
+tick to cross; the rig's `loss_if_sold_now` at the second of the fill, which
+is the figure the abort rule read, and what the bids pay now, are readings
+for the user's `--positions`, not this paragraph. The pre-registered
+reading: one fill is under the two-fill abort; a day whose fills' loss
+exceeds its payout fails the Pass test; whether it does is the morning
+payout against that reading.
+
+**18e, the user's question, and the replay that answers it (4 Oct, 21:19
+UTC; `requote`, new, not pre-registered).** The user's idea: a rig that
+tracked the price in real time and moved its orders away from an
+approaching price ("escape", a safety distance from the level that filled)
+would avoid such fills. Rather than argue it, `pm_scanner/requote.py`
+replays the rig's quoting rule and the idea over public history: the CLOB's
+sampled mids (one a minute for the last day, one every five minutes for the
+week) and the data-api tape, readings every 60 seconds as the rig reads,
+quotes at half the max spread at the reward minimum size. Policies: `rig`
+(re-centre after three readings a tick away, the live rule); `follow` (one
+reading, the pre-Topuria rule); `escape 1t` and `escape 2t` (re-centre at
+once when the mid comes within one or two ticks of a quote, else the rig
+rule); `wide` (a tick further out); and `rig away=0.5t` (the rig rule with a
+half-tick drift counting as away). A print beyond our quote between two
+readings is a fill; each fill is marked against the mid 10 and 60 minutes
+later less a tick; `warned` is whether the reading before the fill already
+showed the mid a tick nearer that side than when quoted, which is the only
+kind of fill any reading-based rule can escape. Eleven markets: the eight
+deep books the chooser has shown (Anthropic $2.25T–$2.5T, Alphabet
+third-largest, Su Chiao-hui, Rhine, EU diesel, Fable output price, Meta
+Watermelon, Kostyantynivka) and the three thin books that filled in 18d
+(Topuria, Caedrel, the café).
+
+Deep books, the week, fill at our price (the queue assumed cleared to us):
+
+```
+policy                     fills warned  /mkt-day loss10/d loss60/d recentre/d score%
+rig confirm=3                114     11     2.57    5.39     5.47      15.7   81.2
+rig confirm=3 away=0.5t      119     13     2.69    5.42     5.64      31.6   97.9
+follow confirm=1             113      0     2.55    5.32     5.63      15.7   82.1
+escape confirm=3 guard=1t    110      3     2.48    5.28     5.55      15.7   81.5
+escape confirm=3 guard=2t    103      2     2.33    5.34     5.49      16.6   71.7
+wide confirm=3 +1t            91     12     2.06    4.68     4.47      15.7   25.5
+```
+
+The one-minute day (eight market-days): rig 57 fills, 15 warned, $11.32 a
+market-day at ten minutes, score 81.2%; escape 1t 52 fills, $8.78, 78.4%;
+escape 2t 47, $8.60, 75.8%; half-tick 58, $11.60, 96.2%. The thin books over
+the week: rig 23 fills, 1 warned; escape 23; half-tick 25. The Anthropic day
+alone, fill at our price: the rig takes three fills, none warned, at
+12:47:35 (ask 0.26, −$3.25 at ten minutes: a buyer lifted the ask and the
+mid went to 0.315), 13:43:58 (bid 0.28, +$1.00) and 19:56:31 (bid 0.27,
+−$1.25 at ten minutes, −$2.00 at an hour); `follow`, both `escape` rules and
+the half-tick rule take the 19:56 fill too, at the same price, with the mid
+before it reading 0.30; only `wide` misses it, with a bid at 0.26 that the
+0.26 print of 19:58:43 would have taken. Over the week in that market: ten
+fills under rig, follow and escape 1t alike, nine under escape 2t, seven
+under wide; score 80.9% for the rig against 99.3% for the half-tick rule
+with the same ten fills.
+
+Caveats, in the module's docstring too: the tape is prints, not our queue
+position, so the counts are ceilings (today's replay has three fills in the
+Anthropic day, two of them before the rig started; the live rig, behind
+4,392 shares at 0.27, took the third);
+the losses are mid marks, not the bids' reading; five-minute bars hide moves
+inside them, which is why the day is the sharp test.
+
+**The reading.** One fill in ten gives warning at the previous reading; the
+other nine, the 19:56 print among them, arrive inside a minute from a mid
+that had not moved. The escape rule removes some of the warned ones (114 to
+110 or 103 over the week, 57 to 52 or 47 on the day), costs nothing to ten
+points of score share, and leaves the loss per market-day where it was
+($5.39 to $5.28 or $5.34). Following every reading removes the warned fills
+and adds the chases (the Topuria shape, in the test file). Quoting a tick
+wider removes a fifth of the fills and three quarters of the score. So the
+idea is not adopted: the fills that cost money are the ones no re-quoting
+rule can see coming, and the thing that bounds them is the size and the
+abort rules, not the distance. What the replay did show, unasked: the rig's
+full-tick re-centre leaves its quotes off-centre whenever a deep book's mid
+sits half a tick away, which it did for about half of 15:24 to 18:44 UTC
+today, the mids alternating 0.30 and 0.305 every ten minutes or so (at
+0.305 against the quoted 0.30 the bid is 3.5c and the ask 2.5c from the
+mid, a third of the score of quotes centred on 0.305 under the two-sided
+rule), and that is
+where 81% against 98% comes from, at twice the re-centres (one every 45
+minutes in deep books). `--recentre-ticks 0.5` is an existing flag; whether
+the next run carries it is the user's call written in its command, and it
+is not changed in code or mid-run. Nothing in the rig changed for this
+entry.
+
+```
+python -m pm_scanner requote --only <condition ids> --days 7 --fill at
+python -m pm_scanner requote --only <id> --days 1 --fill at --detail   # every fill, marked
+```
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)

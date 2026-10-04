@@ -12,6 +12,7 @@ from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
 from .ladder import render_ladder_report, scan_ladders, summarize_snapshots
 from .history import week_fetcher
 from .lp import LiveExchange, PaperExchange, Quoter, append_record, cheap_reason, choose_markets, depth_blockers, exit_blockers, history_blockers, merge_preview, parse_only, positions_report, read_log, refusal_streak, render_plan, render_positions
+from .requote import DEFAULT_POLICIES, render as render_requote, render_summary as render_requote_summary, replay_market, summarize as summarize_requote
 from .rewards import gamma_markets_by_condition, render_pocket, render_rewards, rewards_pocket, rewards_survey
 from .signal import FixtureResolver, GammaResolver, load_signal_csv, render_signal, score_signal
 from .flow import MakerConfig, family_flow, maker_backtest, render_family_flow, render_maker, sampled_market_ids
@@ -843,6 +844,16 @@ def build_parser() -> argparse.ArgumentParser:
     lp.add_argument("--max-budget", type=float, default=float(os.environ.get("MAX_BUDGET_USD", "50")), help="hard cap; --budget above this is refused (env MAX_BUDGET_USD)")
     lp.add_argument("--fixtures", type=Path, default=None, help="unused: this command needs live data")
 
+    rq = sub.add_parser("requote", help="replay re-quote policies (the rig's, follow-every-reading, escape-an-approaching-price, wider, half-tick) on a market's public minute history and tape: fills, what undoing them would cost, how many had warning, and the reward score each keeps (memo section 20, 4 Oct)")
+    rq.add_argument("--only", required=True, help="condition ids to replay (comma-separated)")
+    rq.add_argument("--days", type=int, default=1, help="1: the last day at one-minute mids (sharp); 7: the last week at five-minute mids (coarse)")
+    rq.add_argument("--interval", type=int, default=60, help="seconds between readings, as the rig's --interval")
+    rq.add_argument("--fill", choices=("through", "at"), default="through", help="a print strictly beyond our price fills us (through), or at it too (at: first in the queue, a ceiling on fills)")
+    rq.add_argument("--size", type=float, default=None, help="shares per side (default: the market's reward minimum)")
+    rq.add_argument("--detail", action="store_true", help="list every fill under every policy")
+    rq.add_argument("--json", type=Path, default=None, help="write the replays here")
+    rq.add_argument("--fixtures", type=Path, default=None, help="unused here: the replay reads live public data")
+
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
     f.add_argument("--platform", choices=["polymarket", "kalshi"], required=True)
     f.add_argument("--price", type=float, required=True)
@@ -851,6 +862,52 @@ def build_parser() -> argparse.ArgumentParser:
     f.add_argument("--multiplier", type=float, default=1.0, help="Kalshi series multiplier")
     f.add_argument("--maker", action="store_true", help="Kalshi maker instead of taker")
     return p
+
+
+def _run_requote(args, source) -> int:
+    from .weather import LiveTrades
+
+    ids = [x.strip() for x in str(args.only).split(",") if x.strip()]
+    try:
+        markets = gamma_markets_by_condition(source.http, ids)
+    except Exception as exc:  # noqa: BLE001
+        print(f"requote: gamma lookup failed: {exc}", file=sys.stderr)
+        return 2
+    tape = LiveTrades(http=source.http)
+    rows = []
+    for cid in ids:
+        m = markets.get(cid)
+        if m is None:
+            print(f"requote: {cid[:12]}... not found on gamma, skipped", file=sys.stderr)
+            continue
+        try:
+            got = replay_market(source.http, tape, m, days=args.days, interval=args.interval, fill=args.fill, size=args.size)
+        except Exception as exc:  # noqa: BLE001
+            print(f"requote: {m.question[:50]!r} failed: {exc}", file=sys.stderr)
+            continue
+        if got is None:
+            print(f"requote: {m.question[:50]!r} has no reward programme or no history, skipped", file=sys.stderr)
+            continue
+        rows.append(got)
+    if not rows:
+        return 1
+    grain = "one-minute mids, last day" if args.days <= 1 else "five-minute mids, last week"
+    print(render_requote(rows, title=f"re-quote policies replayed on {grain}, readings every {args.interval}s, fill={args.fill}"))
+    if len(rows) > 1:
+        print()
+        print(render_requote_summary(summarize_requote(rows), title="across the markets (per market-day)"))
+    if args.detail:
+        for name, reps in rows:
+            print(f"\n{name}")
+            for r in reps:
+                print(f"  {r.policy.label}: {len(r.fills)} fills, {r.recentres} re-centres, score {r.score_share * 100:.1f}%")
+                for f in r.fills:
+                    when = datetime.fromtimestamp(f.ts, tz=timezone.utc).strftime("%d %b %H:%M:%S")
+                    print(f"    {when} {f.side} at {f.price} (quoted around {f.quoted_mid}, mid before {f.mid_before}, {'warned' if f.warned else 'no warning'}) mid +10m {f.mark_10} +60m {f.mark_60} loss {f.loss(10)} / {f.loss(60)}")
+    if args.json:
+        args.json.write_text(json.dumps([{"market": name, "replays": [r.to_dict() for r in reps]} for name, reps in rows], indent=1, default=str))
+        print(f"\nwrote {args.json}")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1044,6 +1101,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "lp":
         return _run_lp(args, source)
+
+    if args.cmd == "requote":
+        return _run_requote(args, source)
 
     kwargs = _scan_kwargs(args)
 

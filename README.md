@@ -359,6 +359,27 @@ key from polymarket.com settings. `--budget` above `MAX_BUDGET_USD` is
 refused (`--cancel-all`, `--earnings` and `--approve` size no quote and do not
 read the budget).
 
+### Did a re-quoting rule cause or avoid a fill? `requote`
+
+```
+python -m pm_scanner requote --only <condition ids> --days 7 --fill at        # the week, five-minute mids
+python -m pm_scanner requote --only <id> --days 1 --fill at --detail          # the last day, one-minute mids, every fill marked
+```
+
+Replays the rig's quoting rule (`rig`: re-centre after three readings a tick
+away), `follow` (every reading), `escape` (re-centre at once when the mid comes
+within one or two ticks of a quote), `wide` (a tick further out) and the rig
+rule with a half-tick drift counting as away, over a market's public minute
+history and trade tape, at the reward minimum size. Per policy: fills, how
+many had warning at the reading before (the only kind a reading-based rule can
+escape), what undoing each would cost against the mid 10 and 60 minutes later,
+re-centres, and the reward score kept against a quote re-centred every reading.
+Read-only, public data; the counts are ceilings (the tape is prints, not our
+queue position) and the losses are mid marks, not the `--positions` reading.
+Memo section 20, 4 Oct: the 19:56 UTC fill came from a one-second 3,192-share
+print with no approach to escape from; the half-tick drift cost the rig a
+sixth of its score.
+
 ## Fee models (change them when the venues do)
 
 * Polymarket, Fee Structure V2 (2026): taker fee per share = `rate * p * (1-p)`;
@@ -394,6 +415,7 @@ pm_scanner/
   xtracker.py    xtracker.polymarket.com's JSON routes: an account's whole counted-post history as a catalog CSV
   counts.py      count-window ladders: windows and brackets from the Gamma wording, catalog -> negative-binomial probabilities -> signal CSV; headroom of the market itself
   lp.py          the liquidity-reward test rig: minimum-size post-only quotes in unquoted rewarded markets, scoring and earnings read-back
+  requote.py     re-quote policies (the rig's, follow, escape, wide, half-tick) replayed on a market's minute history and tape: fills, warning, undo cost, score kept
   history.py     the CLOB's week of prices per market, measured: age in days and 3-cent moves per day (the chooser's restlessness filter)
   weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/flow/today
   cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather`, `flow`, `ladder`, `rewards`, `signal`, `lp` and `fee` commands
