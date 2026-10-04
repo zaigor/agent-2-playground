@@ -2455,6 +2455,19 @@ one-market test on the strength of a model figure that has fallen by two
 thirds in four hours in the one market where it can be checked. If 18e passes, three
 markets for a week is the next step, with the cap written in that command.
 
+**18e, the log at 18:37 UTC (4 Oct, from the user's tail of lp.out).** The
+ten-minute readings at 18:26:57 and 18:37:10: 2 of 2 orders scoring; the
+market's own earnings for 4 Oct $0.3063 then $0.3116 (the account's total
+$1.4772 then $1.4825), so about $0.31 earned in the first four hours, a pace
+near $1.9 a day against the start's modelled $3.4 to $7.6 and the 18:34
+re-read's $1.3 to $3.7; the pot $184 then $188 a day; Polymarket's
+competitiveness figure 7.65 then 7.26, against 3.03 at the start, which is
+the crowd of the previous entry in Polymarket's own number. The two order
+ids in the scoring line are not the two placed at 14:41, yet `grep -c
+re-centre lp.out` read 0: the orders were replaced by something other than a
+logged re-centre (a restart by the loop after a crash, or by hand), to be
+settled from lp.jsonl, which keeps every run's lines.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
