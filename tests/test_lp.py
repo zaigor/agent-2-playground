@@ -363,3 +363,58 @@ def test_quoter_respects_held_inventory_and_starts_from_a_clean_slate(tmp_path):
     assert [o.token for o in x2.orders.values()] == ["n"]  # only the NO side is posted
     q3 = Quoter(x2, [_plan()], clock=lambda: 0.0, printer=lambda s: None, held={"0xa": (20.0, 20.0)})
     assert q3.states[0].stopped == "both sides held"
+
+
+def test_chooser_reads_the_price_history_and_the_live_gate_refuses_young_or_restless_markets():
+    """4 Oct: the three-day test picked two markets created the day before; their prices had moved
+    45c and 20c since listing and one filled within ninety minutes ($3.87 to undo). The chooser now
+    reads the CLOB's week of prices, skips young or restless markets, prints age and moves per day,
+    and a live run refuses them even when named with --only."""
+    from pm_scanner.history import PriceWeek
+    from pm_scanner.lp import history_blockers, with_history
+
+    rows = [
+        _row("0xa", "Will Alphabet be the third-largest company by market cap?", rate=117, mid=0.64, spread=0.02, days=89),
+        _row("0xb", "Will Russia capture the Royal Cafe Alex by November 30?", rate=100, mid=0.29, spread=0.07, days=58),
+        _row("0xc", "Lula flips Bolsonaro for Brazil president by October 15?", rate=100, mid=0.40, spread=0.03, days=12),
+        _row("0xd", "Will the next Muse model family be named Muse Fire?", rate=32, mid=0.25, spread=0.04, days=88),
+    ]
+    markets = {r.condition_id: _market(r.condition_id, f"y{r.condition_id}", f"n{r.condition_id}") for r in rows}
+    weeks = {
+        "y0xa": PriceWeek(days=6.97, points=1008, moves=7, path=1.31, low=0.58, high=0.69, band=0.03),  # 1.0 a day
+        "y0xb": PriceWeek(days=0.93, points=135, moves=5, path=0.73, low=0.125, high=0.36, band=0.03),  # one day old, 5.4 a day
+        "y0xc": PriceWeek(days=6.97, points=1009, moves=50, path=4.58, low=0.30, high=0.55, band=0.03),  # 7.2 a day
+        # y0xd: no history at all
+    }
+    asked: list[str] = []
+
+    def history(token: str):
+        asked.append(token)
+        return weeks.get(token)
+
+    reasons: dict = {}
+    plans = choose_markets(rows, markets, budget=100.0, max_markets=4, min_days=7, max_exit=10.0, history=history, reasons=reasons)
+    assert [p.condition_id for p in plans] == ["0xa"]
+    assert reasons["under 6.5 days of prices (a new market still finding its price)"] == 1
+    assert reasons["price jumped 3c or more over 2 times a day last week"] == 1
+    assert reasons["no price history on the CLOB"] == 1
+    assert sorted(asked) == ["y0xa", "y0xb", "y0xc", "y0xd"]  # fetched once per candidate that passed the cheaper filters
+    a = plans[0]
+    assert a.age_days == 6.97 and a.moves_per_day == 1.0 and a.path_per_day == 0.188
+    assert history_blockers(plans, 6.5, 2.0) == []
+    relaxed = choose_markets(rows, markets, budget=100.0, max_markets=4, min_days=7, max_exit=10.0, history=history, max_moves=8.0, min_age=0.5)
+    assert [p.condition_id for p in relaxed] == ["0xa", "0xb", "0xc"]  # the caps are the user's to move, in the command
+
+    named = choose_markets(rows, markets, budget=100.0, max_markets=4, only={"0xb", "0xc", "0xd"}, history=history)
+    assert [p.condition_id for p in named] == ["0xb", "0xc", "0xd"] and named[0].age_days == 0.93 and named[2].age_days is None  # --only shows them
+    blockers = history_blockers(named, 6.5, 2.0)
+    assert len(blockers) == 3 and "0.9 days" in blockers[0] and "7.2 times a day" in blockers[1] and "no price history" in blockers[2]
+    assert len(history_blockers(named[:2], 0.5, 8.0)) == 0
+
+    text = render_plan(plans + named[:1])
+    assert " age " in text and " mv/d " in text and " 7.0   1.0 " in text and " 0.9   5.4 " in text and "finding its price" in text
+    assert "    -" in render_plan(named[2:])  # no history read
+    without = choose_markets(rows, markets, budget=100.0, max_markets=4, min_days=7, max_exit=10.0)  # no fetcher: the old behaviour, columns empty
+    assert [p.condition_id for p in without] == ["0xa", "0xb", "0xc", "0xd"] and without[0].age_days is None
+    p = _plan()
+    assert with_history(p, None) is p and p.moves_per_day is None

@@ -16,8 +16,11 @@ and section 20 before changing it or advising a live run.
   reading is not available say so instead of estimating. (4 Oct 2026: "under a
   dollar" to exit was really $2.45 by the bids, and $4.63 a little later.)
 - **A live `lp` run** names its market with `--only` from a dry run made minutes
-  before, and its plan's `exit $` column is under `--max-exit`. Raising the cap
+  before, and its plan's `exit $` column is under `--max-exit`, its `age` column
+  at least `--min-age` and its `mv/d` column under `--max-moves`. Moving a cap
   is the user's call, written in the command, never a default changed in code.
+  (4 Oct: two markets created the day before, with big pots as bait, moved 45c
+  and 20c on their first day; one filled within ninety minutes, $3.87 to undo.)
 - **Public information only.** Nothing from inside a resolution source, no VPN,
   no terms-of-service circumvention.
 - **Record outcomes in MEMO.md** the day they happen: fills, disposals, final

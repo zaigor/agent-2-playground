@@ -323,8 +323,14 @@ sold straight back into what the book keeps below that quote, fee included (a
 fill means every order at or above our price was taken first); candidates above
 `--max-exit` ($2 by default), or whose book cannot absorb the quote at all, are
 dropped, and a live run refuses such a plan even when named with `--only`.
-Every `fill` line in the log carries `sell_now` and `loss_if_sold_now` read from
-the book at that second. At start the rig cancels any order a dead run left
+The `age` and `mv/d` columns come from the CLOB's week of 10-minute prices:
+days of history (7.0 is a full week; a younger market is still finding its
+price) and moves of 3 cents or more per day over it, each one a move that could
+have filled a quote 3 cents from the mid. Candidates under `--min-age` (6.5
+days) or over `--max-moves` (2 a day) are dropped and refused live the same way
+(4 Oct: two one-day-old markets had moved 45c and 20c since listing; one filled
+within ninety minutes). Every `fill` line in the log carries `sell_now` and
+`loss_if_sold_now` read from the book at that second. At start the rig cancels any order a dead run left
 resting and reads the account's positions, so a side filled before a crash is
 not quoted again. What a position is worth is what the bids pay
 (`--positions`); the site's midpoint mark is not money.
@@ -370,6 +376,7 @@ pm_scanner/
   xtracker.py    xtracker.polymarket.com's JSON routes: an account's whole counted-post history as a catalog CSV
   counts.py      count-window ladders: windows and brackets from the Gamma wording, catalog -> negative-binomial probabilities -> signal CSV; headroom of the market itself
   lp.py          the liquidity-reward test rig: minimum-size post-only quotes in unquoted rewarded markets, scoring and earnings read-back
+  history.py     the CLOB's week of prices per market, measured: age in days and 3-cent moves per day (the chooser's restlessness filter)
   weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/flow/today
   cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather`, `flow`, `ladder`, `rewards`, `signal`, `lp` and `fee` commands
 data/            israel_polls_2026.csv (hand-maintained poll table), saved reports, signal_example.csv

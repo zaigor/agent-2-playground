@@ -1222,7 +1222,12 @@ rig cancels whatever a dead run left resting and reads the account's
 positions from the public feed, so a side filled before a crash is never
 quoted again. The morning routine is `lp --earnings <yesterday>`,
 `lp --positions`, and the log's `fill` lines; the pre-registered reading
-below is unchanged.)
+below is unchanged. Later the same day, also not pre-registered: the first
+start was stopped after about two hours, two of its three markets having been
+created the day before, and the chooser gained an age rule and a restlessness
+rule read from the CLOB's price history, section 20; the test restarts with
+the markets those rules pass, and the reading below applies to that set from
+its own start.)
 
 Pre-registered reading of the result, per day and per market:
 
@@ -2124,6 +2129,70 @@ the three is then above the cap the whole run refuses and the loop retries
 every five minutes, quoting nothing until the book recovers or the end time
 passes; the refusal shows in the tmux pane, not in `lp.jsonl`. The start
 time, the fills and the morning readings go here as they happen.
+
+**The first start, stopped after about two hours (4 Oct).** The run went up in
+the early afternoon, Jerusalem time, under `nohup`. The positions feed, read
+at 13:12:37 UTC: 20 YES of the Royal Café Alex market at 0.26, cost $5.20,
+the best bid 0.07 for 30 shares, selling everything into the book $1.33,
+a loss of $3.87 by the bids; the site's mark 0.12. No position in the other
+two. In the same read the other Kostyantynivka market stood at 0.68/0.69,
+from 0.56 at the dry run, and Alphabet at 0.62/0.64, from 0.64. I advised
+stopping the run (`pkill` the loop, `SIGINT` the rig, `--cancel-all`,
+`--positions`), and the café position is the user's call: into the 0.07 bid
+for $1.33, or a resting sell between 0.12 and the 0.16 ask, or held as a
+20-dollar ticket the market prices at 12 percent. Not pre-registered:
+stopping, and everything below.
+
+**What the chooser could not see.** The CLOB's price history
+(`/prices-history?market=<token>&interval=1w&fidelity=10`, a week of
+10-minute midpoints) and Gamma's `createdAt`, read at about 13:05 UTC:
+
+| market | created | points | low..high | 10-min moves of 3c+ | per day |
+|---|---|---|---|---|---|
+| Alphabet third-largest | 7 Aug | 1,008 | 0.58..0.69 | 7 | 1.0 |
+| Russia captures all of Kostyantynivka | 3 Oct 14:34 UTC | 136 | 0.135..0.83 | 46 | 49 |
+| Russia captures the Royal Café Alex | 3 Oct 14:42 UTC | 135 | 0.125..0.36 | 5 | 5.4 |
+
+Both Russia markets were listed the afternoon before, with $100 pots. A big
+pot on a new market is the bait for price discovery, and the chooser read the
+pot, the book and the days to resolution, none of which say how old a market
+is or how its price has behaved. The user's question that afternoon, whether
+"the more random the bet the better", has the answer in this table: the
+outcome of a Kostyantynivka market is as uncertain as Alphabet's, but its
+price moved a quote's width forty-six times in a day, and a fill is a move
+through the quote, not a resolution.
+
+**Calibration, 70 candidates.** For the markets passing the older filters
+(the 70 best by modelled reward), the same read: ages from 0.9 days upward,
+27 of them under a week old. Moves of 3c or more per day over the past week
+at 10-minute bins: Muse Fire 0.7, Alphabet 1.0, West Nile 1.1, Buccaneers
+2.0, Topuria 2.0, Ishaq Dar 2.0, Caedrel 2.1, Anthropic price 2.1, Claude
+Fable price 2.4, Lula 7.2, the Yokohama mayoral 22.7; the café 5.4 and the
+other Kostyantynivka market 49 on their one day. Hourly bins separate the
+same markets less well (Alphabet 2 moves a week, the café 3 in its day), so
+the column uses 10-minute bins. The rule, written as defaults and as live
+gates that `--only` does not bypass: at least 6.5 days of prices
+(`--min-age`; the week the endpoint returns reads as 7.0) and at most 2
+moves a day (`--max-moves`). Moving either is the user's call, in the
+command. `pm_scanner/history.py`, the two columns `age` and `mv/d` in the
+plan, the plan's `age_days`, `moves_per_day` and `path_per_day` in the log,
+tests in `tests/test_history.py` and `tests/test_lp.py`.
+
+**The chooser with the new rules, 13:25 UTC, the books of the moment.** At
+the defaults nothing fits out of 1,819 rewarded markets: 40 fail the $2 exit,
+14 are under a week old, 11 too restless, 594 below $20 a day of modelled
+reward. Alphabet is among the 594: at the 11:45 dry run nobody was inside
+its 4.5c max spread and the model gave our quote the whole $117 pot; by
+13:23 the book held 571 shares at 0.62, 1,028 at 0.61 and 413 at 0.60 on
+the bid side and 582, 1,283 and 389 on the ask side, inside the spread, so
+a 20-share quote would take 0.7 to 2 percent of the pot, $0.80 to $2.31 a
+day. The pocket closed in ninety minutes; the morning's reading was a
+window, not a property of the market. At `--max-moves 3` two markets fit:
+Caedrel for esports content creator of the year ($45 pot, mid 0.38, exit
+$0.87, 2.3 moves a day, 72 days) and Topuria to fight Pimblett next ($25
+pot, mid 0.48, exit $1.25, 2.0 a day, 256 days), $37.60 parked. Whether to
+run those two at `--max-moves 3`, or wait for a day with a quieter pocket,
+is the user's call, and the restart's record goes here.
 
 ## Sources
 

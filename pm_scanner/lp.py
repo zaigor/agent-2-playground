@@ -23,8 +23,9 @@ import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
+from .history import PriceWeek
 from .http import HttpClient
 from .polymarket import PolyMarket
 from .rewards import PocketRow
@@ -73,6 +74,9 @@ class QuotePlan:
     exit_cost: float | None = None  # dollars lost undoing one full fill on the worse side into the bids left below the quote at planning, fee included; None = no exit
     exit_yes: float | None = None  # net per share the bids pay for the YES side's shares
     exit_no: float | None = None  # net per share the NO bids pay for the NO side's shares
+    age_days: float | None = None  # span of the CLOB's week of price history (about 7 = a full week; less = a market still finding its price)
+    moves_per_day: float | None = None  # 10-minute moves of 3c or more per day over that history: each one could have filled a quote 3c from the mid
+    path_per_day: float | None = None  # total price travel per day over that history
 
     @property
     def ask(self) -> float:
@@ -101,6 +105,31 @@ def make_plan(row: PocketRow, market: PolyMarket, tick: float = 0.01, mid: float
     )
 
 
+def with_history(plan: QuotePlan, week: PriceWeek | None) -> QuotePlan:
+    if week is None:
+        return plan
+    plan.age_days = round(week.days, 2)
+    plan.moves_per_day = round(week.moves_per_day, 2)
+    plan.path_per_day = round(week.path_per_day, 3)
+    return plan
+
+
+def history_blockers(plans: list[QuotePlan], min_age: float, max_moves: float) -> list[str]:
+    """Why a live run must not place these quotes: no price history to judge the market by, a
+    market younger than `min_age` days of prices (still finding its price: 4 Oct, two one-day-old
+    markets moved 45c and 20c on their first day and one filled within ninety minutes), or a price
+    that jumped a quote's width more than `max_moves` times a day over the past week."""
+    out: list[str] = []
+    for p in plans:
+        if p.age_days is None or p.moves_per_day is None:
+            out.append(f"{p.question[:60]}: no price history on the CLOB, so its age and restlessness cannot be judged")
+        elif p.age_days < min_age:
+            out.append(f"{p.question[:60]}: only {p.age_days:.1f} days of prices, under --min-age {min_age:g}; a new market is still finding its price")
+        elif p.moves_per_day > max_moves:
+            out.append(f"{p.question[:60]}: the price moved 3c or more {p.moves_per_day:.1f} times a day last week, above --max-moves {max_moves:g}")
+    return out
+
+
 def exit_blockers(plans: list[QuotePlan], max_exit: float) -> list[str]:
     """Why a live run must not place these quotes: a side that, once filled, could not be sold
     back into the book (no exit) or would lose more than `max_exit` dollars doing so."""
@@ -113,13 +142,18 @@ def exit_blockers(plans: list[QuotePlan], max_exit: float) -> list[str]:
     return out
 
 
-def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, budget: float, max_markets: int, min_days: float = 7.0, max_spread: float = 0.5, min_reward: float = 20.0, exclude_words: tuple[str, ...] = EXCLUDE_WORDS, only: set[str] | None = None, per_market: float = 0.0, reasons: dict[str, int] | None = None, max_exit: float = 2.0) -> list[QuotePlan]:
+def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, budget: float, max_markets: int, min_days: float = 7.0, max_spread: float = 0.5, min_reward: float = 20.0, exclude_words: tuple[str, ...] = EXCLUDE_WORDS, only: set[str] | None = None, per_market: float = 0.0, reasons: dict[str, int] | None = None, max_exit: float = 2.0,
+                   history: Callable[[str], PriceWeek | None] | None = None, min_age: float = 6.5, max_moves: float = 2.0) -> list[QuotePlan]:
     """The best pots that fit the budget: long-dated, not too wide, not news-driven families,
-    and with a book that would take one fill back for at most `max_exit` dollars (the 3 Oct
-    smoke run was filled in a book where getting out cost $3 at once and $4.60 by morning).
-    `per_market` caps the collateral of one market (0 = 1.6 × budget / max_markets, so a
-    50-share market does not swallow a budget meant for three 20-share ones). `reasons`, when
-    given, collects why each candidate was passed over."""
+    with a book that would take one fill back for at most `max_exit` dollars (the 3 Oct
+    smoke run was filled in a book where getting out cost $3 at once and $4.60 by morning),
+    and, when `history` (yes token -> PriceWeek) is given, at least `min_age` days of prices
+    on the CLOB with at most `max_moves` jumps of 3c a day over them (the 4 Oct test picked
+    two one-day-old markets whose prices had moved 45c and 20c since listing). The history
+    is fetched only for candidates that pass every cheaper filter. `per_market` caps the
+    collateral of one market (0 = 1.6 × budget / max_markets, so a 50-share market does not
+    swallow a budget meant for three 20-share ones). `reasons`, when given, collects why each
+    candidate was passed over."""
     plans: list[QuotePlan] = []
     spent = 0.0
     cap = per_market if per_market > 0 else 1.6 * budget / max(1, max_markets)
@@ -169,6 +203,19 @@ def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, bud
         if spent + p.collateral > budget:
             skip("over the remaining budget")
             continue
+        if history is not None:
+            week = history(p.yes_token)
+            with_history(p, week)
+            if only is None:
+                if week is None:
+                    skip("no price history on the CLOB")
+                    continue
+                if week.days < min_age:
+                    skip(f"under {min_age:g} days of prices (a new market still finding its price)")
+                    continue
+                if week.moves_per_day > max_moves:
+                    skip(f"price jumped 3c or more over {max_moves:g} times a day last week")
+                    continue
         plans.append(p)
         spent += p.collateral
         if len(plans) >= max_markets:
@@ -686,12 +733,15 @@ def render_positions(ps: list[Position]) -> str:
 def render_plan(plans: list[QuotePlan]) -> str:
     if not plans:
         return "no market fits the budget and filters"
-    L = [f"  {'reward lo..hi':>14} {'rate':>5} {'mid':>5} {'bid':>5} {'ask':>5} {'size':>4} {'collat':>7} {'exit $':>6} {'days':>5}  question"]
+    L = [f"  {'reward lo..hi':>14} {'rate':>5} {'mid':>5} {'bid':>5} {'ask':>5} {'size':>4} {'collat':>7} {'exit $':>6} {'age':>4} {'mv/d':>5} {'days':>5}  question"]
     for p in plans:
         ex = f"{p.exit_cost:6.2f}" if p.exit_cost is not None else "  none"
-        L.append(f"  {p.reward_low:6.1f}..{p.reward_high:<6.1f} {p.rate_per_day:5.0f} {p.mid:5.2f} {p.bid:5.2f} {p.ask:5.2f} {p.size:4.0f} {p.collateral:7.2f} {ex} {p.days_to_end if p.days_to_end is not None else float('nan'):5.0f}  {p.question[:60]}")
+        age = f"{p.age_days:4.1f}" if p.age_days is not None else "   -"
+        mv = f"{p.moves_per_day:5.1f}" if p.moves_per_day is not None else "    -"
+        L.append(f"  {p.reward_low:6.1f}..{p.reward_high:<6.1f} {p.rate_per_day:5.0f} {p.mid:5.2f} {p.bid:5.2f} {p.ask:5.2f} {p.size:4.0f} {p.collateral:7.2f} {ex} {age} {mv} {p.days_to_end if p.days_to_end is not None else float('nan'):5.0f}  {p.question[:60]}")
     L.append(f"  total collateral parked: ${sum(p.collateral for p in plans):.2f} in {len(plans)} markets; modelled reward ${sum(p.reward_low for p in plans):.0f}..{sum(p.reward_high for p in plans):.0f}/day")
     L.append("  exit $: what one full fill on the worse side would lose if sold straight back into what today's book keeps below that quote, fee included (a fill means every order at or above it was taken first; none = nothing below could absorb it)")
+    L.append("  age: days of price history on the CLOB (7.0 = a full week; a younger market is still finding its price).  mv/d: 10-minute moves of 3c or more per day over that history, each one a move that could have filled a quote 3c from the mid (- = no history read)")
     for p in plans:
         L.append(f"  --only {p.condition_id}   # {p.question[:50]}  {p.url}")
     return "\n".join(L)
