@@ -295,3 +295,25 @@ def test_positions_report_prices_by_the_bids_not_the_site_mark():
     assert render_positions([]) == "no open positions"
     d = ps[0].to_dict()
     assert d["book_absorbs"] is True and d["sell_now"] == round(ps[0].sell_now, 4)
+
+
+def test_pocket_exit_assumes_the_fill_swept_the_book_down_to_our_price():
+    """4 Oct, 08:25 UTC: the book was 21 shares at 0.34, then a cliff at 0.22; the rig bid 0.34
+    behind the 21, was filled two minutes later in an 11c drop, and the bids then paid $4.42 for
+    its 20 shares. Measured at the touch the exit was 4c; measured below the quote it is $2.57."""
+    from pm_scanner.rewards import pocket_scan
+
+    NOW = datetime(2026, 10, 4, 8, tzinfo=timezone.utc)
+    cfg = [{"condition_id": "0xw", "total_daily_rate": 90.0, "rewards_max_spread": 4.5, "rewards_min_size": 20}]
+    m = parse_market({"id": "0xw", "question": "Will there be no Meta Watermelon model release by October 31, 2026?", "conditionId": "0xw", "outcomes": '["Yes", "No"]', "clobTokenIds": '["yw", "nw"]', "outcomePrices": '["0.37", "0.63"]', "endDate": "2026-10-31T23:59:00Z", "acceptingOrders": True, "orderMinSize": 5})
+    book = Book("yw", bids=[Level(0.34, 21.0), Level(0.22, 400.0), Level(0.21, 41.93)], asks=[Level(0.40, 40.0), Level(0.42, 21.0), Level(0.44, 20.0), Level(0.61, 10.0)])
+    rows = pocket_scan(cfg, {"0xw": m}, {"yw": book}, now=NOW)
+    r = rows[0]
+    assert r.mid == 0.37 and r.exit_yes == round((0.22 - 0.05 * 0.22 * 0.78), 4)  # the 0.34 level is gone once our 0.34 bid is filled
+    p = make_plan(r, m)
+    assert p.bid == 0.34 and p.exit_cost == 2.57
+    reasons: dict = {}
+    assert choose_markets(rows, {"0xw": m}, budget=25.0, max_markets=1, reasons=reasons) == [] and reasons["undoing one fill into the book would lose more than $2"] == 1
+    deep = Book("yw", bids=[Level(0.34, 21.0), Level(0.33, 200.0)], asks=[Level(0.40, 40.0), Level(0.41, 200.0)])
+    p2 = make_plan(pocket_scan(cfg, {"0xw": m}, {"yw": deep}, now=NOW)[0], m)
+    assert p2.exit_cost is not None and p2.exit_cost < 0.6  # a book with support one tick below the quote passes

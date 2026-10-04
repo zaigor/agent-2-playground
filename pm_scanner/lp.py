@@ -28,7 +28,7 @@ from typing import Any, Protocol
 from .http import HttpClient
 from .polymarket import PolyMarket
 from .rewards import PocketRow
-from .unwind import Unwind, no_bids_from_yes_asks, unwind_into
+from .unwind import Unwind, _dec, ceil_tick, floor_tick, no_bids_from_yes_asks, quote_prices, unwind_into  # noqa: F401  (quote_prices and the tick helpers are re-exported for the tests and the CLI)
 
 EXCLUDE_WORDS = ("temperature", "weather", "earthquake", "video", "posts from", "tweets", "views", "hurricane", "category", "precipitation", "rain", "snow", "storm", "wind", "flood", "grand prix")
 
@@ -52,18 +52,6 @@ def best_prices(bids: list[tuple[float, float]], asks: list[tuple[float, float]]
     return (max(b) if b else None, min(a) if a else None)
 
 
-def floor_tick(x: float, tick: float) -> float:
-    return math.floor(x / tick + 1e-9) * tick
-
-
-def ceil_tick(x: float, tick: float) -> float:
-    return math.ceil(x / tick - 1e-9) * tick
-
-
-def _dec(tick: float) -> int:
-    return max(0, -int(math.floor(math.log10(tick) + 1e-9)))
-
-
 @dataclass
 class QuotePlan:
     condition_id: str
@@ -82,7 +70,7 @@ class QuotePlan:
     reward_high: float
     days_to_end: float | None
     url: str = ""
-    exit_cost: float | None = None  # dollars lost undoing one full fill on the worse side into the book seen at planning, fee included; None = no exit
+    exit_cost: float | None = None  # dollars lost undoing one full fill on the worse side into the bids left below the quote at planning, fee included; None = no exit
     exit_yes: float | None = None  # net per share the bids pay for the YES side's shares
     exit_no: float | None = None  # net per share the NO bids pay for the NO side's shares
 
@@ -92,17 +80,6 @@ class QuotePlan:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
-
-def quote_prices(mid: float, half_spread: float, tick: float) -> tuple[float, float]:
-    """(YES bid, NO bid) for a quote centred on `mid`, rounded outward to the tick and kept
-    inside 1c..99c."""
-    d = _dec(tick)
-    bid = round(min(max(floor_tick(mid - half_spread, tick), tick), 1.0 - tick), d)
-    ask = round(min(max(ceil_tick(mid + half_spread, tick), tick), 1.0 - tick), d)
-    if ask <= bid:
-        ask = round(bid + tick, d)
-    return bid, round(1.0 - ask, d)
 
 
 def make_plan(row: PocketRow, market: PolyMarket, tick: float = 0.01, mid: float | None = None) -> QuotePlan | None:
@@ -665,7 +642,7 @@ def render_plan(plans: list[QuotePlan]) -> str:
         ex = f"{p.exit_cost:6.2f}" if p.exit_cost is not None else "  none"
         L.append(f"  {p.reward_low:6.1f}..{p.reward_high:<6.1f} {p.rate_per_day:5.0f} {p.mid:5.2f} {p.bid:5.2f} {p.ask:5.2f} {p.size:4.0f} {p.collateral:7.2f} {ex} {p.days_to_end if p.days_to_end is not None else float('nan'):5.0f}  {p.question[:60]}")
     L.append(f"  total collateral parked: ${sum(p.collateral for p in plans):.2f} in {len(plans)} markets; modelled reward ${sum(p.reward_low for p in plans):.0f}..{sum(p.reward_high for p in plans):.0f}/day")
-    L.append("  exit $: what one full fill on the worse side would lose if sold straight back into today's book, fee included (none = the book cannot absorb it)")
+    L.append("  exit $: what one full fill on the worse side would lose if sold straight back into what today's book keeps below that quote, fee included (a fill means every order at or above it was taken first; none = nothing below could absorb it)")
     for p in plans:
         L.append(f"  --only {p.condition_id}   # {p.question[:50]}  {p.url}")
     return "\n".join(L)

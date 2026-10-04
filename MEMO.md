@@ -1160,8 +1160,11 @@ quoted a different market than its dry run twenty minutes earlier, two pots
 being equal, see section 20.)
 
 (Since 4 Oct the plan carries an `exit $` column: what one full fill on the
-worse side would lose if sold straight back into the book that minute, fee
-included. Candidates above `--max-exit`, $2 by default, or whose book cannot
+worse side would lose if sold straight back into what the book keeps strictly
+below that quote, fee included; a fill at our price means every order at or
+above it was taken first, so the touch is no measure of the exit (the second
+smoke run, later that morning, was filled behind one 21-share order with a
+12c cliff under it, and the column had said 4c). Candidates above `--max-exit`, $2 by default, or whose book cannot
 absorb the quote at all, are dropped, and a live run refuses such a plan even
 with `--only`; raising `--max-exit` is the one way to accept the loss, and it
 is written in the command. Every `fill` line in the log carries `sell_now` and
@@ -1994,6 +1997,36 @@ the resting sell did $1.37 better, and the fill came from a buyer stepping up
 to an ask with nothing near it, not from a move against it. One case, no
 conclusion, but it argues for a "sell as maker inside the spread, with a
 deadline" step before any taker exit if the rig ever has to unwind again.
+
+**The second smoke run (4 Oct, 08:25 UTC), in progress as this is written.**
+Market named with `--only` from the dry run: "Will there be no Meta Watermelon
+model release by October 31, 2026?", the no-release leg of a dated event, 28
+days out, mid 0.37, book 0.34/0.40 with depth at the touch, exit column $0.04,
+pot $90/day with others inside the spread (modelled share $3.5–9.5/day).
+
+* 08:25:03. YES bid 0.34 and NO bid 0.60 (YES ask 0.40), 20 shares each,
+  $18.80 parked; both accepted with ids. Scoring read at the same second: 0 of
+  2 (the read is lagged; see 08:35).
+* 08:27:05. The YES bid filled in full, 20 shares at 0.34, $6.80, in an
+  11-cent drop (mid 0.37 to 0.26 within two minutes). The fill line, by the
+  new rule, carried the exit of that second: the bids paid $4.42, a loss of
+  $2.38 if sold at once. The book that morning had 21 shares at 0.34 and then
+  nothing until 0.22; the seller swept through. Re-centred, the rig kept the
+  NO bid at 0.71 (YES ask 0.29).
+* 08:35:16. **1 of 1 orders scoring**, earnings for the day $0.0256 after ten
+  minutes with one side resting, about $0.15 an hour, $3.7 a day; the model's
+  low estimate for this quote was $3.47 a day. Point 3 of 18c is answered:
+  the CLOB scores a minimum-size quote inside the max spread, and the accrual
+  matches the share formula. The unwritten rule does not exist.
+* 08:38:40 (read from the container with `lp --positions`): 20 YES at 0.34,
+  best bid 0.23 for 120 shares, sell-now $4.42, P&L if sold −$2.38; site
+  mark 0.26.
+
+Two runs, two fills, both on the bid, both within two minutes of placement,
+both at the moment of a move against that side. Point 3 passes; the question
+18d was built to answer, whether the payout covers the fills, is already
+answered for this size: $0.15 an hour against $2.38 of fill. The run's end,
+the NO leg's fate and the position's disposal go here when known.
 
 Changed after the fact, none of it pre-registered: the re-centre crash fixed
 with a regression test; the mid taken from other people's orders; "rain",

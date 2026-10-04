@@ -316,7 +316,8 @@ python -m pm_scanner lp --positions             # what the account holds, priced
 ```
 
 The plan's `exit $` column is what one full fill on the worse side would lose if
-sold straight back into the book that minute, fee included; candidates above
+sold straight back into what the book keeps below that quote, fee included (a
+fill means every order at or above our price was taken first); candidates above
 `--max-exit` ($2 by default), or whose book cannot absorb the quote at all, are
 dropped, and a live run refuses such a plan even when named with `--only`.
 Every `fill` line in the log carries `sell_now` and `loss_if_sold_now` read from

@@ -9,6 +9,7 @@ every planned quote (the `exit $` column, filtered by --max-exit), writes it on 
 fill, and `lp --positions` prints it for whatever the account holds."""
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -65,3 +66,40 @@ def exit_cost(entry_price: float, shares: float, bids: Iterable[Level], *, fee_r
 
 def no_bids_from_yes_asks(asks: Iterable[Level]) -> list[Level]:
     return [(round(1.0 - price, 4), size) for price, size in asks]
+
+
+# --------------------------------------------------------------------------- #
+# Where a quote lands on the price grid (shared by the pocket scan and the rig)
+# --------------------------------------------------------------------------- #
+
+
+def floor_tick(x: float, tick: float) -> float:
+    return math.floor(x / tick + 1e-9) * tick
+
+
+def ceil_tick(x: float, tick: float) -> float:
+    return math.ceil(x / tick - 1e-9) * tick
+
+
+def _dec(tick: float) -> int:
+    return max(0, -int(math.floor(math.log10(tick) + 1e-9)))
+
+
+def quote_prices(mid: float, half_spread: float, tick: float) -> tuple[float, float]:
+    """(YES bid, NO bid) for a quote centred on `mid`, rounded outward to the tick and kept
+    inside 1c..99c."""
+    d = _dec(tick)
+    bid = round(min(max(floor_tick(mid - half_spread, tick), tick), 1.0 - tick), d)
+    ask = round(min(max(ceil_tick(mid + half_spread, tick), tick), 1.0 - tick), d)
+    if ask <= bid:
+        ask = round(bid + tick, d)
+    return bid, round(1.0 - ask, d)
+
+
+def swept_bids(bids: Iterable[Level], our_bid: float) -> list[Level]:
+    """The bids left once our bid at `our_bid` has been filled: a seller takes every bid at or
+    above our price before ours (price priority, then time priority on our own level), so the
+    exit after a fill is into what lies strictly below. The 3 Oct run's 0.87 bid sat 14c above
+    the next bid; the 4 Oct run's 0.34 bid sat 12c above a cliff at 0.22 behind one 21-share
+    order. Measured at the touch both looked cheap to undo; measured this way neither passed."""
+    return [(p, s) for p, s in bids if p < our_bid - 1e-9]
