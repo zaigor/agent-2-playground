@@ -1208,9 +1208,12 @@ python -m pm_scanner lp --live --budget 50 --markets 3 --hours 72 --log lp.jsonl
 python -m pm_scanner lp --earnings 2026-10-0X      # each morning
 ```
 
-(4 Oct, after the two smoke runs, not pre-registered. The account holds $29,
-so the test starts with one market, `--markets 1 --budget 25`, about $19
-parked; three markets need about $57 and a deposit, the user's call. A live
+(4 Oct, after the two smoke runs, not pre-registered. The account was funded
+to about $105 the same day, so the test runs with three markets as written,
+but at `--budget 60`, not $50: three 20-share two-sided quotes park about $57
+(18.8 + 19.1 + 19.1 in the unit test), which the pre-registered $50 could not
+hold with its per-market cap of $26.67; the hard cap goes to
+`MAX_BUDGET_USD=60`, the test's budget and not the account's balance. A live
 run names its markets with `--only` from a `--check` made minutes before.
 For three unattended days on a laptop the run goes in `tmux` under
 `systemd-inhibit`, in a restart loop, and ends at `--until <ISO UTC>` rather
