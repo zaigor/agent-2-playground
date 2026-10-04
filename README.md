@@ -313,6 +313,7 @@ python -m pm_scanner lp --live --budget 50 --markets 3 --hours 72 --log lp.jsonl
 python -m pm_scanner lp --earnings 2026-10-01   # the day's reward accrual per market
 python -m pm_scanner lp --cancel-all
 python -m pm_scanner lp --positions             # what the account holds, priced by the bids, not by the site's midpoint
+python -m pm_scanner lp --merge <condition id> [--live]   # both sides held: turn the pairs back into $1 each, no price, no fee
 ```
 
 The plan's `exit $` column is what one full fill on the worse side would lose if

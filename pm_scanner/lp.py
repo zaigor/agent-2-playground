@@ -202,6 +202,7 @@ class Exchange(Protocol):
 
     def top_of_book(self, token: str, own_bids: list[tuple[float, float]] | None = None, own_asks: list[tuple[float, float]] | None = None) -> tuple[float | None, float | None]: ...
     def book(self, token: str) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]: ...
+    def merge(self, condition_id: str) -> dict[str, Any]: ...
     def place(self, token: str, price: float, size: float) -> str | None: ...
     def cancel(self, order_ids: list[str]) -> None: ...
     def cancel_all(self) -> None: ...
@@ -229,6 +230,10 @@ class PaperExchange:
     def book(self, token: str) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
         bb, ba = self.top_of_book(token)
         return ([(bb, 1e6)] if bb is not None else []), ([(ba, 1e6)] if ba is not None else [])
+
+    def merge(self, condition_id: str) -> dict[str, Any]:
+        self.log.append(("merge", condition_id))
+        return {"submitted": False, "paper": True, "condition_id": condition_id}
 
     def place(self, token: str, price: float, size: float) -> str | None:
         self.n += 1
@@ -330,6 +335,20 @@ class LiveExchange:
             out["gasless_error"] = str(exc)
         return out
 
+    def merge(self, condition_id: str) -> dict[str, Any]:
+        """Merge every YES+NO pair of `condition_id` back into collateral: $1 per pair, no price,
+        no fee, relayed gaslessly on a deposit wallet. The SDK reads the two balances and
+        merges the smaller; the 4 Oct smoke run left 20 of each."""
+        handle = self.client.merge_positions(condition_id=condition_id, amount="max")
+        result = handle.wait()
+        out: dict[str, Any] = {"submitted": True, "condition_id": condition_id}
+        for name in ("state", "status", "transaction_hash", "tx_hash", "hash", "error"):
+            val = getattr(result, name, None)
+            if val is not None:
+                out[name] = str(val)
+        out["result"] = str(result)[:400]
+        return out
+
     def book(self, token: str) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
         ob = self.client.get_order_book(token_id=token)
         return [(float(l.price), float(l.size)) for l in ob.bids], [(float(l.price), float(l.size)) for l in ob.asks]
@@ -388,6 +407,8 @@ class MarketState:
     plan: QuotePlan
     bid_id: str | None = None
     ask_id: str | None = None
+    bid_px: float | None = None  # the price the resting bid was placed at (re-centred quotes differ from the plan's)
+    ask_px: float | None = None  # the NO bid's price
     quoted_mid: float | None = None
     bid_filled: float = 0.0  # YES shares bought
     ask_filled: float = 0.0  # NO shares bought
@@ -429,9 +450,11 @@ class Quoter:
         try:
             if want_bid and not st.bid_done and st.bid_id is None:
                 st.bid_id = self.x.place(p.yes_token, bid, p.size)
+                st.bid_px = bid
                 self.log("place", market=p.question[:60], side="YES bid", price=bid, size=p.size, order_id=st.bid_id)
             if want_ask and not st.ask_done and st.ask_id is None:
                 st.ask_id = self.x.place(p.no_token, no_bid, p.size)
+                st.ask_px = no_bid
                 self.log("place", market=p.question[:60], side="NO bid (YES ask)", price=no_bid, yes_ask=round(1 - no_bid, 4), size=p.size, order_id=st.ask_id)
             st.quoted_mid = mid
         except Exception as exc:  # noqa: BLE001
@@ -479,7 +502,8 @@ class Quoter:
                     if matched > 0:
                         setattr(st, f"{side}_filled", getattr(st, f"{side}_filled") + matched)
                         setattr(st, f"{side}_done", True)
-                        entry = p.bid if side == "bid" else p.no_bid
+                        resting = st.bid_px if side == "bid" else st.ask_px  # the 4 Oct log printed the plan's 0.60 for a NO bid resting at 0.68
+                        entry = resting if resting is not None else (p.bid if side == "bid" else p.no_bid)
                         self.log("fill", market=p.question[:60], side=side, shares=matched, price=entry, **self._exit_now(p, side, matched, entry))
                         if o is not None:  # partially filled and still resting: take the rest down, never average in
                             self.x.cancel([oid])
@@ -618,6 +642,18 @@ def positions_report(http: HttpClient, book_fetcher, wallet: str) -> list[Positi
         out.append(Position(str(d.get("title", "")), str(d.get("outcome", "")), str(d.get("conditionId", "")), token, shares, float(d.get("avgPrice") or 0.0),
                             float(d.get("curPrice") or 0.0), str(d.get("endDate", "")), best[0] if best else None, best[1] if best else 0.0, unwind_into(bids, shares)))
     return out
+
+
+def merge_preview(http: HttpClient, wallet: str, condition_id: str) -> dict[str, Any]:
+    """What a merge of `condition_id` would return, from the public positions feed: the pairs
+    are the smaller of the YES and NO balances, a dollar each."""
+    legs = [d for d in fetch_positions(http, wallet) if str(d.get("conditionId", "")).lower() == condition_id.lower()]
+    by = {str(d.get("outcome", "")).lower(): float(d.get("size") or 0.0) for d in legs}
+    yes, no = by.get("yes", 0.0), by.get("no", 0.0)
+    pairs = min(yes, no)
+    paid = sum(float(d.get("size") or 0.0) * float(d.get("avgPrice") or 0.0) for d in legs)
+    return {"condition_id": condition_id, "title": legs[0].get("title", "") if legs else "", "yes_shares": yes, "no_shares": no, "pairs": round(pairs, 4), "returns_usd": round(pairs, 2), "paid_usd": round(paid, 2),
+            "left_over": {"yes": round(yes - pairs, 4), "no": round(no - pairs, 4)}}
 
 
 def render_positions(ps: list[Position]) -> str:

@@ -1998,7 +1998,7 @@ to an ask with nothing near it, not from a move against it. One case, no
 conclusion, but it argues for a "sell as maker inside the spread, with a
 deadline" step before any taker exit if the rig ever has to unwind again.
 
-**The second smoke run (4 Oct, 08:25 UTC), in progress as this is written.**
+**The second smoke run (4 Oct, 08:25 to 10:01 UTC).**
 Market named with `--only` from the dry run: "Will there be no Meta Watermelon
 model release by October 31, 2026?", the no-release leg of a dated event, 28
 days out, mid 0.37, book 0.34/0.40 with depth at the touch, exit column $0.04,
@@ -2022,11 +2022,49 @@ pot $90/day with others inside the spread (modelled share $3.5–9.5/day).
   best bid 0.23 for 120 shares, sell-now $4.42, P&L if sold −$2.38; site
   mark 0.26.
 
-Two runs, two fills, both on the bid, both within two minutes of placement,
-both at the moment of a move against that side. Point 3 passes; the question
-18d was built to answer, whether the payout covers the fills, is already
-answered for this size: $0.15 an hour against $2.38 of fill. The run's end,
-the NO leg's fate and the position's disposal go here when known.
+* 09:28 to 09:37. The mid climbed 0.26 → 0.29 in three one-tick steps and
+  the NO bid followed, 0.71 → 0.70 → 0.69 → 0.68 (YES ask 0.29 → 0.32), each
+  re-post scoring at the next read. Earnings reads: $0.0256 (08:35), 0.0341,
+  0.0406, 0.0470, 0.0529, 0.0567 (09:26), 0.1055 (09:36, with competitiveness
+  down to 0.135), 0.1199, 0.1320 (09:56): about $0.09 an hour, $2.1 a day,
+  for one side of a minimum quote in a $60–105 pot.
+* 10:00:49. The NO bid at 0.68 filled in full: a buyer lifted our YES ask at
+  0.32. (The log line said 0.60, the plan's original price; the resting order
+  was at 0.68, confirmed by the positions feed. The fill line now carries the
+  resting price.) Both sides filled, so the rig stopped the market and ended
+  cleanly at 10:01:50 with nothing open.
+
+**Result of the second run.** 20 YES at 0.34 ($6.80) and 20 NO at 0.68
+($13.60): $20.40 paid for a pair that is worth $20 whatever happens, a locked
+loss of $0.40, against rewards accrued of $0.132 by the last read (the day's
+final figure comes with `lp --earnings 2026-10-04` tomorrow). Net about
+−$0.27 for two hours, with $20 of the budget tied in the pair until it is
+merged: `lp --merge <condition id> --live` turns the pairs back into $20 of
+collateral through the SDK's gasless merge, no price, no fee (previewed from
+public data first). Readings at 10:07: YES bid 0.31 for 80 shares, NO bid
+0.65 for 41; selling both legs into the book would have returned $18.76,
+which is why the merge and not a sale.
+
+Against the checklist of 18c: 1 passed (balance, approvals); 2 passed (two
+live orders, ids, visible on the site); 3 **passed**, 1 of 1 scoring from the
+ten-minute read onward and at every read after (the read taken one second
+after placement says 0 and is not a verdict); 4 passed ($0.0256 within ten
+minutes); 5 passed through the "both sides filled" stop rather than the
+two-hour timer; 6 is tomorrow's payout, if the day's total clears whatever
+minimum applies. The unwritten rule that minimum quotes do not score does not
+exist, and the share formula of 17b predicted the accrual to within its range.
+
+What the two runs say about 18d: a minimum quote earns about $2 a day a side
+in these pots, and gets filled fast, within two minutes both times, at the
+moment the price moves against it. In the second run the other side was
+lifted ninety minutes later on the way back and the round trip cost $0.40 on
+20 shares; in the first the price did not come back and the exit cost $1.08.
+Two hours is not a sample; the $50 three-day test of 18d would be, and its
+pre-registered reading stands as written. Whether to run it is the user's
+call; what the memo can say is that the rewards are real and small, and the
+fills are real and frequent, and the three-day test is what decides which is
+bigger. Changed after the fact, not pre-registered: the exit column now
+measured below the quote; the fill line's price; the merge command.
 
 Changed after the fact, none of it pre-registered: the re-centre crash fixed
 with a regression test; the mid taken from other people's orders; "rain",

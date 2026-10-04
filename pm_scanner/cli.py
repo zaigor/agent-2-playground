@@ -10,7 +10,7 @@ from pathlib import Path
 from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
 from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
 from .ladder import render_ladder_report, scan_ladders, summarize_snapshots
-from .lp import LiveExchange, PaperExchange, Quoter, choose_markets, parse_only, render_plan, exit_blockers, positions_report, render_positions
+from .lp import LiveExchange, PaperExchange, Quoter, choose_markets, exit_blockers, merge_preview, parse_only, positions_report, render_plan, render_positions
 from .rewards import gamma_markets_by_condition, render_pocket, render_rewards, rewards_pocket, rewards_survey
 from .signal import FixtureResolver, GammaResolver, load_signal_csv, render_signal, score_signal
 from .flow import MakerConfig, family_flow, maker_backtest, render_family_flow, render_maker, sampled_market_ids
@@ -451,10 +451,35 @@ def _run_crossings(args, source) -> int:
 
 def _run_lp(args, source) -> int:
     log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
-    housekeeping = args.cancel_all or args.earnings or args.approve or args.positions  # no quote is sized, so the budget is not read
+    housekeeping = args.cancel_all or args.earnings or args.approve or args.positions or args.merge  # no quote is sized, so the budget is not read
     if args.budget > args.max_budget and not housekeeping:
         print(f"refusing: --budget {args.budget:g} is above the hard cap {args.max_budget:g} (MAX_BUDGET_USD)", file=sys.stderr)
         return 2
+    if args.merge:
+        wallet = (args.wallet or os.environ.get("POLY_WALLET", "")).strip()
+        if not wallet:
+            print("merge: set POLY_WALLET or pass --wallet 0x...", file=sys.stderr)
+            return 2
+        try:
+            pv = merge_preview(source.http, wallet, args.merge)
+        except Exception as exc:  # noqa: BLE001
+            print(f"merge preview failed: {exc}", file=sys.stderr)
+            return 2
+        print(json.dumps(pv, indent=1))
+        if pv["pairs"] <= 0:
+            print("nothing to merge: the account does not hold both sides of that market", file=sys.stderr)
+            return 1
+        if not args.live:
+            print(f"\ndry run: merging would turn {pv['pairs']:g} YES+NO pairs into ${pv['returns_usd']:.2f} of collateral (paid ${pv['paid_usd']:.2f}); add --live to do it")
+            return 0
+        try:
+            exchange = LiveExchange.from_env()
+            print(json.dumps(exchange.merge(args.merge), indent=1, default=str))
+            print(render_positions(positions_report(source.http, source.poly_books, wallet)))
+        except Exception as exc:  # noqa: BLE001
+            print(f"merge failed: {exc}", file=sys.stderr)
+            return 2
+        return 0
     if args.positions:
         wallet = (args.wallet or os.environ.get("POLY_WALLET", "")).strip()
         if not wallet:
@@ -749,7 +774,8 @@ def build_parser() -> argparse.ArgumentParser:
     lp.add_argument("--earnings", default=None, help="live: print the day's reward earnings (YYYY-MM-DD) and exit")
     lp.add_argument("--cancel-all", action="store_true", help="live: cancel every open order on the account and exit")
     lp.add_argument("--positions", action="store_true", help="what the account holds and what the book pays to sell it now (public data; needs POLY_WALLET or --wallet, no key)")
-    lp.add_argument("--wallet", default=None, help="account address for --positions (default: POLY_WALLET)")
+    lp.add_argument("--wallet", default=None, help="account address for --positions and --merge (default: POLY_WALLET)")
+    lp.add_argument("--merge", default=None, metavar="CONDITION_ID", help="merge every YES+NO pair of this market back into collateral ($1 a pair, no price, no fee); preview from public data, --live to do it")
     lp.add_argument("--json", type=Path, default=None, help="with --positions: also write the rows as JSON here")
     lp.add_argument("--max-exit", type=float, default=2.0, help="candidate markets: undoing one full fill into today's book must lose at most this many dollars, fee included; a live run refuses a plan above it")
     lp.add_argument("--max-budget", type=float, default=float(os.environ.get("MAX_BUDGET_USD", "50")), help="hard cap; --budget above this is refused (env MAX_BUDGET_USD)")

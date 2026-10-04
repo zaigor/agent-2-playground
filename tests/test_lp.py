@@ -207,6 +207,13 @@ def test_quoter_survives_a_partial_fill_followed_by_a_move(tmp_path):
     q.step()
     assert st.replaced == 1 and st.bid_id is None and st.ask_id is not None
     assert [o.token for o in x.orders.values()] == ["n"] and not st.stopped
+    ask = x.orders[st.ask_id]
+    assert ask.price == 0.69 and st.ask_px == 0.69  # mid 0.285 + 0.0225 -> YES ask 0.31 -> NO bid 0.69
+    ask.matched = 20.0
+    q.step()
+    fills = [json.loads(l) for l in (tmp_path / "lp.jsonl").read_text().splitlines() if '"fill"' in l]
+    assert fills[-1]["side"] == "ask" and fills[-1]["price"] == 0.69  # the resting price, not the plan's 0.67 (the 4 Oct log said 0.60 for a fill at 0.68)
+    assert st.stopped == "both sides filled"
 
 
 def test_best_prices_ignores_our_own_orders():
@@ -317,3 +324,21 @@ def test_pocket_exit_assumes_the_fill_swept_the_book_down_to_our_price():
     deep = Book("yw", bids=[Level(0.34, 21.0), Level(0.33, 200.0)], asks=[Level(0.40, 40.0), Level(0.41, 200.0)])
     p2 = make_plan(pocket_scan(cfg, {"0xw": m}, {"yw": deep}, now=NOW)[0], m)
     assert p2.exit_cost is not None and p2.exit_cost < 0.6  # a book with support one tick below the quote passes
+
+
+def test_merge_preview_counts_the_pairs_from_the_positions_feed():
+    from pm_scanner.lp import merge_preview
+
+    class Http:
+        def get_json(self, url, params=None):
+            return [
+                {"asset": "y", "conditionId": "0xC", "size": 20.0, "avgPrice": 0.34, "outcome": "Yes", "title": "Watermelon no-release?"},
+                {"asset": "n", "conditionId": "0xC", "size": 20.0, "avgPrice": 0.68, "outcome": "No", "title": "Watermelon no-release?"},
+                {"asset": "z", "conditionId": "0xD", "size": 5.0, "avgPrice": 0.5, "outcome": "Yes", "title": "other"},
+            ]
+
+    pv = merge_preview(Http(), "0xw", "0xc")  # case-insensitive id
+    assert pv["pairs"] == 20.0 and pv["returns_usd"] == 20.0 and pv["paid_usd"] == 20.4 and pv["left_over"] == {"yes": 0.0, "no": 0.0}
+    assert merge_preview(Http(), "0xw", "0xD")["pairs"] == 0.0
+    x = PaperExchange({"y": (0.3, 0.4)})
+    assert x.merge("0xC")["submitted"] is False and x.log[-1] == ("merge", "0xC")
