@@ -2364,6 +2364,16 @@ pre-registered test of its own is a decision for after tomorrow's payout
 reading, the one clean measurement these three days still owe; it is not
 pre-registered here.
 
+**18e, the check before the start (4 Oct, about 14:30 UTC).** Balance
+$102.74. The chooser at `--markets 1 --budget 60 --min-reward 0.5
+--min-depth 200` gave one market, the Anthropic market-cap bracket $2.25T to
+$2.5T at the IPO close: pot $177 a day, modelled $3.4 to $7.6 a day for our
+quote, mid 0.28, bid 0.26, ask 0.31, 50 shares a side, $47.50 parked, exit
+$1.04, 7.0 days of prices, 0.7 moves a day, 264 score-weighted shares inside
+the spread on the thinner side, 454 days to resolution. The user was given
+the live command with that id, ending 2026-10-06T14:30 UTC. The start line,
+placements, fills and the daily readings follow here.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
