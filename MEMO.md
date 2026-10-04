@@ -2424,6 +2424,37 @@ a minute without quotes costs about a minute's share of the day's pot).
 Not pre-registered: the automation, not the rules. Each cap is a flag, moved
 in the command and never in code, 0 turning it off, per CLAUDE.md.
 
+**18e, the book an hour in (4 Oct, 18:34 UTC, public readings).** The user's
+portfolio page showed both orders resting unfilled (0 of 50 each) and asked
+what that says, and whether to quote a second market with the cash left. The
+CLOB book for the YES token at this reading: bids 0.30 (6 shares), 0.29
+(3,418), 0.28 (968), 0.27 (450), 0.26 (725, ours among them); asks 0.31
+(822, ours among them), 0.32 (2,430), 0.33 (786). Mid 0.305, two ticks above
+the 0.285 quoted at the start: our YES ask at 0.31 is at the top of the ask
+side and the YES bid at 0.26 has 4,842 shares ahead of it. A dry run of the
+chooser on the market alone now reads pot $184, modelled $1.3 to $3.7 a day
+for our quote, 1,733 score-weighted shares inside the spread on the thinner
+side, exit $1.06; at 14:30 it read $177, $3.4 to $7.6, 259 and $1.04. The
+model's figure for our share fell by about two thirds within an hour as the
+inside of the spread filled with other people's size (whether in answer to
+our presence or to the price move the book does not say; the `pots` lines in
+the log, every ten minutes, carry Polymarket's own competitiveness figure for
+the comparison). That is the pre-registration's "share collapses" fail
+condition in the making, to be read in tomorrow's payout, not acted on
+today. A two-market dry run at a $110 budget did not pick the Anthropic
+bracket at all; it gave the Rhine River water-level market (pot $97,
+modelled $3.4 to $8.9, exit $1.59, 1.3 moves a day, 28 days to resolution:
+a gauge-reading market driven by rain forecasts, the family the exclusion
+list was written for, which the words "river" and "levels" slip past) and
+the New Taipei mayor market for Su Chiao-hui (pot $102, modelled $1.9 to
+$4.6, exit $1.13, 1.6 moves a day, 55 days). Advice given: no second market
+during the 48 hours. Under the $60 cap there is $12.50 of headroom and every
+deep market parks $45 or more, so a second quote means a cap of about $110,
+$93 of the $102.74 cash committed, and a departure from the pre-registered
+one-market test on the strength of a model figure that has just fallen by
+two thirds in the one market where it can be checked. If 18e passes, three
+markets for a week is the next step, with the cap written in that command.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
