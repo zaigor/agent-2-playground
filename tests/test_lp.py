@@ -60,7 +60,7 @@ def test_make_plan_and_choose_markets_respect_budget_filters_and_exclusions():
     assert reasons["undoing one fill into the book would lose more than $2"] == 2  # 0xc (25c wide) and 0xd (45c wide)
     only = choose_markets(rows, markets, budget=100.0, max_markets=5, only={"0xb"})
     assert [x.condition_id for x in only] == ["0xb"]  # --only skips the filters
-    assert "total collateral" in render_plan(plans)
+    assert "total collateral" in render_plan(plans) and "--only 0xa " in render_plan(plans)  # the id a live run must name
 
 
 def _plan(cid="0xa", days=30.0, mid=0.30):

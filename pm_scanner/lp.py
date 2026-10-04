@@ -664,6 +664,8 @@ def render_plan(plans: list[QuotePlan]) -> str:
         L.append(f"  {p.reward_low:6.1f}..{p.reward_high:<6.1f} {p.rate_per_day:5.0f} {p.mid:5.2f} {p.bid:5.2f} {p.ask:5.2f} {p.size:4.0f} {p.collateral:7.2f} {ex} {p.days_to_end if p.days_to_end is not None else float('nan'):5.0f}  {p.question[:60]}")
     L.append(f"  total collateral parked: ${sum(p.collateral for p in plans):.2f} in {len(plans)} markets; modelled reward ${sum(p.reward_low for p in plans):.0f}..{sum(p.reward_high for p in plans):.0f}/day")
     L.append("  exit $: what one full fill on the worse side would lose if sold straight back into today's book, fee included (none = the book cannot absorb it)")
+    for p in plans:
+        L.append(f"  --only {p.condition_id}   # {p.question[:50]}  {p.url}")
     return "\n".join(L)
 
 
