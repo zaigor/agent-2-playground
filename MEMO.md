@@ -1170,7 +1170,7 @@ prints the same for whatever the account holds. The rule behind it, for the
 human and the model alike: what a position is worth is what the bids pay. The
 site's midpoint mark is not money, and neither is an estimate; on the morning
 of 4 Oct the mark said −$0.15, an estimate said "under a dollar", and the bids
-said −$2.45, then −$4.63 an hour later.)
+said −$2.45, then −$4.63 a little later the same morning.)
 
 What "the system plays as expected" means, in order:
 
@@ -1980,11 +1980,13 @@ by an eleven-cent fall overnight, which is what memo 14 said weather takers
 look like. The book under that mark was 26 cents wide: a 73c bid for 17.69
 shares, a 72c bid for 12, then nothing until 99c; the site's sell panel
 offered $10.87 for the lot, a loss of $2.45, not the $0.15 the mark implied.
-By 06:00 UTC the 73c bid had gone too and the best bid was 58c for 25 shares,
+A little later that morning (Jerusalem time; the clock was not recorded) the 73c
+bid had gone too and the best bid was 58c for 25 shares,
 which would have paid $8.69 (−$4.63).
 
 Disposal: a resting limit sell at 80c, the lone ask in that book, placed by
-hand on the site, was hit later that morning: 15.3 shares at 80c, $12.24, as
+hand on the site, was hit shortly before 10:00 Jerusalem time (07:00 UTC):
+15.3 shares at 80c, $12.24, as
 maker, no fee. **Final P&L of the first smoke run: −$1.08** on $13.32 (bought
 at 87c, sold at 80c), cash back to about $27.92, nothing held, no order open.
 For the record, the advice that morning was to hit the 73c bid for $10.87;

@@ -272,7 +272,7 @@ def test_plan_carries_the_exit_cost_and_the_live_gate_reads_it():
 
 
 def test_positions_report_prices_by_the_bids_not_the_site_mark():
-    """4 Oct, 06:00 UTC: the site said the position was worth $10.56 (midpoint 0.69); the bids paid $8.69."""
+    """4 Oct, morning: the site said the position was worth $10.56 (midpoint 0.69); the bids paid $8.69."""
     from pm_scanner.lp import positions_report, render_positions
 
     class Http:

@@ -2,7 +2,7 @@
 
 The site marks a position at the midpoint of the book, and so did I on the morning of
 4 Oct (memo section 20): the midpoint said the smoke-run position was down $0.15, the
-bids said $2.45, and an hour later they said $4.60. Nothing about an exit may be an
+bids said $2.45, and a little later they said $4.63. Nothing about an exit may be an
 estimate again: this module walks the resting bids, best first, charges the taker fee
 on the way out, and returns the dollars a sale actually brings. `lp` prints it for
 every planned quote (the `exit $` column, filtered by --max-exit), writes it on every

@@ -14,7 +14,7 @@ and section 20 before changing it or advising a live run.
   mark is not money, and neither is a figure from memory. Before advising a
   sale, an exit or a size, run that command or ask for the book, and if the
   reading is not available say so instead of estimating. (4 Oct 2026: "under a
-  dollar" to exit was really $2.45 by the bids, and $4.63 an hour later.)
+  dollar" to exit was really $2.45 by the bids, and $4.63 a little later.)
 - **A live `lp` run** names its market with `--only` from a dry run made minutes
   before, and its plan's `exit $` column is under `--max-exit`. Raising the cap
   is the user's call, written in the command, never a default changed in code.
