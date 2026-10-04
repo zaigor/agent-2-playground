@@ -317,7 +317,8 @@ python -m pm_scanner lp --cancel-all
 Credentials come from the environment only (`.env.example`): the signer key
 of a fresh wallet, the Polymarket account wallet address and a Relayer API
 key from polymarket.com settings. `--budget` above `MAX_BUDGET_USD` is
-refused.
+refused (`--cancel-all`, `--earnings` and `--approve` size no quote and do not
+read the budget).
 
 ## Fee models (change them when the venues do)
 

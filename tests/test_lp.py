@@ -101,6 +101,17 @@ def test_lp_refuses_budget_above_the_cap(capsys):
     assert "hard cap" in capsys.readouterr().err
 
 
+def test_lp_housekeeping_does_not_read_the_budget(capsys, monkeypatch):
+    """`MAX_BUDGET_USD=29 lp --cancel-all` was refused on 4 Oct because the default --budget 50
+    tripped the cap; cancelling, reading earnings and approving size no quote."""
+    for var in ("POLY_PRIVATE_KEY", "POLY_WALLET", "POLY_RELAYER_KEY", "POLY_RELAYER_ADDRESS"):
+        monkeypatch.delenv(var, raising=False)
+    for flags in (["--cancel-all"], ["--earnings", "2026-10-04"], ["--approve"]):
+        assert main(["lp", "--max-budget", "29", *flags]) == 2
+        err = capsys.readouterr().err
+        assert "hard cap" not in err and "cannot connect" in err
+
+
 def test_describe_reads_the_sdk_approvals_dataclass():
     """The SDK's `missing` is a dataclass with erc20/erc1155 tuples, not a list (the first live
     --check on 3 Oct reported "'MissingTradingApprovals' object is not iterable")."""

@@ -1970,6 +1970,12 @@ live run must name its market with `--only` so that what is quoted is what
 the dry run showed. Whether to run the smoke test again at all is a decision
 for the morning, with the fill above as its first data point.
 
+4 Oct, a small one: `MAX_BUDGET_USD=29 python -m pm_scanner lp --cancel-all`
+was refused ("--budget 50 is above the hard cap 29") because the default
+budget tripped the cap before the command noticed it only had to cancel.
+Cancelling, reading earnings and approving size no quote, so they now skip
+the cap; with a cap in the environment the plain command works as written.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)

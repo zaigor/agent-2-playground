@@ -451,7 +451,8 @@ def _run_crossings(args, source) -> int:
 
 def _run_lp(args, source) -> int:
     log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
-    if args.budget > args.max_budget:
+    housekeeping = args.cancel_all or args.earnings or args.approve  # no quote is sized, so the budget is not read
+    if args.budget > args.max_budget and not housekeeping:
         print(f"refusing: --budget {args.budget:g} is above the hard cap {args.max_budget:g} (MAX_BUDGET_USD)", file=sys.stderr)
         return 2
     exchange = None
