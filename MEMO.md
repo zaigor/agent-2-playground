@@ -2225,6 +2225,47 @@ $56.60 parked. The user was told to start the live run with those ids,
 `--until 2026-10-07T10:00`. The start line and the first placements go here
 from the log.
 
+**The restart (4 Oct, 13:38:57 UTC) and its abort two minutes later.** The
+start line: three markets, 68.4 hours to the end time, nothing held. Six
+placements between 13:38:59 and 13:39:02 at the planned prices (Fable 0.17
+and 0.23, Caedrel 0.35 and 0.41, Topuria 0.44 and 0.49); scoring 0 of 6 at
+placement as before; the pots' competitiveness 0.0 in all three. Then, from
+the log:
+
+* 13:40:04 Caedrel re-centred, mid 0.38 to 0.36, quotes to 0.33 and 0.39.
+* 13:40:05 Topuria's ask filled: 17.47 shares, NO bought at 0.51 (YES sold
+  at 0.49), `sell_now` 6.02, `loss_if_sold_now` 2.89. The mid read 0.465 to
+  0.575 and the rig re-centred the remaining bid up to 0.55.
+* 13:41:07 Caedrel re-centred again, mid 0.36 to 0.425, quotes to 0.40 and
+  0.45.
+* 13:41:08 Topuria's bid at 0.55 filled: 20 YES, `sell_now` 7.76,
+  `loss_if_sold_now` 3.24. Both sides filled; the rig stopped that market.
+
+Section 18d's abort condition, two fills in one market, was met two minutes
+into the restart. The user was told to stop the run, cancel, and merge the
+17.47 pairs ($17.47 back, no price, no fee; the pair cost 0.51 + 0.55 = 1.06,
+a locked loss of $1.05), leaving 2.53 YES. The positions feed at 13:44:37
+UTC: Topuria 20 YES at 0.55 (bids pay $7.76, −$3.24), Topuria 17.47 NO at
+0.51 ($7.82, −$1.09), the café's 20 YES ($2.68, −$2.52); everything sold
+into the books, $18.26 for $25.11 paid. Topuria's book at that second: a
+20-share bid at 0.40, then nothing until 0.17; a 20-share ask at 0.54, then
+0.67. The morning's `exit $` of 1.05 had been measured against bids near
+0.41 that were, it now appears, one other quoter's 20 shares, which moved.
+
+**What this says about the rig, not the market.** After selling YES at 0.49
+the rig placed a bid at 0.55, chasing a mid that one buyer had moved with a
+few orders; buying back above 1 minus the NO price already held locks a
+loss by construction, whatever happens next. Two rules follow, to be written
+into `lp.py` before any further live run: once one side is held, the other
+side's price may not complete the pair above $1 (bid at most 1 − NO price −
+tick, NO bid at most 1 − YES price − tick), and a re-centre must not follow a
+single reading of a book this thin, since in a book of a few 20-share orders
+the mid is whoever last placed one. Both not pre-registered. The
+restlessness column did not save Topuria either: 2.0 moves a day over the
+past week, then an 11c move in the first minute of quoting. Three live
+sessions, four fills, each within an hour of starting, each costing more
+than the modelled day of rewards for its market: that is the running count.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
