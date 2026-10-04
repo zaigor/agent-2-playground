@@ -2374,6 +2374,27 @@ the spread on the thinner side, 454 days to resolution. The user was given
 the live command with that id, ending 2026-10-06T14:30 UTC. The start line,
 placements, fills and the daily readings follow here.
 
+**18e, the start (4 Oct, 14:41:15 UTC).** The run started with the one
+market and nothing held, 47.8 hours to the end at 2026-10-06T14:30 UTC,
+reading the book every 60 seconds. Its start line: mid 0.285, YES bid 0.26,
+YES ask 0.31 (a NO bid at 0.69), 50 shares a side, $47.50 parked, exit
+$1.04, 6.99 days of prices, 0.71 moves a day, 259 score-weighted shares
+inside the spread on the thinner side, 453.6 days to resolution, pot $177 a
+day with competitiveness 3.03. Both orders were placed at 14:41:16 (ids
+0x4127… for the YES bid, 0x4ed3… for the NO bid). The scoring reading in the
+same second said 0 of 2 orders scoring; every start so far has read that way
+in its first second (2 of 2 and 6 of 6 false at the 4 Oct starts) and the
+ten-minute readings afterwards read true, so the reading due at 14:51 is the
+first that counts, and a false there is a question for the rig, not for the
+market. The account-wide earnings reading for 4 Oct was $1.17, up from $0.93
+read at 13:39; no order of ours rested between 13:41 and 14:41, so the rise
+is read as the endpoint catching up on quotes already made, not as new
+accrual (an inference, to be settled by tomorrow's payout reading). Nothing
+of the test's own has been earned yet (the market's line reads $0.00).
+Abort rules in force, from the pre-registration above: two fills in the
+market, any fill with `loss_if_sold_now` over $2, a gate refusal at a
+restart lasting over an hour.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
