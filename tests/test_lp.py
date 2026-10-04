@@ -13,12 +13,13 @@ from pm_scanner.unwind import unwind_into
 NOW = datetime(2026, 9, 30, 12, tzinfo=timezone.utc)
 
 
-def _row(cid, q, rate=100.0, mid=0.30, spread=0.20, days=30.0, share=1.0, min_size=20.0, v=4.5, depth=1e6):
-    """A pocket row whose book is one level each side at the touch, `depth` shares deep."""
+def _row(cid, q, rate=100.0, mid=0.30, spread=0.20, days=30.0, share=1.0, min_size=20.0, v=4.5, depth=1e6, inside=0.0):
+    """A pocket row whose book is one level each side at the touch, `depth` shares deep, with
+    `inside` score-weighted shares of other people's orders already inside the max spread."""
     best_bid, best_ask = mid - spread / 2, mid + spread / 2
     u_yes = unwind_into([(best_bid, depth)], min_size) if best_bid > 0 else None
     u_no = unwind_into([(1 - best_ask, depth)], min_size) if best_ask < 1 else None
-    return PocketRow(cid, q, rate, v, min_size, mid, spread, 0.0, 0.0, share, share, rate * share, rate * share, min_size, 100.0, 10.0, days,
+    return PocketRow(cid, q, rate, v, min_size, mid, spread, inside, inside, share, share, rate * share, rate * share, min_size, 100.0, 10.0, days,
                      exit_yes=u_yes.net / min_size if u_yes is not None and u_yes.complete else None, exit_no=u_no.net / min_size if u_no is not None and u_no.complete else None)
 
 
@@ -463,3 +464,23 @@ def test_quoter_never_completes_a_pair_above_a_dollar_and_waits_before_following
     x4 = StrictPaperExchange({"y": (0.25, 0.35)})
     Quoter(x4, [_plan()], clock=lambda: 0.0, printer=lambda s: None, held={"0xa": (20.0, 0.0)}).step()
     assert [o.price for o in x4.orders.values()] == [0.67]
+
+
+def test_deep_books_can_be_asked_for_and_the_live_gate_holds_the_line():
+    """Section 18e: the opposite of the pocket. `--min-depth` keeps only markets where other people
+    already rest that many score-weighted shares inside the max spread on the thinner side; the plan
+    shows the figure; a live run asked for depth refuses a thin book even when named with --only."""
+    from pm_scanner.lp import depth_blockers
+
+    deep = _row("0xa", "Will Alphabet be the third-largest company by market cap?", rate=118, mid=0.63, spread=0.02, days=89, share=0.01, inside=709.4)
+    thin = _row("0xb", "Will Ilia Topuria fight Paddy Pimblett next?", rate=25, mid=0.465, spread=0.10, days=256, inside=0.0)
+    markets = {r.condition_id: _market(r.condition_id, f"y{r.condition_id}", f"n{r.condition_id}") for r in (deep, thin)}
+    reasons: dict = {}
+    plans = choose_markets([deep, thin], markets, budget=60.0, max_markets=3, min_days=7, min_reward=0.5, max_exit=10.0, min_depth=200, reasons=reasons)
+    assert [p.condition_id for p in plans] == ["0xa"] and plans[0].inside == 709.4
+    assert reasons["under 200 score-weighted shares inside the max spread on the thinner side"] == 1
+    assert [p.condition_id for p in choose_markets([deep, thin], markets, budget=60.0, max_markets=3, min_days=7, min_reward=0.5, max_exit=10.0)] == ["0xb", "0xa"]  # off by default: the pocket first, by modelled reward
+    named = choose_markets([deep, thin], markets, budget=60.0, max_markets=3, only={"0xb"}, min_depth=200)
+    assert named[0].inside == 0.0 and "0 score-weighted shares" in depth_blockers(named, 200)[0] and depth_blockers(named, 0) == []
+    text = render_plan(plans)
+    assert " inside " in text and "   709 " in text and "unquoted pocket" in text

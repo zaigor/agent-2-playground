@@ -11,7 +11,7 @@ from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
 from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
 from .ladder import render_ladder_report, scan_ladders, summarize_snapshots
 from .history import week_fetcher
-from .lp import LiveExchange, PaperExchange, Quoter, choose_markets, exit_blockers, history_blockers, merge_preview, parse_only, positions_report, render_plan, render_positions
+from .lp import LiveExchange, PaperExchange, Quoter, cheap_reason, choose_markets, depth_blockers, exit_blockers, history_blockers, merge_preview, parse_only, positions_report, render_plan, render_positions
 from .rewards import gamma_markets_by_condition, render_pocket, render_rewards, rewards_pocket, rewards_survey
 from .signal import FixtureResolver, GammaResolver, load_signal_csv, render_signal, score_signal
 from .flow import MakerConfig, family_flow, maker_backtest, render_family_flow, render_maker, sampled_market_ids
@@ -519,10 +519,11 @@ def _run_lp(args, source) -> int:
         rows = rewards_pocket(source.http, source.poly_books, now=now, min_rate=args.min_rate, log=log)
         only = parse_only(args.only)
         cand = [r for r in rows if only is None or r.condition_id in only]
-        markets = gamma_markets_by_condition(source.http, [r.condition_id for r in cand[:400]])
+        worth_a_lookup = cand if only is not None else [r for r in cand if cheap_reason(r, min_days=args.min_days, max_spread=args.max_spread, min_reward=args.min_reward, min_depth=args.min_depth) is None]
+        markets = gamma_markets_by_condition(source.http, [r.condition_id for r in worth_a_lookup[:400]])
         reasons: dict[str, int] = {}
         plans = choose_markets(cand, markets, budget=args.budget, max_markets=1 if args.smoke else args.markets, min_days=args.min_days, max_spread=args.max_spread, min_reward=args.min_reward, only=only, per_market=args.per_market, reasons=reasons, max_exit=args.max_exit,
-                               history=week_fetcher(source.http), min_age=args.min_age, max_moves=args.max_moves)
+                               history=week_fetcher(source.http), min_age=args.min_age, max_moves=args.max_moves, min_depth=args.min_depth)
         if not plans and reasons:
             log("no market fits; why each candidate was passed over: " + ", ".join(f"{k}: {v}" for k, v in reasons.items()) + " (a small budget wants --smoke or --markets 1, which lifts the per-market cap, or --per-market)")
     except Exception as exc:
@@ -548,6 +549,12 @@ def _run_lp(args, source) -> int:
         for b in blockers:
             print(b, file=sys.stderr)
         print(f"live run refused: the market is too young or its price too restless for --min-age {args.min_age:g} / --max-moves {args.max_moves:g}; pick another market, or lower --min-age / raise --max-moves in the command if you accept that risk (4 Oct: two one-day-old markets, 45c and 20c of travel on day one, one fill in ninety minutes costing $3.87)", file=sys.stderr)
+        return 2
+    blockers = depth_blockers(plans, args.min_depth)
+    if blockers:
+        for b in blockers:
+            print(b, file=sys.stderr)
+        print(f"live run refused: the book is thinner inside the max spread than --min-depth {args.min_depth:g} asks; pick another market, or lower --min-depth in the command (4 Oct: in books of a few 20-share orders the mid was whoever last placed one)", file=sys.stderr)
         return 2
     hours = 2.0 if args.smoke and args.hours == 72.0 else args.hours
     if args.until:
@@ -811,6 +818,7 @@ def build_parser() -> argparse.ArgumentParser:
     lp.add_argument("--json", type=Path, default=None, help="with --positions: also write the rows as JSON here")
     lp.add_argument("--max-exit", type=float, default=2.0, help="candidate markets: undoing one full fill into today's book must lose at most this many dollars, fee included; a live run refuses a plan above it")
     lp.add_argument("--min-age", type=float, default=6.5, help="candidate markets: at least this many days of price history on the CLOB (the week it returns reads as about 7; a new market is still finding its price); a live run refuses a younger one")
+    lp.add_argument("--min-depth", type=float, default=0.0, help="candidate markets: at least this many score-weighted shares of other people's orders already inside the max spread on the thinner side (0 = off; hundreds = the deep calm books of section 18e, where the mid is real and a fill is cheap to undo); a live run refuses a plan under it")
     lp.add_argument("--max-moves", type=float, default=2.0, help="candidate markets: at most this many 10-minute moves of 3c or more per day over the past week's prices (each one could have filled a quote 3c from the mid); a live run refuses a plan above it")
     lp.add_argument("--max-budget", type=float, default=float(os.environ.get("MAX_BUDGET_USD", "50")), help="hard cap; --budget above this is refused (env MAX_BUDGET_USD)")
     lp.add_argument("--fixtures", type=Path, default=None, help="unused: this command needs live data")

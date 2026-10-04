@@ -17,7 +17,8 @@ and section 20 before changing it or advising a live run.
   dollar" to exit was really $2.45 by the bids, and $4.63 a little later.)
 - **A live `lp` run** names its market with `--only` from a dry run made minutes
   before, and its plan's `exit $` column is under `--max-exit`, its `age` column
-  at least `--min-age` and its `mv/d` column under `--max-moves`. Moving a cap
+  at least `--min-age`, its `mv/d` column under `--max-moves` and, when the run
+  asks for deep books with `--min-depth`, its `inside` column above it. Moving a cap
   is the user's call, written in the command, never a default changed in code.
   (4 Oct: two markets created the day before, with big pots as bait, moved 45c
   and 20c on their first day; one filled within ninety minutes, $3.87 to undo.)

@@ -1249,6 +1249,51 @@ Pre-registered reading of the result, per day and per market:
 Whatever happens, the log and the earnings readings go into section 20,
 with the same honesty as sections 12-16.
 
+### 18e. The deep-book test (4 Oct, written before its start, after 18d aborted)
+
+18d ended by its own abort clause two minutes into its restart (section 20).
+What the three days showed is that the pocket of 17b, rewarded markets
+nobody quotes inside the max spread, is unquoted because its books are a few
+20-share orders: the mid is whoever last placed one, the `exit $` column is
+one other quoter's shares that leave when the price moves, and six fills
+came in under four hours of quoting against about a dollar of rewards. This
+test asks the opposite question. In a deep calm book (Alphabet on 4 Oct:
+some 1,500 shares resting inside the 4.5c max spread on each side, 2c wide,
+a price that moved 3c seven times in a week) a 20-share quote at half the
+max spread takes one or two percent of the pot, $0.80 to $2.31 a day on
+$18.80 parked, and a fill is undone for cents because the exit is real.
+Does the rig earn that, and what do its fills cost there?
+
+```
+python -m pm_scanner lp --check --markets 1 --budget 60 --min-reward 0.5 --min-depth 200
+MAX_BUDGET_USD=60 PYTHONUNBUFFERED=1 nohup systemd-inhibit --what=sleep --why=lp bash -c 'until python -m pm_scanner lp --live --markets 1 --budget 60 --min-reward 0.5 --min-depth 200 --only <id> --until <ISO UTC, 48h on> --log lp.jsonl; do sleep 300; done' > lp.out 2>&1 &
+```
+
+One market, the minimum size, 48 hours, the inventory rules of section 20
+live for the first time (a held side caps the other under $1 a pair; a
+re-centre waits for three readings), `--min-depth 200` as a live gate so a
+thinned book is refused at a restart. `--min-reward 0.5` because the chooser's
+$20-a-day floor was written for the pocket and excludes every deep book by
+construction.
+
+Pre-registered reading, per UTC day:
+
+* **Pass:** the payout is at least half of (the market's pot that day × the
+  share the rig logged), and the `loss_if_sold_now` of every fill that day,
+  summed, is under that payout. Then three such markets for a week at the
+  same size, and nothing beyond that without a new memo section.
+* **Fail:** the fills' `loss_if_sold_now` exceeds the payout over the 48
+  hours, or the payout is under a quarter of the modelled figure, or the
+  rig's share collapses as others re-quote around it (the pots and
+  competitiveness are logged every ten minutes).
+* **Abort early:** two fills in one market, any single fill with
+  `loss_if_sold_now` above $2, or any refusal by the live gate at a restart
+  that lasts more than an hour.
+
+Expected if it passes: $1 to $2 a day per market, $3 to $6 a day on three,
+which is a rate of return on $57 parked and not an income; whether it scales
+to twenty markets is the week's question, not this one's.
+
 ## 19. Niche public data (1 Oct): what exists, which markets price against it, how much room the price leaves
 
 You asked for open data that is too niche to be obvious, where the link

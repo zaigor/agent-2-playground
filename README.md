@@ -310,6 +310,7 @@ python -m pm_scanner lp                         # dry run: the plan, priced from
 python -m pm_scanner lp --check                 # with POLY_* set: wallet type, balance, approvals, the plan
 python -m pm_scanner lp --smoke --live --only <condition id>          # one market, two hours, then cancel: does the CLOB score it?
 python -m pm_scanner lp --live --budget 50 --markets 3 --only <ids> --hours 72 --log lp.jsonl
+python -m pm_scanner lp --check --markets 1 --budget 60 --min-reward 0.5 --min-depth 200   # section 18e: one deep calm book
 # three unattended days on a laptop: a restart loop that still ends on time
 MAX_BUDGET_USD=29 systemd-inhibit --what=sleep --why=lp bash -c 'until python -m pm_scanner lp --live --markets 1 --budget 25 --only <id> --until 2026-10-07T10:00 --log lp.jsonl; do sleep 300; done'
 python -m pm_scanner lp --earnings 2026-10-01   # the day's reward accrual per market
@@ -329,7 +330,11 @@ price) and moves of 3 cents or more per day over it, each one a move that could
 have filled a quote 3 cents from the mid. Candidates under `--min-age` (6.5
 days) or over `--max-moves` (2 a day) are dropped and refused live the same way
 (4 Oct: two one-day-old markets had moved 45c and 20c since listing; one filled
-within ninety minutes). Every `fill` line in the log carries `sell_now` and
+within ninety minutes). `inside` is the score-weighted size other people
+already rest inside the max spread on the thinner side; `--min-depth N` (off by
+default) asks for the opposite of the unquoted pocket, the deep calm books of
+memo section 18e where the mid is real and a fill is cheap to undo, and a live
+run asked for depth refuses a thinner book. Every `fill` line in the log carries `sell_now` and
 `loss_if_sold_now` read from the book at that second. At start the rig cancels any order a dead run left
 resting and reads the account's positions, so a side filled before a crash is
 not quoted again. Once one side is held, the other is capped so the pair never

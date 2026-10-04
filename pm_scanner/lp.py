@@ -77,6 +77,7 @@ class QuotePlan:
     age_days: float | None = None  # span of the CLOB's week of price history (about 7 = a full week; less = a market still finding its price)
     moves_per_day: float | None = None  # 10-minute moves of 3c or more per day over that history: each one could have filled a quote 3c from the mid
     path_per_day: float | None = None  # total price travel per day over that history
+    inside: float | None = None  # score-weighted shares others already rest inside the max spread, thinner side (a deep book makes the mid real and the exit cheap)
 
     @property
     def ask(self) -> float:
@@ -102,6 +103,7 @@ def make_plan(row: PocketRow, market: PolyMarket, tick: float = 0.01, mid: float
         size=size, half_spread=h, mid=round(m, 4), bid=bid, no_bid=no_bid, collateral=round(size * (bid + no_bid), 2),
         rate_per_day=row.rate_per_day, reward_low=row.reward_low, reward_high=row.reward_high, days_to_end=row.days_to_end, url=row.url,
         exit_cost=exit_cost, exit_yes=exit_yes, exit_no=exit_no,
+        inside=round(min(getattr(row, "q_bid", 0.0) or 0.0, getattr(row, "q_ask", 0.0) or 0.0), 1),
     )
 
 
@@ -112,6 +114,16 @@ def with_history(plan: QuotePlan, week: PriceWeek | None) -> QuotePlan:
     plan.moves_per_day = round(week.moves_per_day, 2)
     plan.path_per_day = round(week.path_per_day, 3)
     return plan
+
+
+def depth_blockers(plans: list[QuotePlan], min_depth: float) -> list[str]:
+    """Why a live run asked for deep books (`--min-depth` above 0) must not place these quotes: on
+    the thinner side fewer score-weighted shares rest inside the max spread than asked. (4 Oct: in
+    books of a few 20-share orders the mid was whoever last placed one; six fills in four hours.)"""
+    if min_depth <= 0:
+        return []
+    return [f"{p.question[:60]}: only {p.inside:g} score-weighted shares rest inside the max spread on the thinner side, under --min-depth {min_depth:g}"
+            for p in plans if (p.inside or 0.0) < min_depth]
 
 
 def history_blockers(plans: list[QuotePlan], min_age: float, max_moves: float) -> list[str]:
@@ -142,8 +154,27 @@ def exit_blockers(plans: list[QuotePlan], max_exit: float) -> list[str]:
     return out
 
 
+def cheap_reason(r: PocketRow, *, min_days: float = 7.0, max_spread: float = 0.5, min_reward: float = 20.0, exclude_words: tuple[str, ...] = EXCLUDE_WORDS, min_depth: float = 0.0) -> str | None:
+    """Why a pocket row is passed over before any further request is made for it (None = it
+    stands). The CLI uses the same test to decide which candidates are worth a Gamma lookup, so
+    a market far down the reward order (every deep book, at `--min-reward 0.5`) is still found."""
+    if r.days_to_end is None or r.days_to_end < min_days:
+        return f"ends within {min_days:g} days"
+    if r.spread > max_spread:
+        return f"book spread above {max_spread:g}"
+    if not 0.15 <= r.mid <= 0.85:
+        return "mid outside 0.15..0.85 (near-certain markets: the bid risks 85c to earn 15c against whoever knows first)"
+    if r.reward_low < min_reward:
+        return f"modelled reward below ${min_reward:g}/day"
+    if any(w in r.question.lower() for w in exclude_words):
+        return "excluded family"
+    if min_depth > 0 and min(r.q_bid, r.q_ask) < min_depth:
+        return f"under {min_depth:g} score-weighted shares inside the max spread on the thinner side"
+    return None
+
+
 def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, budget: float, max_markets: int, min_days: float = 7.0, max_spread: float = 0.5, min_reward: float = 20.0, exclude_words: tuple[str, ...] = EXCLUDE_WORDS, only: set[str] | None = None, per_market: float = 0.0, reasons: dict[str, int] | None = None, max_exit: float = 2.0,
-                   history: Callable[[str], PriceWeek | None] | None = None, min_age: float = 6.5, max_moves: float = 2.0) -> list[QuotePlan]:
+                   history: Callable[[str], PriceWeek | None] | None = None, min_age: float = 6.5, max_moves: float = 2.0, min_depth: float = 0.0) -> list[QuotePlan]:
     """The best pots that fit the budget: long-dated, not too wide, not news-driven families,
     with a book that would take one fill back for at most `max_exit` dollars (the 3 Oct
     smoke run was filled in a book where getting out cost $3 at once and $4.60 by morning),
@@ -153,7 +184,10 @@ def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, bud
     is fetched only for candidates that pass every cheaper filter. `per_market` caps the
     collateral of one market (0 = 1.6 × budget / max_markets, so a 50-share market does not
     swallow a budget meant for three 20-share ones). `reasons`, when given, collects why each
-    candidate was passed over."""
+    candidate was passed over. `min_depth` above 0 asks for the opposite of section 17b's pocket:
+    at least that many score-weighted shares of other people's orders already inside the max
+    spread on the thinner side, the deep books where the mid is real and a fill is cheap to undo
+    (section 18e)."""
     plans: list[QuotePlan] = []
     spent = 0.0
     cap = per_market if per_market > 0 else 1.6 * budget / max(1, max_markets)
@@ -168,20 +202,9 @@ def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, bud
         if only is not None and r.condition_id not in only:
             continue
         if only is None:
-            if r.days_to_end is None or r.days_to_end < min_days:
-                skip(f"ends within {min_days:g} days")
-                continue
-            if r.spread > max_spread:
-                skip(f"book spread above {max_spread:g}")
-                continue
-            if not 0.15 <= r.mid <= 0.85:
-                skip("mid outside 0.15..0.85 (near-certain markets: the bid risks 85c to earn 15c against whoever knows first)")
-                continue
-            if r.reward_low < min_reward:
-                skip(f"modelled reward below ${min_reward:g}/day")
-                continue
-            if any(w in r.question.lower() for w in exclude_words):
-                skip("excluded family")
+            why = cheap_reason(r, min_days=min_days, max_spread=max_spread, min_reward=min_reward, exclude_words=exclude_words, min_depth=min_depth)
+            if why is not None:
+                skip(why)
                 continue
         m = markets.get(r.condition_id)
         if m is None or not m.accepting_orders:
@@ -768,15 +791,17 @@ def render_positions(ps: list[Position]) -> str:
 def render_plan(plans: list[QuotePlan]) -> str:
     if not plans:
         return "no market fits the budget and filters"
-    L = [f"  {'reward lo..hi':>14} {'rate':>5} {'mid':>5} {'bid':>5} {'ask':>5} {'size':>4} {'collat':>7} {'exit $':>6} {'age':>4} {'mv/d':>5} {'days':>5}  question"]
+    L = [f"  {'reward lo..hi':>14} {'rate':>5} {'mid':>5} {'bid':>5} {'ask':>5} {'size':>4} {'collat':>7} {'exit $':>6} {'age':>4} {'mv/d':>5} {'inside':>6} {'days':>5}  question"]
     for p in plans:
         ex = f"{p.exit_cost:6.2f}" if p.exit_cost is not None else "  none"
         age = f"{p.age_days:4.1f}" if p.age_days is not None else "   -"
         mv = f"{p.moves_per_day:5.1f}" if p.moves_per_day is not None else "    -"
-        L.append(f"  {p.reward_low:6.1f}..{p.reward_high:<6.1f} {p.rate_per_day:5.0f} {p.mid:5.2f} {p.bid:5.2f} {p.ask:5.2f} {p.size:4.0f} {p.collateral:7.2f} {ex} {age} {mv} {p.days_to_end if p.days_to_end is not None else float('nan'):5.0f}  {p.question[:60]}")
+        inside = f"{p.inside:6.0f}" if p.inside is not None else "     -"
+        L.append(f"  {p.reward_low:6.1f}..{p.reward_high:<6.1f} {p.rate_per_day:5.0f} {p.mid:5.2f} {p.bid:5.2f} {p.ask:5.2f} {p.size:4.0f} {p.collateral:7.2f} {ex} {age} {mv} {inside} {p.days_to_end if p.days_to_end is not None else float('nan'):5.0f}  {p.question[:60]}")
     L.append(f"  total collateral parked: ${sum(p.collateral for p in plans):.2f} in {len(plans)} markets; modelled reward ${sum(p.reward_low for p in plans):.0f}..{sum(p.reward_high for p in plans):.0f}/day")
     L.append("  exit $: what one full fill on the worse side would lose if sold straight back into what today's book keeps below that quote, fee included (a fill means every order at or above it was taken first; none = nothing below could absorb it)")
     L.append("  age: days of price history on the CLOB (7.0 = a full week; a younger market is still finding its price).  mv/d: 10-minute moves of 3c or more per day over that history, each one a move that could have filled a quote 3c from the mid (- = no history read)")
+    L.append("  inside: score-weighted shares other people already rest inside the max spread, thinner side (0 = the unquoted pocket of 17b, whose mid is whoever last placed an order; hundreds = a book where the mid is real and a fill is cheap to undo)")
     for p in plans:
         L.append(f"  --only {p.condition_id}   # {p.question[:50]}  {p.url}")
     return "\n".join(L)
