@@ -2209,6 +2209,22 @@ told that one is a market on Anthropic's prices picked with Anthropic's
 model, that the quote is two-sided and that nothing non-public went into it,
 and left to decide whether to include it.
 
+**The restart's check (4 Oct, afternoon Jerusalem time).** Balance $104.18
+($109.38 less the café shares), approvals as before. The plan at
+`--markets 3 --budget 60 --max-moves 3`, the same three ids as the dry run
+made here minutes earlier:
+
+| pot/day | mid | bid | ask | collateral | exit $ | age | mv/d | days | market |
+|---|---|---|---|---|---|---|---|---|---|
+| 50 | 0.20 | 0.17 | 0.23 | 18.80 | 1.55 | 7.0 | 2.4 | 89 | Claude Fable output price at or below $40 in 2026 |
+| 45 | 0.38 | 0.35 | 0.41 | 18.80 | 0.87 | 7.0 | 2.3 | 72 | Caedrel wins esports content creator of the year |
+| 25 | 0.47 | 0.44 | 0.49 | 19.00 | 1.05 | 7.0 | 2.0 | 256 | Topuria fights Pimblett next |
+
+$56.60 parked. The user was told to start the live run with those ids,
+`--max-moves 3` in the command so the gate reads the same cap, ending at
+`--until 2026-10-07T10:00`. The start line and the first placements go here
+from the log.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
