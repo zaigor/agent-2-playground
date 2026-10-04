@@ -2260,11 +2260,49 @@ into `lp.py` before any further live run: once one side is held, the other
 side's price may not complete the pair above $1 (bid at most 1 − NO price −
 tick, NO bid at most 1 − YES price − tick), and a re-centre must not follow a
 single reading of a book this thin, since in a book of a few 20-share orders
-the mid is whoever last placed one. Both not pre-registered. The
+the mid is whoever last placed one. Both not pre-registered; both written the
+same afternoon: the cap in `Quoter._post` (a capped placement logs
+`capped_by_pair`, a side that no price under $1 can complete logs `hold`),
+the account's own positions carrying their average price into the cap at a
+restart, and `--recentre-confirm` (3 checks) in `Quoter.step`; the test
+replays Topuria's two minutes and ends with a bid at 0.48, not 0.55. The
 restlessness column did not save Topuria either: 2.0 moves a day over the
-past week, then an 11c move in the first minute of quoting. Three live
-sessions, four fills, each within an hour of starting, each costing more
-than the modelled day of rewards for its market: that is the running count.
+past week, then an 11c move in the first minute of quoting.
+
+**The merge and the count (4 Oct, afternoon).** The user stopped the run,
+cancelled, and merged Topuria's 17.4693 pairs through the relayer: $17.47 of
+collateral back for shares that cost $18.52 (0.51 + 0.55 a pair), a realised
+loss of $1.05. Left in the account, by the bids at the next read: the café's
+20 YES ($2.68 for $5.20, −$2.52) and Topuria's 2.53 YES ($0.98 for $1.39,
+−$0.41). The earnings read in the restart's first minute showed $0.93
+accrued for 4 Oct across every market quoted that day (Watermelon's $0.13
+and the first start's three), to be paid at midnight UTC and read tomorrow
+with `lp --earnings 2026-10-04`. The running count over the three days of
+live quoting, readings only:
+
+| | fills | realised / locked | open, by the bids | rewards |
+|---|---|---|---|---|
+| 3 Oct, rain market, 3 min | 1 (15.3 YES at 0.87) | −$1.08 | | |
+| 4 Oct, Watermelon, 96 min | 2 (pair at 1.02) | −$0.40 | | +$0.13 |
+| 4 Oct, first start, ~70 min | 1 (20 YES at 0.26) | | −$2.52 | about +$0.80 |
+| 4 Oct, restart, 2 min | 2 (pair at 1.06, 2.53 YES over) | −$1.05 | −$0.41 | $0 |
+| total | 6 in under four hours of quoting | −$2.53 | −$2.93 | about +$0.93 |
+
+Six fills in under four hours of quoting, the first within three minutes of
+each start, against about a dollar of rewards. The pocket of section 17b,
+rewarded markets nobody quotes inside the max spread, is unquoted for a
+reason the snapshots could not show: its books are a few 20-share orders,
+so the mid is whoever last placed one, the `exit $` column is one other
+quoter's 20 shares that leave when the price moves, and the first order of
+any size goes through a minimum quote. The restlessness and age rules remove
+the worst of them and left, at the defaults, none of 1,819 markets to quote
+today. The deep calm books (Alphabet, 1,500 shares inside the spread by
+13:23) are where the fills would be cheap, and there a 20-share quote takes
+one or two percent of the pot, $0.80 to $2.31 a day on $18.80 parked, with
+the professionals as neighbours. Whether that variant deserves a
+pre-registered test of its own is a decision for after tomorrow's payout
+reading, the one clean measurement these three days still owe; it is not
+pre-registered here.
 
 ## Sources
 

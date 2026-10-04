@@ -559,15 +559,20 @@ def _run_lp(args, source) -> int:
             print(f"--until {args.until} is in the past; nothing to do", file=sys.stderr)
             return 0
     held: dict[str, tuple[float, float]] = {}
+    held_px: dict[str, tuple[float | None, float | None]] = {}
     wallet = (args.wallet or os.environ.get("POLY_WALLET", "")).strip() or str(getattr(exchange.client, "wallet", "") or "")
     if wallet:
         try:
             for pos in positions_report(source.http, source.poly_books, wallet):
                 yes, no = held.get(pos.condition_id, (0.0, 0.0))
-                held[pos.condition_id] = (yes + pos.shares, no) if pos.outcome.lower() == "yes" else (yes, no + pos.shares)
+                yes_px, no_px = held_px.get(pos.condition_id, (None, None))
+                if pos.outcome.lower() == "yes":
+                    held[pos.condition_id], held_px[pos.condition_id] = (yes + pos.shares, no), (pos.avg_price, no_px)
+                else:
+                    held[pos.condition_id], held_px[pos.condition_id] = (yes, no + pos.shares), (yes_px, pos.avg_price)
         except Exception as exc:  # noqa: BLE001
             print(f"warning: could not read held positions ({exc}); a side filled by an earlier run would be quoted again", file=sys.stderr)
-    q = Quoter(exchange, plans, log_path=args.log, pull_before_end_hours=args.pull_before_end_hours, held=held)
+    q = Quoter(exchange, plans, log_path=args.log, pull_before_end_hours=args.pull_before_end_hours, recentre_confirm=args.recentre_confirm, held=held, held_prices=held_px)
     print(f"\nquoting {len(plans)} market(s) for {hours:.1f}h, checking every {args.interval:g}s; Ctrl-C cancels everything and exits")
     try:
         q.run(hours=hours, interval=args.interval)
@@ -793,6 +798,7 @@ def build_parser() -> argparse.ArgumentParser:
     lp.add_argument("--hours", type=float, default=72.0, help="how long to keep quoting (the smoke test defaults to 2)")
     lp.add_argument("--until", default=None, metavar="ISO-UTC", help="quote until this time instead of --hours (e.g. 2026-10-07T10:00); a restarted run then still ends on time")
     lp.add_argument("--interval", type=float, default=60.0, help="seconds between book checks")
+    lp.add_argument("--recentre-confirm", type=int, default=3, help="re-centre the quotes only after the others' mid has read a tick or more away for this many consecutive checks (in a book of a few 20-share orders the mid is whoever last placed one)")
     lp.add_argument("--pull-before-end-hours", type=float, default=48.0, help="cancel a market's quotes this long before its end date")
     lp.add_argument("--log", type=Path, default=Path("lp.jsonl"), help="JSONL record of every order, fill, scoring read and earnings read")
     lp.add_argument("--check", action="store_true", help="live credentials: print wallet, balance, approvals and the plan, send nothing")

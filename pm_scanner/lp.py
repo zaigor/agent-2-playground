@@ -461,28 +461,39 @@ class MarketState:
     ask_filled: float = 0.0  # NO shares bought
     bid_done: bool = False  # a side is retired once it has been filled: never average in
     ask_done: bool = False
+    bid_fill_px: float | None = None  # what the YES shares held cost per share (a fill, or the account's average)
+    ask_fill_px: float | None = None  # the same for the NO shares
+    away: int = 0  # consecutive steps the others' mid has read a tick or more from where we quoted
     replaced: int = 0
     stopped: str = ""
 
 
 class Quoter:
-    def __init__(self, exchange: Exchange, plans: list[QuotePlan], *, log_path: Path | None = None, pull_before_end_hours: float = 48.0, recentre_ticks: float = 1.0, clock=time.time, printer=print, held: dict[str, tuple[float, float]] | None = None) -> None:
+    def __init__(self, exchange: Exchange, plans: list[QuotePlan], *, log_path: Path | None = None, pull_before_end_hours: float = 48.0, recentre_ticks: float = 1.0, recentre_confirm: int = 3, clock=time.time, printer=print,
+                 held: dict[str, tuple[float, float]] | None = None, held_prices: dict[str, tuple[float | None, float | None]] | None = None) -> None:
         """`held` maps a condition id to (YES shares, NO shares) the account already holds, so a
-        run restarted after a crash never adds to a side that was filled before it died."""
+        run restarted after a crash never adds to a side that was filled before it died;
+        `held_prices` gives what those shares cost per share, which caps the other side (see
+        `_post`). `recentre_confirm` is how many consecutive steps the others' mid must read a tick
+        or more away before the quotes follow it: in a book of a few 20-share orders the mid is
+        whoever last placed one (4 Oct: Caedrel's mid read 0.38, 0.36, 0.425 on three successive
+        minutes; Topuria's 0.465 then 0.575, and back to 0.47 within three)."""
         self.x = exchange
         self.states = [MarketState(p) for p in plans]
         for st in self.states:
             yes, no = (held or {}).get(st.plan.condition_id, (0.0, 0.0))
+            yes_px, no_px = (held_prices or {}).get(st.plan.condition_id, (None, None))
             if yes >= 1.0:
-                st.bid_done, st.bid_filled = True, yes
+                st.bid_done, st.bid_filled, st.bid_fill_px = True, yes, yes_px
             if no >= 1.0:
-                st.ask_done, st.ask_filled = True, no
+                st.ask_done, st.ask_filled, st.ask_fill_px = True, no, no_px
             if st.bid_done and st.ask_done:
                 st.stopped = "both sides held"
         self.held = held or {}
         self.log_path = log_path
         self.pull_before_end_hours = pull_before_end_hours
         self.recentre_ticks = recentre_ticks
+        self.recentre_confirm = max(1, int(recentre_confirm))
         self.clock = clock
         self.printer = printer
         self.started = clock()
@@ -505,15 +516,33 @@ class Quoter:
         twice (an id would be overwritten and the first order orphaned on the book)."""
         p = st.plan
         bid, no_bid = quote_prices(mid, p.half_spread, p.tick)
+        d = _dec(p.tick)
+        # Never complete a pair above $1. Holding NO bought at q, a YES bid above 1 - q - tick buys
+        # the pair for more than it pays at resolution; the 4 Oct restart sold YES at 0.49, read the
+        # mid 11c higher a minute later, bid 0.55 and was filled: a loss locked by construction.
+        bid_cap = round(floor_tick(1.0 - st.ask_fill_px - p.tick, p.tick), d) if st.ask_done and st.ask_fill_px is not None else None
+        no_cap = round(floor_tick(1.0 - st.bid_fill_px - p.tick, p.tick), d) if st.bid_done and st.bid_fill_px is not None else None
         try:
             if want_bid and not st.bid_done and st.bid_id is None:
-                st.bid_id = self.x.place(p.yes_token, bid, p.size)
-                st.bid_px = bid
-                self.log("place", market=p.question[:60], side="YES bid", price=bid, size=p.size, order_id=st.bid_id)
+                capped = bid_cap is not None and bid > bid_cap + 1e-9
+                if capped:
+                    bid = bid_cap
+                if bid < p.tick - 1e-9:
+                    self.log("hold", market=p.question[:60], side="YES bid", reason=f"no price under 1 - {st.ask_fill_px} completes the pair below $1")
+                else:
+                    st.bid_id = self.x.place(p.yes_token, bid, p.size)
+                    st.bid_px = bid
+                    self.log("place", market=p.question[:60], side="YES bid", price=bid, size=p.size, order_id=st.bid_id, **({"capped_by_pair": st.ask_fill_px} if capped else {}))
             if want_ask and not st.ask_done and st.ask_id is None:
-                st.ask_id = self.x.place(p.no_token, no_bid, p.size)
-                st.ask_px = no_bid
-                self.log("place", market=p.question[:60], side="NO bid (YES ask)", price=no_bid, yes_ask=round(1 - no_bid, 4), size=p.size, order_id=st.ask_id)
+                capped = no_cap is not None and no_bid > no_cap + 1e-9
+                if capped:
+                    no_bid = no_cap
+                if no_bid < p.tick - 1e-9:
+                    self.log("hold", market=p.question[:60], side="NO bid (YES ask)", reason=f"no price under 1 - {st.bid_fill_px} completes the pair below $1")
+                else:
+                    st.ask_id = self.x.place(p.no_token, no_bid, p.size)
+                    st.ask_px = no_bid
+                    self.log("place", market=p.question[:60], side="NO bid (YES ask)", price=no_bid, yes_ask=round(1 - no_bid, 4), size=p.size, order_id=st.ask_id, **({"capped_by_pair": st.bid_fill_px} if capped else {}))
             st.quoted_mid = mid
         except Exception as exc:  # noqa: BLE001
             self.log("error", market=p.question[:60], error=str(exc))
@@ -562,6 +591,7 @@ class Quoter:
                         setattr(st, f"{side}_done", True)
                         resting = st.bid_px if side == "bid" else st.ask_px  # the 4 Oct log printed the plan's 0.60 for a NO bid resting at 0.68
                         entry = resting if resting is not None else (p.bid if side == "bid" else p.no_bid)
+                        setattr(st, f"{side}_fill_px", entry)
                         self.log("fill", market=p.question[:60], side=side, shares=matched, price=entry, **self._exit_now(p, side, matched, entry))
                         if o is not None:  # partially filled and still resting: take the rest down, never average in
                             self.x.cancel([oid])
@@ -585,9 +615,14 @@ class Quoter:
             else:
                 mid = (bb + ba) / 2.0
             need_bid, need_ask = not st.bid_done and not have_bid, not st.ask_done and not have_ask
-            moved = st.quoted_mid is None or abs(mid - st.quoted_mid) >= self.recentre_ticks * p.tick - 1e-9
+            away = st.quoted_mid is not None and abs(mid - st.quoted_mid) >= self.recentre_ticks * p.tick - 1e-9
+            st.away = st.away + 1 if away else 0
+            if st.quoted_mid is not None and not (st.away >= self.recentre_confirm):
+                mid = st.quoted_mid  # a move not yet confirmed: anything re-posted goes back where we quoted
+            moved = st.quoted_mid is None or st.away >= self.recentre_confirm
             if moved and (have_bid or have_ask):
-                self._pull(st, f"re-centre: mid {st.quoted_mid} -> {round(mid, 4)}")
+                self._pull(st, f"re-centre: mid {st.quoted_mid} -> {round(mid, 4)}" + (f" (held {st.away} steps)" if st.away > 1 else ""))
+                st.away = 0
                 st.replaced += 1
                 have_bid = have_ask = False  # pulled: the ids are gone (the 3 Oct run cancelled a None here)
                 need_bid, need_ask = not st.bid_done, not st.ask_done

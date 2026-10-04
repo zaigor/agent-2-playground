@@ -71,7 +71,7 @@ def test_quoter_places_recentres_retires_filled_sides_and_cancels_at_end(tmp_pat
     books = {"y": (0.25, 0.35)}
     x = PaperExchange(books)
     clock = [0.0]
-    q = Quoter(x, [_plan()], log_path=tmp_path / "lp.jsonl", clock=lambda: clock[0], printer=lambda s: None)
+    q = Quoter(x, [_plan()], log_path=tmp_path / "lp.jsonl", clock=lambda: clock[0], printer=lambda s: None, recentre_confirm=1)
     s = q.step()
     assert s["active"] == 1 and len(x.orders) == 2
     prices = sorted((o.token, o.price) for o in x.orders.values())
@@ -194,7 +194,7 @@ class StrictPaperExchange(PaperExchange):
 def test_quoter_survives_a_partial_fill_followed_by_a_move(tmp_path):
     books = {"y": (0.25, 0.35)}
     x = StrictPaperExchange(books)
-    q = Quoter(x, [_plan()], log_path=tmp_path / "lp.jsonl", clock=lambda: 0.0, printer=lambda s: None)
+    q = Quoter(x, [_plan()], log_path=tmp_path / "lp.jsonl", clock=lambda: 0.0, printer=lambda s: None, recentre_confirm=1)
     q.step()
     bid = next(o for o in x.orders.values() if o.token == "y")
     bid.matched = 15.3  # partly filled, the rest still resting
@@ -418,3 +418,48 @@ def test_chooser_reads_the_price_history_and_the_live_gate_refuses_young_or_rest
     assert [p.condition_id for p in without] == ["0xa", "0xb", "0xc", "0xd"] and without[0].age_days is None
     p = _plan()
     assert with_history(p, None) is p and p.moves_per_day is None
+
+
+def test_quoter_never_completes_a_pair_above_a_dollar_and_waits_before_following_the_mid(tmp_path):
+    """4 Oct, 13:40 UTC: Topuria's ask filled (NO bought at 0.51), the others' mid read 11c higher a
+    minute later, the rig bid 0.55 and was filled: 0.51 + 0.55 = 1.06 a pair, a loss locked by
+    construction. Now a held side caps the other at 1 - price - tick, and the quotes follow the mid
+    only after it has read away for `recentre_confirm` consecutive steps."""
+    books = {"y": (0.44, 0.49)}  # mid 0.465: YES bid 0.44, NO bid 0.51
+    x = StrictPaperExchange(books)
+    q = Quoter(x, [_plan(mid=0.465)], log_path=tmp_path / "lp.jsonl", clock=lambda: 0.0, printer=lambda s: None, recentre_confirm=3)
+    q.step()
+    st = q.states[0]
+    assert sorted(o.price for o in x.orders.values()) == [0.44, 0.51]
+    ask = next(o for o in x.orders.values() if o.token == "n")
+    ask.matched = 17.47  # NO bought at 0.51
+    books["y"] = (0.55, 0.60)  # the mid jumps to 0.575 on the same buying
+    q.step()
+    assert st.ask_done and st.ask_fill_px == 0.51 and st.ask_id is None
+    bid = next(o for o in x.orders.values() if o.token == "y")
+    assert bid.price == 0.44 and st.replaced == 0 and st.away == 1  # one reading away: the bid stays where it was
+    q.step()
+    assert st.away == 2 and st.replaced == 0
+    q.step()  # the third reading confirms the move; the re-centred bid would be 0.55, the pair cap is 1 - 0.51 - 0.01
+    assert st.replaced == 1 and st.away == 0
+    bid = next(o for o in x.orders.values() if o.token == "y")
+    assert bid.price == 0.48 and st.bid_px == 0.48
+    places = [json.loads(l) for l in (tmp_path / "lp.jsonl").read_text().splitlines() if '"place"' in l]
+    assert places[-1]["price"] == 0.48 and places[-1]["capped_by_pair"] == 0.51
+    books["y"] = (0.56, 0.59)  # back to the quoted mid: the count resets
+    q.step()
+    assert st.away == 0 and st.replaced == 1
+    # the cap holds from the account's own positions too, and a side that cannot be completed under $1 is not posted
+    x2 = StrictPaperExchange({"y": (0.25, 0.35)})
+    q2 = Quoter(x2, [_plan()], log_path=tmp_path / "lp2.jsonl", clock=lambda: 0.0, printer=lambda s: None, held={"0xa": (20.0, 0.0)}, held_prices={"0xa": (0.55, None)})
+    q2.step()
+    no = next(o for o in x2.orders.values() if o.token == "n")
+    assert no.price == 0.44  # the plan's NO bid 0.67 would make the pair 1.22; 1 - 0.55 - 0.01
+    x3 = StrictPaperExchange({"y": (0.25, 0.35)})
+    q3 = Quoter(x3, [_plan()], log_path=tmp_path / "lp3.jsonl", clock=lambda: 0.0, printer=lambda s: None, held={"0xa": (0.0, 20.0)}, held_prices={"0xa": (None, 0.99)})
+    q3.step()
+    assert x3.orders == {} and '"hold"' in (tmp_path / "lp3.jsonl").read_text()
+    # without a known price the old behaviour stands
+    x4 = StrictPaperExchange({"y": (0.25, 0.35)})
+    Quoter(x4, [_plan()], clock=lambda: 0.0, printer=lambda s: None, held={"0xa": (20.0, 0.0)}).step()
+    assert [o.price for o in x4.orders.values()] == [0.67]

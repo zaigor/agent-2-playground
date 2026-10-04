@@ -21,6 +21,10 @@ and section 20 before changing it or advising a live run.
   is the user's call, written in the command, never a default changed in code.
   (4 Oct: two markets created the day before, with big pots as bait, moved 45c
   and 20c on their first day; one filled within ninety minutes, $3.87 to undo.)
+- **The rig's two inventory rules** stay as they are unless the memo says why:
+  a held side caps the other so a pair never costs more than $1, and a
+  re-centre waits for `--recentre-confirm` readings. (4 Oct: the rig sold YES
+  at 0.49, followed an 11c one-minute spike and bought YES at 0.55.)
 - **Public information only.** Nothing from inside a resolution source, no VPN,
   no terms-of-service circumvention.
 - **Record outcomes in MEMO.md** the day they happen: fills, disposals, final

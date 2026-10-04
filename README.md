@@ -332,7 +332,13 @@ days) or over `--max-moves` (2 a day) are dropped and refused live the same way
 within ninety minutes). Every `fill` line in the log carries `sell_now` and
 `loss_if_sold_now` read from the book at that second. At start the rig cancels any order a dead run left
 resting and reads the account's positions, so a side filled before a crash is
-not quoted again. What a position is worth is what the bids pay
+not quoted again. Once one side is held, the other is capped so the pair never
+costs more than $1 (a YES bid at most 1 − NO price − tick, and the reverse);
+the quotes follow the others' mid only after it has read a tick or more away
+for `--recentre-confirm` consecutive checks (3), because in a book of a few
+20-share orders the mid is whoever last placed one (4 Oct: sold YES at 0.49,
+mid read 11c higher a minute later, bought YES at 0.55, a loss locked by
+construction). What a position is worth is what the bids pay
 (`--positions`); the site's midpoint mark is not money.
 
 Credentials come from the environment only (`.env.example`): the signer key
