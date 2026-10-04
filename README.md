@@ -312,7 +312,16 @@ python -m pm_scanner lp --smoke --live --only <condition id>          # one mark
 python -m pm_scanner lp --live --budget 50 --markets 3 --hours 72 --log lp.jsonl
 python -m pm_scanner lp --earnings 2026-10-01   # the day's reward accrual per market
 python -m pm_scanner lp --cancel-all
+python -m pm_scanner lp --positions             # what the account holds, priced by the bids, not by the site's midpoint
 ```
+
+The plan's `exit $` column is what one full fill on the worse side would lose if
+sold straight back into the book that minute, fee included; candidates above
+`--max-exit` ($2 by default), or whose book cannot absorb the quote at all, are
+dropped, and a live run refuses such a plan even when named with `--only`.
+Every `fill` line in the log carries `sell_now` and `loss_if_sold_now` read from
+the book at that second. What a position is worth is what the bids pay
+(`--positions`); the site's midpoint mark is not money.
 
 Credentials come from the environment only (`.env.example`): the signer key
 of a fresh wallet, the Polymarket account wallet address and a Relayer API

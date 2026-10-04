@@ -1159,6 +1159,19 @@ python -m pm_scanner lp --smoke --live --only <condition id from the dry run>   
 quoted a different market than its dry run twenty minutes earlier, two pots
 being equal, see section 20.)
 
+(Since 4 Oct the plan carries an `exit $` column: what one full fill on the
+worse side would lose if sold straight back into the book that minute, fee
+included. Candidates above `--max-exit`, $2 by default, or whose book cannot
+absorb the quote at all, are dropped, and a live run refuses such a plan even
+with `--only`; raising `--max-exit` is the one way to accept the loss, and it
+is written in the command. Every `fill` line in the log carries `sell_now` and
+`loss_if_sold_now` read from the book at that second, and `lp --positions`
+prints the same for whatever the account holds. The rule behind it, for the
+human and the model alike: what a position is worth is what the bids pay. The
+site's midpoint mark is not money, and neither is an estimate; on the morning
+of 4 Oct the mark said −$0.15, an estimate said "under a dollar", and the bids
+said −$2.45, then −$4.63 an hour later.)
+
 What "the system plays as expected" means, in order:
 
 1. `--check` shows the pUSD balance you deposited and approvals in place.
@@ -1180,7 +1193,8 @@ What "the system plays as expected" means, in order:
 
 Capital parked during the smoke test: about $19 (20 shares each side at
 prices summing to about 0.95). Risk: a fill on either side, at most that
-$19 held to resolution. Cost if everything works: nothing.
+$19 held to resolution, or at most the plan's `exit $` if sold straight back.
+Cost if everything works: nothing.
 
 ### 18d. The $50 test (three days)
 
@@ -1963,7 +1977,21 @@ Morning of 4 Oct: `--cancel-all` confirmed nothing open; the site showed the
 15.3 shares at an average of 87c marked at 76.5c, value $11.71, down $1.61
 (12%), cash $15.68, portfolio $27.39. The seller who hit the bid was followed
 by an eleven-cent fall overnight, which is what memo 14 said weather takers
-look like.
+look like. The book under that mark was 26 cents wide: a 73c bid for 17.69
+shares, a 72c bid for 12, then nothing until 99c; the site's sell panel
+offered $10.87 for the lot, a loss of $2.45, not the $0.15 the mark implied.
+By 06:00 UTC the 73c bid had gone too and the best bid was 58c for 25 shares,
+which would have paid $8.69 (−$4.63).
+
+Disposal: a resting limit sell at 80c, the lone ask in that book, placed by
+hand on the site, was hit later that morning: 15.3 shares at 80c, $12.24, as
+maker, no fee. **Final P&L of the first smoke run: −$1.08** on $13.32 (bought
+at 87c, sold at 80c), cash back to about $27.92, nothing held, no order open.
+For the record, the advice that morning was to hit the 73c bid for $10.87;
+the resting sell did $1.37 better, and the fill came from a buyer stepping up
+to an ask with nothing near it, not from a move against it. One case, no
+conclusion, but it argues for a "sell as maker inside the spread, with a
+deadline" step before any taker exit if the rig ever has to unwind again.
 
 Changed after the fact, none of it pre-registered: the re-centre crash fixed
 with a regression test; the mid taken from other people's orders; "rain",

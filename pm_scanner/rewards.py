@@ -28,6 +28,7 @@ from typing import Any
 from .flow import MakerConfig, simulate_maker, yes_price_series
 from .http import HttpClient
 from .polymarket import CLOB_URL, GAMMA_URL, Book, PolyMarket, parse_market
+from .unwind import no_bids_from_yes_asks, unwind_into
 
 REWARDS_URL = f"{CLOB_URL}/rewards/markets/current"
 DEFAULT_REBATE = 0.25  # share of the taker fee paid back to the maker on a fill (sports 0.15, crypto 0.20)
@@ -297,6 +298,8 @@ class PocketRow:
     volume_24h: float
     days_to_end: float | None
     url: str = ""
+    exit_yes: float | None = None  # net dollars per share from selling the minimum quote's YES into the bids now; None = the bids cannot absorb it
+    exit_no: float | None = None  # the same for NO, sold into the NO bids (the YES asks at 1 - price)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -323,7 +326,10 @@ def pocket_scan(configs: list[dict[str, Any]], markets: dict[str, PolyMarket], b
         size = max(ms, 5.0)
         lo, hi = our_share(order_score(v, v / 2.0) * size, comp["q_bid"], comp["q_ask"], mid)
         days = (m.end_date - now).total_seconds() / 86400.0 if m.end_date else None
-        rows.append(PocketRow(c["condition_id"], m.question, rate, v, ms, round(mid, 4), round(b.best_ask.price - b.best_bid.price, 4), comp["q_bid"], comp["q_ask"], lo, hi, rate * lo, rate * hi, size, m.liquidity, m.volume_24h, round(days, 1) if days is not None else None, m.url))
+        u_yes = unwind_into([(lv.price, lv.size) for lv in b.bids], size)
+        u_no = unwind_into(no_bids_from_yes_asks((lv.price, lv.size) for lv in b.asks), size)
+        rows.append(PocketRow(c["condition_id"], m.question, rate, v, ms, round(mid, 4), round(b.best_ask.price - b.best_bid.price, 4), comp["q_bid"], comp["q_ask"], lo, hi, rate * lo, rate * hi, size, m.liquidity, m.volume_24h, round(days, 1) if days is not None else None, m.url,
+                              exit_yes=round(u_yes.net / size, 4) if u_yes.complete else None, exit_no=round(u_no.net / size, 4) if u_no.complete else None))
     rows.sort(key=lambda r: -r.reward_low)
     return rows
 

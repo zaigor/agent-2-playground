@@ -10,7 +10,7 @@ from pathlib import Path
 from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
 from .israel import DEFAULT_SURPLUS_PAIRS, ErrorModel, render_israel, run_israel
 from .ladder import render_ladder_report, scan_ladders, summarize_snapshots
-from .lp import LiveExchange, PaperExchange, Quoter, choose_markets, parse_only, render_plan
+from .lp import LiveExchange, PaperExchange, Quoter, choose_markets, parse_only, render_plan, exit_blockers, positions_report, render_positions
 from .rewards import gamma_markets_by_condition, render_pocket, render_rewards, rewards_pocket, rewards_survey
 from .signal import FixtureResolver, GammaResolver, load_signal_csv, render_signal, score_signal
 from .flow import MakerConfig, family_flow, maker_backtest, render_family_flow, render_maker, sampled_market_ids
@@ -451,10 +451,24 @@ def _run_crossings(args, source) -> int:
 
 def _run_lp(args, source) -> int:
     log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
-    housekeeping = args.cancel_all or args.earnings or args.approve  # no quote is sized, so the budget is not read
+    housekeeping = args.cancel_all or args.earnings or args.approve or args.positions  # no quote is sized, so the budget is not read
     if args.budget > args.max_budget and not housekeeping:
         print(f"refusing: --budget {args.budget:g} is above the hard cap {args.max_budget:g} (MAX_BUDGET_USD)", file=sys.stderr)
         return 2
+    if args.positions:
+        wallet = (args.wallet or os.environ.get("POLY_WALLET", "")).strip()
+        if not wallet:
+            print("positions: set POLY_WALLET or pass --wallet 0x... (the account address; no key is needed)", file=sys.stderr)
+            return 2
+        try:
+            ps = positions_report(source.http, source.poly_books, wallet)
+        except Exception as exc:  # noqa: BLE001
+            print(f"positions failed: {exc}", file=sys.stderr)
+            return 2
+        print(render_positions(ps))
+        if args.json:
+            args.json.write_text(json.dumps([x.to_dict() for x in ps], indent=1, default=str))
+        return 0
     exchange = None
     if args.live or args.check or args.earnings or args.cancel_all or args.approve:
         try:
@@ -481,7 +495,7 @@ def _run_lp(args, source) -> int:
         cand = [r for r in rows if only is None or r.condition_id in only]
         markets = gamma_markets_by_condition(source.http, [r.condition_id for r in cand[:400]])
         reasons: dict[str, int] = {}
-        plans = choose_markets(cand, markets, budget=args.budget, max_markets=1 if args.smoke else args.markets, min_days=args.min_days, max_spread=args.max_spread, min_reward=args.min_reward, only=only, per_market=args.per_market, reasons=reasons)
+        plans = choose_markets(cand, markets, budget=args.budget, max_markets=1 if args.smoke else args.markets, min_days=args.min_days, max_spread=args.max_spread, min_reward=args.min_reward, only=only, per_market=args.per_market, reasons=reasons, max_exit=args.max_exit)
         if not plans and reasons:
             log("no market fits; why each candidate was passed over: " + ", ".join(f"{k}: {v}" for k, v in reasons.items()) + " (a small budget wants --smoke or --markets 1, which lifts the per-market cap, or --per-market)")
     except Exception as exc:
@@ -495,6 +509,12 @@ def _run_lp(args, source) -> int:
         return 0
     if args.live and not args.check and only is None:
         print("live run: name the market(s) to quote with --only <condition id,...> from the plan above, so what is quoted is what you saw in the dry run (the 3 Oct smoke run quoted a different market than its dry run, the pots being equal)", file=sys.stderr)
+        return 2
+    blockers = exit_blockers(plans, args.max_exit)
+    if blockers:
+        for b in blockers:
+            print(b, file=sys.stderr)
+        print(f"live run refused: a fill in that book could not be undone for --max-exit ${args.max_exit:g} or less; pick another market, or raise --max-exit if you accept that loss (the 3 Oct smoke run's fill cost $3 to undo at once and $4.60 by morning)", file=sys.stderr)
         return 2
     hours = 2.0 if args.smoke and args.hours == 72.0 else args.hours
     q = Quoter(exchange, plans, log_path=args.log, pull_before_end_hours=args.pull_before_end_hours)
@@ -728,6 +748,10 @@ def build_parser() -> argparse.ArgumentParser:
     lp.add_argument("--approve", action="store_true", help="live: grant the trading approvals the SDK lists as missing (gasless on a deposit wallet) and exit; not needed when approvals_ok_for_quoting is true")
     lp.add_argument("--earnings", default=None, help="live: print the day's reward earnings (YYYY-MM-DD) and exit")
     lp.add_argument("--cancel-all", action="store_true", help="live: cancel every open order on the account and exit")
+    lp.add_argument("--positions", action="store_true", help="what the account holds and what the book pays to sell it now (public data; needs POLY_WALLET or --wallet, no key)")
+    lp.add_argument("--wallet", default=None, help="account address for --positions (default: POLY_WALLET)")
+    lp.add_argument("--json", type=Path, default=None, help="with --positions: also write the rows as JSON here")
+    lp.add_argument("--max-exit", type=float, default=2.0, help="candidate markets: undoing one full fill into today's book must lose at most this many dollars, fee included; a live run refuses a plan above it")
     lp.add_argument("--max-budget", type=float, default=float(os.environ.get("MAX_BUDGET_USD", "50")), help="hard cap; --budget above this is refused (env MAX_BUDGET_USD)")
     lp.add_argument("--fixtures", type=Path, default=None, help="unused: this command needs live data")
 

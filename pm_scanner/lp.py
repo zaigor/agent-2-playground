@@ -25,8 +25,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
+from .http import HttpClient
 from .polymarket import PolyMarket
 from .rewards import PocketRow
+from .unwind import Unwind, no_bids_from_yes_asks, unwind_into
 
 EXCLUDE_WORDS = ("temperature", "weather", "earthquake", "video", "posts from", "tweets", "views", "hurricane", "category", "precipitation", "rain", "snow", "storm", "wind", "flood", "grand prix")
 
@@ -80,6 +82,9 @@ class QuotePlan:
     reward_high: float
     days_to_end: float | None
     url: str = ""
+    exit_cost: float | None = None  # dollars lost undoing one full fill on the worse side into the book seen at planning, fee included; None = no exit
+    exit_yes: float | None = None  # net per share the bids pay for the YES side's shares
+    exit_no: float | None = None  # net per share the NO bids pay for the NO side's shares
 
     @property
     def ask(self) -> float:
@@ -107,15 +112,34 @@ def make_plan(row: PocketRow, market: PolyMarket, tick: float = 0.01, mid: float
     h = row.max_spread / 100.0 / 2.0
     bid, no_bid = quote_prices(m, h, tick)
     size = float(math.ceil(max(row.min_size, market.order_min_size, 5.0)))
+    exit_yes = getattr(row, "exit_yes", None)
+    exit_no = getattr(row, "exit_no", None)
+    costs = [(bid - exit_yes) * size if exit_yes is not None else None, (no_bid - exit_no) * size if exit_no is not None else None]
+    exit_cost = None if any(c is None for c in costs) else round(max(c for c in costs if c is not None), 2)
     return QuotePlan(
         condition_id=row.condition_id, question=row.question, yes_token=market.yes_token, no_token=market.no_token, tick=tick,
         size=size, half_spread=h, mid=round(m, 4), bid=bid, no_bid=no_bid, collateral=round(size * (bid + no_bid), 2),
         rate_per_day=row.rate_per_day, reward_low=row.reward_low, reward_high=row.reward_high, days_to_end=row.days_to_end, url=row.url,
+        exit_cost=exit_cost, exit_yes=exit_yes, exit_no=exit_no,
     )
 
 
-def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, budget: float, max_markets: int, min_days: float = 7.0, max_spread: float = 0.5, min_reward: float = 20.0, exclude_words: tuple[str, ...] = EXCLUDE_WORDS, only: set[str] | None = None, per_market: float = 0.0, reasons: dict[str, int] | None = None) -> list[QuotePlan]:
-    """The best pots that fit the budget: long-dated, not too wide, not news-driven families.
+def exit_blockers(plans: list[QuotePlan], max_exit: float) -> list[str]:
+    """Why a live run must not place these quotes: a side that, once filled, could not be sold
+    back into the book (no exit) or would lose more than `max_exit` dollars doing so."""
+    out: list[str] = []
+    for p in plans:
+        if p.exit_cost is None:
+            out.append(f"{p.question[:60]}: the book cannot absorb {p.size:g} shares on at least one side, so a fill has no exit")
+        elif p.exit_cost > max_exit:
+            out.append(f"{p.question[:60]}: undoing one fill into the book would lose ${p.exit_cost:.2f}, above --max-exit {max_exit:g}")
+    return out
+
+
+def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, budget: float, max_markets: int, min_days: float = 7.0, max_spread: float = 0.5, min_reward: float = 20.0, exclude_words: tuple[str, ...] = EXCLUDE_WORDS, only: set[str] | None = None, per_market: float = 0.0, reasons: dict[str, int] | None = None, max_exit: float = 2.0) -> list[QuotePlan]:
+    """The best pots that fit the budget: long-dated, not too wide, not news-driven families,
+    and with a book that would take one fill back for at most `max_exit` dollars (the 3 Oct
+    smoke run was filled in a book where getting out cost $3 at once and $4.60 by morning).
     `per_market` caps the collateral of one market (0 = 1.6 × budget / max_markets, so a
     50-share market does not swallow a budget meant for three 20-share ones). `reasons`, when
     given, collects why each candidate was passed over."""
@@ -156,6 +180,12 @@ def choose_markets(rows: list[PocketRow], markets: dict[str, PolyMarket], *, bud
         if p is None:
             skip("no token ids")
             continue
+        if only is None and p.exit_cost is None:
+            skip("the book cannot absorb one fill: no exit")
+            continue
+        if only is None and p.exit_cost > max_exit:
+            skip(f"undoing one fill into the book would lose more than ${max_exit:g}")
+            continue
         if only is None and p.collateral > cap:
             skip(f"minimum quote needs more than the per-market cap (${cap:.2f})")
             continue
@@ -194,6 +224,7 @@ class Exchange(Protocol):
         return {"submitted": True, "missing_before": before.get("approvals_missing", []), "missing_after": after.get("approvals_missing", []), "approvals_ok": after.get("approvals_ok")}
 
     def top_of_book(self, token: str, own_bids: list[tuple[float, float]] | None = None, own_asks: list[tuple[float, float]] | None = None) -> tuple[float | None, float | None]: ...
+    def book(self, token: str) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]: ...
     def place(self, token: str, price: float, size: float) -> str | None: ...
     def cancel(self, order_ids: list[str]) -> None: ...
     def cancel_all(self) -> None: ...
@@ -217,6 +248,10 @@ class PaperExchange:
         if self.book_fn is not None:
             return self.book_fn(token)
         return self.books.get(token, (None, None))  # the paper books are other people's orders already
+
+    def book(self, token: str) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
+        bb, ba = self.top_of_book(token)
+        return ([(bb, 1e6)] if bb is not None else []), ([(ba, 1e6)] if ba is not None else [])
 
     def place(self, token: str, price: float, size: float) -> str | None:
         self.n += 1
@@ -318,9 +353,13 @@ class LiveExchange:
             out["gasless_error"] = str(exc)
         return out
 
-    def top_of_book(self, token: str, own_bids=None, own_asks=None) -> tuple[float | None, float | None]:
+    def book(self, token: str) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
         ob = self.client.get_order_book(token_id=token)
-        return best_prices([(float(l.price), float(l.size)) for l in ob.bids], [(float(l.price), float(l.size)) for l in ob.asks], own_bids, own_asks)
+        return [(float(l.price), float(l.size)) for l in ob.bids], [(float(l.price), float(l.size)) for l in ob.asks]
+
+    def top_of_book(self, token: str, own_bids=None, own_asks=None) -> tuple[float | None, float | None]:
+        bids, asks = self.book(token)
+        return best_prices(bids, asks, own_bids, own_asks)
 
     def place(self, token: str, price: float, size: float) -> str | None:
         r = self.client.place_limit_order(token_id=token, side="BUY", price=f"{price:.4f}".rstrip("0").rstrip("."), size=f"{size:g}", post_only=True)
@@ -419,6 +458,16 @@ class Quoter:
         except Exception as exc:  # noqa: BLE001
             self.log("error", market=p.question[:60], error=str(exc))
 
+    def _exit_now(self, p: QuotePlan, side: str, shares: float, entry: float) -> dict[str, Any]:
+        """What the book would pay this second for the shares just bought: the number the memo
+        wants on every fill, never estimated afterwards."""
+        try:
+            bids, asks = self.x.book(p.yes_token)
+            u = unwind_into(bids if side == "bid" else no_bids_from_yes_asks(asks), shares)
+        except Exception as exc:  # noqa: BLE001
+            return {"exit_error": str(exc)}
+        return {"sell_now": round(u.net, 2), "loss_if_sold_now": round(entry * shares - u.net, 2), "book_absorbs": u.complete}
+
     def _pull(self, st: MarketState, reason: str) -> None:
         ids = [i for i in (st.bid_id, st.ask_id) if i]
         if ids:
@@ -451,7 +500,8 @@ class Quoter:
                     if matched > 0:
                         setattr(st, f"{side}_filled", getattr(st, f"{side}_filled") + matched)
                         setattr(st, f"{side}_done", True)
-                        self.log("fill", market=p.question[:60], side=side, shares=matched, price=(p.bid if side == "bid" else p.no_bid))
+                        entry = p.bid if side == "bid" else p.no_bid
+                        self.log("fill", market=p.question[:60], side=side, shares=matched, price=entry, **self._exit_now(p, side, matched, entry))
                         if o is not None:  # partially filled and still resting: take the rest down, never average in
                             self.x.cancel([oid])
                             open_by_id.pop(oid, None)
@@ -527,13 +577,93 @@ class Quoter:
                 self.log("end", states=[{k: v for k, v in asdict(st).items() if k != "plan"} | {"market": st.plan.question[:60]} for st in self.states])
 
 
+# --------------------------------------------------------------------------- #
+# What the account holds, priced by the book and not by the site's midpoint mark
+# --------------------------------------------------------------------------- #
+
+DATA_API = "https://data-api.polymarket.com"
+
+
+@dataclass
+class Position:
+    title: str
+    outcome: str
+    condition_id: str
+    token: str
+    shares: float
+    avg_price: float
+    site_price: float  # the midpoint mark the site shows
+    end_date: str
+    best_bid: float | None
+    best_bid_size: float
+    unwind: Unwind
+
+    @property
+    def cost(self) -> float:
+        return self.shares * self.avg_price
+
+    @property
+    def site_value(self) -> float:
+        return self.shares * self.site_price
+
+    @property
+    def sell_now(self) -> float:
+        return self.unwind.net
+
+    @property
+    def pnl_if_sold(self) -> float:
+        return self.unwind.net - self.cost
+
+    def to_dict(self) -> dict[str, Any]:
+        d = asdict(self)
+        d.update(cost=round(self.cost, 4), site_value=round(self.site_value, 4), sell_now=round(self.sell_now, 4), pnl_if_sold=round(self.pnl_if_sold, 4), book_absorbs=self.unwind.complete)
+        return d
+
+
+def fetch_positions(http: HttpClient, wallet: str) -> list[dict[str, Any]]:
+    data = http.get_json(f"{DATA_API}/positions", {"user": wallet, "sizeThreshold": 0})
+    return [d for d in (data or []) if float(d.get("size") or 0) > 0]
+
+
+def positions_report(http: HttpClient, book_fetcher, wallet: str) -> list[Position]:
+    """Every open position of `wallet` with what its own token's bids pay for it right now."""
+    raw = fetch_positions(http, wallet)
+    books = book_fetcher([str(d["asset"]) for d in raw]) if raw else {}
+    out: list[Position] = []
+    for d in raw:
+        token = str(d["asset"])
+        b = books.get(token)
+        bids = [(lv.price, lv.size) for lv in b.bids] if b is not None else []
+        shares = float(d["size"])
+        best = max(bids, key=lambda lv: lv[0]) if bids else None
+        out.append(Position(str(d.get("title", "")), str(d.get("outcome", "")), str(d.get("conditionId", "")), token, shares, float(d.get("avgPrice") or 0.0),
+                            float(d.get("curPrice") or 0.0), str(d.get("endDate", "")), best[0] if best else None, best[1] if best else 0.0, unwind_into(bids, shares)))
+    return out
+
+
+def render_positions(ps: list[Position]) -> str:
+    if not ps:
+        return "no open positions"
+    L = [f"  {'shares':>7} {'avg':>5} {'cost $':>7} {'site':>5} {'bid':>5} {'depth':>6} {'sell now $':>10} {'P&L $':>7}  market"]
+    for p in ps:
+        bid = f"{p.best_bid:5.2f}" if p.best_bid is not None else " none"
+        sell = f"{p.sell_now:10.2f}" + ("" if p.unwind.complete else "*")
+        L.append(f"  {p.shares:7.2f} {p.avg_price:5.2f} {p.cost:7.2f} {p.site_price:5.2f} {bid} {p.best_bid_size:6.1f} {sell} {p.pnl_if_sold:7.2f}  {p.title[:50]} ({p.outcome}, ends {p.end_date})")
+    L.append(f"  selling everything into the book now returns ${sum(p.sell_now for p in ps):.2f} for ${sum(p.cost for p in ps):.2f} paid: P&L ${sum(p.pnl_if_sold for p in ps):+.2f}"
+             + ("; * = the bids cannot absorb all of it, the figure is for the part they can" if any(not p.unwind.complete for p in ps) else ""))
+    L.append("  'site' is the midpoint mark polymarket.com shows; 'sell now' is what the bids pay, taker fee included. Only the second is money.")
+    return "\n".join(L)
+
+
 def render_plan(plans: list[QuotePlan]) -> str:
     if not plans:
         return "no market fits the budget and filters"
-    L = [f"  {'reward lo..hi':>14} {'rate':>5} {'mid':>5} {'bid':>5} {'ask':>5} {'size':>4} {'collat':>7} {'days':>5}  question"]
+    L = [f"  {'reward lo..hi':>14} {'rate':>5} {'mid':>5} {'bid':>5} {'ask':>5} {'size':>4} {'collat':>7} {'exit $':>6} {'days':>5}  question"]
     for p in plans:
-        L.append(f"  {p.reward_low:6.1f}..{p.reward_high:<6.1f} {p.rate_per_day:5.0f} {p.mid:5.2f} {p.bid:5.2f} {p.ask:5.2f} {p.size:4.0f} {p.collateral:7.2f} {p.days_to_end if p.days_to_end is not None else float('nan'):5.0f}  {p.question[:60]}")
+        ex = f"{p.exit_cost:6.2f}" if p.exit_cost is not None else "  none"
+        L.append(f"  {p.reward_low:6.1f}..{p.reward_high:<6.1f} {p.rate_per_day:5.0f} {p.mid:5.2f} {p.bid:5.2f} {p.ask:5.2f} {p.size:4.0f} {p.collateral:7.2f} {ex} {p.days_to_end if p.days_to_end is not None else float('nan'):5.0f}  {p.question[:60]}")
     L.append(f"  total collateral parked: ${sum(p.collateral for p in plans):.2f} in {len(plans)} markets; modelled reward ${sum(p.reward_low for p in plans):.0f}..{sum(p.reward_high for p in plans):.0f}/day")
+    L.append("  exit $: what one full fill on the worse side would lose if sold straight back into today's book, fee included (none = the book cannot absorb it)")
     return "\n".join(L)
 
 

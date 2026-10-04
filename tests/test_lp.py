@@ -5,15 +5,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from pm_scanner.cli import main
-from pm_scanner.lp import PaperExchange, QuotePlan, Quoter, choose_markets, make_plan, quote_prices, render_plan
-from pm_scanner.polymarket import parse_market
+from pm_scanner.lp import PaperExchange, QuotePlan, Quoter, choose_markets, exit_blockers, make_plan, quote_prices, render_plan
+from pm_scanner.polymarket import Book, Level, parse_market
 from pm_scanner.rewards import PocketRow
+from pm_scanner.unwind import unwind_into
 
 NOW = datetime(2026, 9, 30, 12, tzinfo=timezone.utc)
 
 
-def _row(cid, q, rate=100.0, mid=0.30, spread=0.20, days=30.0, share=1.0, min_size=20.0, v=4.5):
-    return PocketRow(cid, q, rate, v, min_size, mid, spread, 0.0, 0.0, share, share, rate * share, rate * share, min_size, 100.0, 10.0, days)
+def _row(cid, q, rate=100.0, mid=0.30, spread=0.20, days=30.0, share=1.0, min_size=20.0, v=4.5, depth=1e6):
+    """A pocket row whose book is one level each side at the touch, `depth` shares deep."""
+    best_bid, best_ask = mid - spread / 2, mid + spread / 2
+    u_yes = unwind_into([(best_bid, depth)], min_size) if best_bid > 0 else None
+    u_no = unwind_into([(1 - best_ask, depth)], min_size) if best_ask < 1 else None
+    return PocketRow(cid, q, rate, v, min_size, mid, spread, 0.0, 0.0, share, share, rate * share, rate * share, min_size, 100.0, 10.0, days,
+                     exit_yes=u_yes.net / min_size if u_yes is not None and u_yes.complete else None, exit_no=u_no.net / min_size if u_no is not None and u_no.complete else None)
 
 
 def _market(cid, yes="y", no="n", accepting=True):
@@ -39,16 +45,19 @@ def test_make_plan_and_choose_markets_respect_budget_filters_and_exclusions():
     markets = {r.condition_id: _market(r.condition_id, f"y{r.condition_id}", f"n{r.condition_id}") for r in rows}
     p = make_plan(rows[0], markets["0xa"])
     assert p is not None and p.size == 20 and p.bid == 0.26 and p.ask == 0.32 and abs(p.collateral - 20 * (0.26 + 0.68)) < 1e-9
-    plans = choose_markets(rows, markets, budget=50.0, max_markets=3, min_days=7)
+    plans = choose_markets(rows, markets, budget=50.0, max_markets=3, min_days=7, max_exit=10.0)
     assert [x.condition_id for x in plans] == ["0xa", "0xc"]  # 0xd would exceed $50 with the first two (18.8 + 19.1 + 19.1)
     big = _row("0xg", "Any perp charged in the Cornell case?", rate=600, mid=0.28, spread=0.06, days=120, min_size=50)
     markets["0xg"] = _market("0xg", "yg", "ng")
-    capped = choose_markets(rows + [big], markets, budget=50.0, max_markets=3, min_days=7)
+    capped = choose_markets(rows + [big], markets, budget=50.0, max_markets=3, min_days=7, max_exit=10.0)
     assert "0xg" not in [x.condition_id for x in capped]  # a $47 market would swallow a budget meant for three
-    assert [x.condition_id for x in choose_markets(rows + [big], markets, budget=50.0, max_markets=1, min_days=7)] == ["0xg"]
+    assert [x.condition_id for x in choose_markets(rows + [big], markets, budget=50.0, max_markets=1, min_days=7, max_exit=10.0)] == ["0xg"]
     assert sum(x.collateral for x in plans) <= 50.0
-    plans2 = choose_markets(rows, markets, budget=100.0, max_markets=5, min_days=7)
+    plans2 = choose_markets(rows, markets, budget=100.0, max_markets=5, min_days=7, max_exit=10.0)
     assert [x.condition_id for x in plans2] == ["0xa", "0xc", "0xd"]
+    reasons: dict = {}
+    assert [x.condition_id for x in choose_markets(rows, markets, budget=50.0, max_markets=3, min_days=7, reasons=reasons)] == ["0xa"]  # the default exit cap
+    assert reasons["undoing one fill into the book would lose more than $2"] == 2  # 0xc (25c wide) and 0xd (45c wide)
     only = choose_markets(rows, markets, budget=100.0, max_markets=5, only={"0xb"})
     assert [x.condition_id for x in only] == ["0xb"]  # --only skips the filters
     assert "total collateral" in render_plan(plans)
@@ -192,6 +201,8 @@ def test_quoter_survives_a_partial_fill_followed_by_a_move(tmp_path):
     q.step()
     st = q.states[0]
     assert st.bid_done and st.bid_filled == 15.3 and st.bid_id is None and [o.token for o in x.orders.values()] == ["n"]
+    fills = [json.loads(l) for l in (tmp_path / "lp.jsonl").read_text().splitlines() if '"fill"' in l]
+    assert fills[0]["sell_now"] == 3.68 and fills[0]["loss_if_sold_now"] == 0.45 and fills[0]["book_absorbs"] is True  # 15.3 bought at 0.27, the bids at 0.25, fee 5%
     books["y"] = (0.22, 0.35)  # the others' mid moves two ticks: the ask is re-centred, the bid is not re-posted
     q.step()
     assert st.replaced == 1 and st.bid_id is None and st.ask_id is not None
@@ -221,3 +232,66 @@ def test_quoter_holds_its_quotes_when_nobody_else_is_in_the_book(tmp_path):
     q.step()
     q.step()
     assert q.states[0].replaced == 0 and len(x.orders) == 2
+
+
+def test_unwind_walks_the_bids_and_charges_the_taker_fee():
+    from pm_scanner.unwind import exit_cost, no_bids_from_yes_asks
+
+    bids = [(0.72, 12.0), (0.73, 17.69)]  # the book on the morning of 4 Oct, out of order on purpose
+    u = unwind_into(bids, 15.31)
+    assert u.complete and abs(u.gross - 15.31 * 0.73) < 1e-9 and abs(u.fee - 0.05 * 15.31 * 0.73 * 0.27) < 1e-9 and round(u.net, 2) == 11.03
+    deeper = unwind_into(bids, 25.0)
+    assert deeper.complete and abs(deeper.gross - (17.69 * 0.73 + 7.31 * 0.72)) < 1e-9
+    short = unwind_into(bids, 40.0)
+    assert not short.complete and abs(short.filled - 29.69) < 1e-9
+    assert exit_cost(0.87, 15.31, bids) == round(0.87 * 15.31 - u.net, 4) and exit_cost(0.87, 40.0, bids) is None
+    empty = unwind_into([], 5.0)
+    assert empty.net == 0.0 and not empty.complete and empty.avg_price is None
+    assert no_bids_from_yes_asks([(0.80, 15.3), (0.99, 96.6)]) == [(0.2, 15.3), (0.01, 96.6)]
+
+
+def test_plan_carries_the_exit_cost_and_the_live_gate_reads_it():
+    """3 Oct: the smoke run's bid at 0.87 sat 14c above the next bid; one fill cost $3 to undo at once.
+    The plan now prints that number before anything is placed, and a live run refuses it."""
+    rows = [_row("0xa", "Cornell President out by October 31?", rate=200, mid=0.29, spread=0.07, days=31), _row("0xc", "Will Jay Clayton be Trump's AI czar?", rate=149, mid=0.61, spread=0.25, days=92)]
+    markets = {r.condition_id: _market(r.condition_id, f"y{r.condition_id}", f"n{r.condition_id}") for r in rows}
+    pa, pc = make_plan(rows[0], markets["0xa"]), make_plan(rows[1], markets["0xc"])
+    assert pa.exit_cost == 0.32 and pc.exit_cost == 2.15  # (our price - what the touch pays net of fee) x 20 shares, worse side
+    text = render_plan([pa, pc])
+    assert "exit $" in text and "  0.32" in text and "  2.15" in text
+    blockers = exit_blockers([pa, pc], 2.0)
+    assert len(blockers) == 1 and "$2.15" in blockers[0] and "Jay Clayton" in blockers[0]
+    assert exit_blockers([pa, pc], 2.5) == []
+    thin = _row("0xt", "Thin?", rate=100, mid=0.5, spread=0.04, days=30, depth=5.0)  # five shares at the touch cannot take a 20-share fill
+    markets["0xt"] = _market("0xt", "yt", "nt")
+    pt = make_plan(thin, markets["0xt"])
+    assert pt.exit_cost is None and "none" in render_plan([pt]) and "no exit" in exit_blockers([pt], 2.0)[0]
+    reasons: dict = {}
+    assert choose_markets([thin], markets, budget=50.0, max_markets=1, min_days=7, reasons=reasons) == [] and reasons["the book cannot absorb one fill: no exit"] == 1
+    assert [p.condition_id for p in choose_markets(rows, markets, budget=50.0, max_markets=3, only={"0xc"})] == ["0xc"]  # --only still shows it; the live gate is separate
+
+
+def test_positions_report_prices_by_the_bids_not_the_site_mark():
+    """4 Oct, 06:00 UTC: the site said the position was worth $10.56 (midpoint 0.69); the bids paid $8.69."""
+    from pm_scanner.lp import positions_report, render_positions
+
+    class Http:
+        def get_json(self, url, params=None):
+            assert url.endswith("/positions") and params == {"user": "0xw", "sizeThreshold": 0}
+            return [
+                {"asset": "t1", "conditionId": "0xc", "size": 15.3076, "avgPrice": 0.87, "curPrice": 0.69, "title": "Rain during the Bahrain Grand Prix?", "outcome": "Yes", "endDate": "2026-10-12"},
+                {"asset": "t2", "conditionId": "0xd", "size": 0, "avgPrice": 0.5, "curPrice": 0.5, "title": "closed", "outcome": "No", "endDate": ""},
+            ]
+
+    def books(tokens):
+        assert tokens == ["t1"]
+        return {t: Book(t, bids=[Level(0.57, 5.0), Level(0.58, 25.04)], asks=[Level(0.80, 15.3), Level(0.99, 96.6)]) for t in tokens}
+
+    ps = positions_report(Http(), books, "0xw")
+    assert len(ps) == 1 and ps[0].best_bid == 0.58 and ps[0].best_bid_size == 25.04 and ps[0].unwind.complete
+    assert round(ps[0].cost, 2) == 13.32 and round(ps[0].site_value, 2) == 10.56 and round(ps[0].sell_now, 2) == 8.69 and round(ps[0].pnl_if_sold, 2) == -4.63
+    text = render_positions(ps)
+    assert "8.69" in text and "-4.63" in text and "Only the second is money" in text and "Rain during" in text
+    assert render_positions([]) == "no open positions"
+    d = ps[0].to_dict()
+    assert d["book_absorbs"] is True and d["sell_now"] == round(ps[0].sell_now, 4)
