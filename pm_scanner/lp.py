@@ -419,9 +419,20 @@ class MarketState:
 
 
 class Quoter:
-    def __init__(self, exchange: Exchange, plans: list[QuotePlan], *, log_path: Path | None = None, pull_before_end_hours: float = 48.0, recentre_ticks: float = 1.0, clock=time.time, printer=print) -> None:
+    def __init__(self, exchange: Exchange, plans: list[QuotePlan], *, log_path: Path | None = None, pull_before_end_hours: float = 48.0, recentre_ticks: float = 1.0, clock=time.time, printer=print, held: dict[str, tuple[float, float]] | None = None) -> None:
+        """`held` maps a condition id to (YES shares, NO shares) the account already holds, so a
+        run restarted after a crash never adds to a side that was filled before it died."""
         self.x = exchange
         self.states = [MarketState(p) for p in plans]
+        for st in self.states:
+            yes, no = (held or {}).get(st.plan.condition_id, (0.0, 0.0))
+            if yes >= 1.0:
+                st.bid_done, st.bid_filled = True, yes
+            if no >= 1.0:
+                st.ask_done, st.ask_filled = True, no
+            if st.bid_done and st.ask_done:
+                st.stopped = "both sides held"
+        self.held = held or {}
         self.log_path = log_path
         self.pull_before_end_hours = pull_before_end_hours
         self.recentre_ticks = recentre_ticks
@@ -563,7 +574,9 @@ class Quoter:
             self.log("error", error=f"market rewards: {exc}")
 
     def run(self, *, hours: float, interval: float = 60.0, report_every: int = 10, sleep=time.sleep) -> None:
-        self.log("start", markets=[st.plan.to_dict() for st in self.states], hours=hours, interval=interval)
+        self.x.cancel_all()  # a clean slate: whatever a run that died without its finally block left resting
+        self.log("start", markets=[st.plan.to_dict() for st in self.states], hours=hours, interval=interval,
+                 held={st.plan.question[:40]: {"yes": st.bid_filled, "no": st.ask_filled, "stopped": st.stopped} for st in self.states if st.bid_done or st.ask_done})
         end = self.clock() + hours * 3600.0
         i = 0
         try:

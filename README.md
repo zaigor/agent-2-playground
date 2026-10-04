@@ -309,7 +309,9 @@ pip install -e ".[trade]"                       # the official polymarket-client
 python -m pm_scanner lp                         # dry run: the plan, priced from public books, nothing sent
 python -m pm_scanner lp --check                 # with POLY_* set: wallet type, balance, approvals, the plan
 python -m pm_scanner lp --smoke --live --only <condition id>          # one market, two hours, then cancel: does the CLOB score it?
-python -m pm_scanner lp --live --budget 50 --markets 3 --hours 72 --log lp.jsonl
+python -m pm_scanner lp --live --budget 50 --markets 3 --only <ids> --hours 72 --log lp.jsonl
+# three unattended days on a laptop: a restart loop that still ends on time
+MAX_BUDGET_USD=29 systemd-inhibit --what=sleep --why=lp bash -c 'until python -m pm_scanner lp --live --markets 1 --budget 25 --only <id> --until 2026-10-07T10:00 --log lp.jsonl; do sleep 300; done'
 python -m pm_scanner lp --earnings 2026-10-01   # the day's reward accrual per market
 python -m pm_scanner lp --cancel-all
 python -m pm_scanner lp --positions             # what the account holds, priced by the bids, not by the site's midpoint
@@ -322,7 +324,9 @@ fill means every order at or above our price was taken first); candidates above
 `--max-exit` ($2 by default), or whose book cannot absorb the quote at all, are
 dropped, and a live run refuses such a plan even when named with `--only`.
 Every `fill` line in the log carries `sell_now` and `loss_if_sold_now` read from
-the book at that second. What a position is worth is what the bids pay
+the book at that second. At start the rig cancels any order a dead run left
+resting and reads the account's positions, so a side filled before a crash is
+not quoted again. What a position is worth is what the bids pay
 (`--positions`); the site's midpoint mark is not money.
 
 Credentials come from the environment only (`.env.example`): the signer key

@@ -4,7 +4,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .fees import kalshi_maker_fee, kalshi_taker_fee, polymarket_taker_fee
@@ -542,8 +542,25 @@ def _run_lp(args, source) -> int:
         print(f"live run refused: a fill in that book could not be undone for --max-exit ${args.max_exit:g} or less; pick another market, or raise --max-exit if you accept that loss (the 3 Oct smoke run's fill cost $3 to undo at once and $4.60 by morning)", file=sys.stderr)
         return 2
     hours = 2.0 if args.smoke and args.hours == 72.0 else args.hours
-    q = Quoter(exchange, plans, log_path=args.log, pull_before_end_hours=args.pull_before_end_hours)
-    print(f"\nquoting {len(plans)} market(s) for {hours:g}h, checking every {args.interval:g}s; Ctrl-C cancels everything and exits")
+    if args.until:
+        until = datetime.fromisoformat(args.until.replace("Z", "+00:00"))
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=timezone.utc)
+        hours = max(0.0, (until - utcnow()).total_seconds() / 3600.0)
+        if hours <= 0:
+            print(f"--until {args.until} is in the past; nothing to do", file=sys.stderr)
+            return 0
+    held: dict[str, tuple[float, float]] = {}
+    wallet = (args.wallet or os.environ.get("POLY_WALLET", "")).strip() or str(getattr(exchange.client, "wallet", "") or "")
+    if wallet:
+        try:
+            for pos in positions_report(source.http, source.poly_books, wallet):
+                yes, no = held.get(pos.condition_id, (0.0, 0.0))
+                held[pos.condition_id] = (yes + pos.shares, no) if pos.outcome.lower() == "yes" else (yes, no + pos.shares)
+        except Exception as exc:  # noqa: BLE001
+            print(f"warning: could not read held positions ({exc}); a side filled by an earlier run would be quoted again", file=sys.stderr)
+    q = Quoter(exchange, plans, log_path=args.log, pull_before_end_hours=args.pull_before_end_hours, held=held)
+    print(f"\nquoting {len(plans)} market(s) for {hours:.1f}h, checking every {args.interval:g}s; Ctrl-C cancels everything and exits")
     try:
         q.run(hours=hours, interval=args.interval)
     except KeyboardInterrupt:
@@ -766,6 +783,7 @@ def build_parser() -> argparse.ArgumentParser:
     lp.add_argument("--max-spread", type=float, default=0.5, help="candidate markets: book spread at most this")
     lp.add_argument("--per-market", type=float, default=0.0, help="collateral cap per market (0 = 1.6 x budget / markets)")
     lp.add_argument("--hours", type=float, default=72.0, help="how long to keep quoting (the smoke test defaults to 2)")
+    lp.add_argument("--until", default=None, metavar="ISO-UTC", help="quote until this time instead of --hours (e.g. 2026-10-07T10:00); a restarted run then still ends on time")
     lp.add_argument("--interval", type=float, default=60.0, help="seconds between book checks")
     lp.add_argument("--pull-before-end-hours", type=float, default=48.0, help="cancel a market's quotes this long before its end date")
     lp.add_argument("--log", type=Path, default=Path("lp.jsonl"), help="JSONL record of every order, fill, scoring read and earnings read")

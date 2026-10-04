@@ -342,3 +342,24 @@ def test_merge_preview_counts_the_pairs_from_the_positions_feed():
     assert merge_preview(Http(), "0xw", "0xD")["pairs"] == 0.0
     x = PaperExchange({"y": (0.3, 0.4)})
     assert x.merge("0xC")["submitted"] is False and x.log[-1] == ("merge", "0xC")
+
+
+def test_quoter_respects_held_inventory_and_starts_from_a_clean_slate(tmp_path):
+    """A run restarted after a crash: whatever the dead run left resting is cancelled first, and a
+    side the account already holds is never quoted again (the 4 Oct runs held YES after a fill)."""
+    x = PaperExchange({"y": (0.25, 0.35)})
+    stale = x.place("y", 0.20, 20.0)
+    q = Quoter(x, [_plan()], log_path=tmp_path / "lp.jsonl", clock=lambda: 0.0, printer=lambda s: None, held={"0xa": (20.0, 0.0)})
+    st = q.states[0]
+    assert st.bid_done and st.bid_filled == 20.0 and not st.ask_done
+    q.run(hours=0.0, sleep=lambda s: None)  # start: cancel_all, then straight to the end
+    assert x.log[1] == ("cancel_all", None)  # right after the stale order's own place record
+    assert stale not in x.orders
+    start = json.loads((tmp_path / "lp.jsonl").read_text().splitlines()[0])
+    assert start["kind"] == "start" and start["held"]["Q"]["yes"] == 20.0
+    x2 = PaperExchange({"y": (0.25, 0.35)})
+    q2 = Quoter(x2, [_plan()], clock=lambda: 0.0, printer=lambda s: None, held={"0xa": (20.0, 0.0)})
+    q2.step()
+    assert [o.token for o in x2.orders.values()] == ["n"]  # only the NO side is posted
+    q3 = Quoter(x2, [_plan()], clock=lambda: 0.0, printer=lambda s: None, held={"0xa": (20.0, 20.0)})
+    assert q3.states[0].stopped == "both sides held"

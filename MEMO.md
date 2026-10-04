@@ -1208,6 +1208,19 @@ python -m pm_scanner lp --live --budget 50 --markets 3 --hours 72 --log lp.jsonl
 python -m pm_scanner lp --earnings 2026-10-0X      # each morning
 ```
 
+(4 Oct, after the two smoke runs, not pre-registered. The account holds $29,
+so the test starts with one market, `--markets 1 --budget 25`, about $19
+parked; three markets need about $57 and a deposit, the user's call. A live
+run names its markets with `--only` from a `--check` made minutes before.
+For three unattended days on a laptop the run goes in `tmux` under
+`systemd-inhibit`, in a restart loop, and ends at `--until <ISO UTC>` rather
+than after `--hours`, so a restarted run still stops on time. At start the
+rig cancels whatever a dead run left resting and reads the account's
+positions from the public feed, so a side filled before a crash is never
+quoted again. The morning routine is `lp --earnings <yesterday>`,
+`lp --positions`, and the log's `fill` lines; the pre-registered reading
+below is unchanged.)
+
 Pre-registered reading of the result, per day and per market:
 
 * **Pass:** the payout arriving at midnight UTC is at least half of
