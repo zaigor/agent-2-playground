@@ -2621,13 +2621,15 @@ of the low figure and under a quarter of the high one. The share: the
 competitiveness number went 3.03, 7.65, 7.26, 16.33 in nine hours, which is
 the "share collapses as others re-quote around it" clause, written down as
 a Fail condition. The 48-hour clause (the fills' loss over the payout) is
-read at 14:30 UTC today; with one order resting outside the spread nothing
+read at 14:30 UTC on 6 Oct, the run's `--until` (this entry first said
+"today", 5 Oct, and the user was told the same in chat; corrected in the next
+entry); with one order resting outside the spread nothing
 more is earned unless the mid climbs back above 0.235, and the one thing
 that can still happen is the pair completing at 0.28, which returns the $50
 with fifty cents over. So the run stays to its end as pre-registered: no
 bid is resting, nothing can fill badly, and the capped ask is the designed
-exit. The disposal of the 50 YES after 14:30, by the bids' reading at that
-hour or held, is the user's call and goes here.
+exit. The disposal of the 50 YES after the run ends, by the bids' reading
+at that hour or held, is the user's call and goes here.
 
 Two observations, not rules. First, the loss grew after the fill: $0.49 at
 the fill second, $3.41 five hours later, the price going on in the fill's
@@ -2642,6 +2644,26 @@ informed print, not the price before it. It is not in the rig and would
 need its own section and pre-registration. Second, the crowding: a pot whose
 competitiveness quintuples within a day is a pot the big quoters have found;
 the chooser read it at 3.03 and the 48 hours were spent under 7 to 16.
+
+**18e, day two at 15:02 UTC (5 Oct; the user's 18:10 Jerusalem paste, read
+at 15:11 UTC). Correction first:** the run ends at 14:30 UTC on Monday 6 Oct,
+its `--until`, not today; the previous entry and the chat reply said today,
+and the user ran the end-of-run commands at 18:10 Jerusalem on a run still
+going. The readings are good to have anyway. The 15:02:24 UTC log lines: 1
+order resting, 1 scoring (the capped NO bid at 0.72, a YES ask at 0.28, back
+inside the max spread as the mid recovered); earnings for 5 Oct $0.0306 by
+the rig's read, $0.044 by the user's `--earnings` a few minutes later, which
+is what a one-sided order outside the spread for most of a day earns; the pot
+$140 a day, competitiveness 1.43, against 16.33 at midnight and 3.03 at the
+start, so that figure swings by an order of magnitude within hours and the
+"share collapses" clause should be read on the payouts, not on it.
+`--positions` at about 15:10 UTC: Anthropic 50 YES at 0.27, site mark 0.26,
+best bid 0.25 with 692 shares, sell now $12.03, P&L −$1.47 (−$3.41 at
+midnight; the price came back 4c); the café 20 YES, bid 0.13, sell now
+$2.49, −$2.71; everything $14.52 for $18.70 paid, −$4.18. The pair exit is
+2c away: a print at 0.28 fills the NO bid and the pair merges for $1.00
+against $0.99 paid. Nothing to do until the run ends; the 48-hour reading
+and the disposal go here on 6 Oct.
 
 ## Sources
 
