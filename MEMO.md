@@ -2857,8 +2857,8 @@ this entry is the pot against the score the quote *really rested*, not the
 0.25 × size of the model. The rig's prices are rounded outward to the tick, so
 "half the max spread" (2.25c) rests at 2.5 or 3c, a weight of 0.20 or 0.11,
 not 0.25; with the half-tick drift on top, the 22 quotes rested 69 percent of
-the modelled score. The rewards of section 21's table are overstated by about
-a third for that reason, and so was 18e's modelled figure (its first payout,
+the modelled score. The rewards of section 21's table are overstated by a
+quarter to a third for that reason, and so was 18e's modelled figure (its first payout,
 read as half the low model in section 20, is three quarters of the corrected
 one). The model in `rewards.pocket_scan` should use the rounded distances; it
 is not changed while 18e runs, because the chooser's `--min-reward` gate and
@@ -2896,8 +2896,8 @@ fills at the rig's distance, marked on the five-minute mids:
 
 Three fills in four come back within a day, and holding beats undoing by
 $0.20 to $0.50 a fill, about $0.20 a market-day; the fourth fill does not
-come back and costs $3.80 by then, and the one in twenty that is an informed
-sweep costs $11 to $13, a quarter of the parked money. Holding out for three
+come back and costs $3.80 by then; one fill in ten costs over $5 and one in
+forty-five, the informed sweep, $11 to $13, a quarter of the parked money. Holding out for three
 ticks instead of one (the pair at $0.97) does better on the first four days
 and worse on the last three. The day's 31 fills read the same way at one to
 six hours and the other way at twelve. Both tests of "undo at once" in
@@ -2905,7 +2905,7 @@ section 21 stand: the ten-minute mark is the worst place to undo.
 
 **The hours.** The week's fills by UTC hour, the rig's distance: 69 of 137
 between 18:00 and 24:00, 25 of them in the 20:00 hour alone with $51 of the
-week's $195 of loss; 00:00 to 12:00 UTC had 48 fills. A quote that rests only
+week's $192 of loss; 00:00 to 12:00 UTC had 48 fills. A quote that rests only
 in a window earns the pot for those minutes (the programme samples every
 minute) and meets those hours' fills. The windows below were chosen on the
 whole week's histogram, so the first four days are not a clean fit either;
@@ -2930,15 +2930,15 @@ of the reward, and holding still adds $0.20 a market-day, so the levers are
 real in direction. Stacked, they move the low figure from −$0.57 a market-day
 to between −$0.14 and +$0.02 (the best cell: a tick in, 00:00–18:00 UTC,
 hold a day), and the high figure from +$0.53 to +$1.60. Every cell that
-reads positive on the low figure in the first four days is zero or negative
-in the last three; the worst single fill in the last three days is −$5 to
+reads positive on the low figure in the first four days is at zero (+$0.02
+at best) or negative in the last three; the worst single fill in the last three days is −$5 to
 −$15 in every cell.
 
 **Which figure.** Everything above is positive on the high figure and nothing
 is positive on the low one, so the question is where the real share sits.
 The one payout read so far says: at or under the low figure. 18e's first day
 paid $0.38 for 5.2 hours two-sided; the corrected low model for those hours
-is $0.43 to $0.97 (the $3.4 to $7.6 a day of 18e × 0.69 × 5.2/24), so the
+is $0.51 to $1.14 (the $3.4 to $7.6 a day of 18e × 0.69 × 5.2/24), so the
 rig earned three quarters of the low figure. The deep books are quoted by
 two-sided bots, which is what the low figure assumes.
 
@@ -2947,14 +2947,14 @@ nobody else rests inside the max spread, the share is 100 percent whatever
 the weight, so a quote at the edge of the max spread (4c, weight 0.012)
 takes the whole pot with the fewest fills; the quadratic weight that punishes
 distance in a deep book does not apply when alone. Checked on the seven 18d
-markets at 22:30 UTC: five now have hundreds to thousands of score-weighted
+markets at 21:30 UTC: five now have hundreds to thousands of score-weighted
 shares inside (Kostyantynivka 3,190/5,714, the café 134/582), one has 42/6,
 and one, "Fable's output price at or below $40" ($20 pot, mid 0.29), is
 empty, 100 percent at any distance. Its week: 0.57 fills a day a tick out,
 $1.17 a day of loss at the hour marks, against a $20 pot if alone all day.
 That is the 17b arithmetic again, and 18d is the answer to it: the pockets
 closed within ninety minutes of being quoted, the café's realized share in
-its 70 minutes was about 14 percent of its pot, and the first order of any
+its 70 minutes was about 7 percent of its $100 pot, and the first order of any
 size in a thin book goes through the quote. Not a run; the idea is recorded
 because it is the only one whose structure changes the sign, and the two
 things it needs, an empty book that stays empty and a thin book whose mid
