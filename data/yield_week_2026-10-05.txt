@@ -1,0 +1,36 @@
+Daily rate on the money, 22 markets the chooser's gates let through, each replayed on five-minute mids, last week, fill=through with the rig's rule; fills marked 60 minutes on. Target band 0.1..0.5% a day.
+    pot inside size parked$  share lo..hi% kept% reward lo..hi fills/d loss/d  net lo..hi $/d  %/d on parked  days± worst d   tell  verdict      question
+    170   1102  100   93.00   1.65..4.28      90  2.54..6.58      0.29   1.07   1.47..5.50      1.58..5.92     1/8    -5.27   3533  above        Will Ilija Srdanović be the next prime minister of S
+    129    304   20   19.00   1.57..4.52      97  1.97..5.65      0.86   1.04   0.92..4.60      4.86..24.23    2/8    -3.88  46326  above        Will the Ornn B200 Index be at least $6.50 on Octobe
+     50    253   50   47.50   3.93..10.14     54  1.05..2.72      0.29   1.14  -0.09..1.58     -0.19..3.32     2/8    -3.95   6236  sign unknown Will the 30-year Treasury yield dip below 5.15% befo
+    330   2506  100   93.00   0.54..1.31      98  1.74..4.23      1.00  -0.06   1.81..4.29      1.94..4.62     1/8    -0.66    980  above        Will Aleksandar Vučić be the next Prime Minister of 
+     50    345   50   47.50   3.12..8.39      58  0.90..2.42      0.43   1.04  -0.13..1.39     -0.28..2.92     3/8    -2.21   2864  sign unknown Will an AI lab announce another Millennium Prize sol
+    200   1229   50   48.50   0.71..1.83     101  1.44..3.71      1.43   2.32  -0.89..1.39     -1.83..2.86     5/8    -3.06   6757  sign unknown Will 1 Fed rate hike happen in 2026?
+    110   1006   50   47.50   1.20..3.46      66  0.87..2.51      0.29   0.14   0.72..2.37      1.53..4.98     1/8    -0.13    293  above        Will there be no change in Fed interest rates after 
+    103    726   80   74.40   1.18..2.73      90  1.09..2.51      1.57   2.06  -0.97..0.46     -1.30..0.61     3/8    -9.71  10258  sign unknown Will David Eby be the next Premier of British Columb
+     54    547   50   47.50   2.04..5.63      88  0.97..2.68      0.71   2.82  -1.85..-0.14    -3.90..-0.29    2/8   -10.65  38041  loses        Will Anthropic's IPO valuation be between $1.75T and
+    119    428   20   18.80   0.91..2.43      80  0.87..2.32      1.29   0.49   0.38..1.83      2.04..9.74     3/8    -1.53  15103  above        Will Alphabet be the third-largest company in the wo
+    200   2468   50   46.50   0.44..1.22      78  0.69..1.91      1.71   3.04  -2.35..-1.12    -5.06..-2.41    2/8   -18.81  85579  loses        Will Google have the best AI model at the end of Dec
+     31    435   50   47.50   2.48..6.74      68  0.52..1.42      0.57   0.11   0.41..1.31      0.87..2.75     1/8    -3.69   6714  above        Will "Babydoll – Dominic Fike" be the #2 song for 20
+    150   1114   50   47.50   0.50..1.16      68  0.51..1.19      0.71   0.36   0.15..0.83      0.32..1.75     2/8    -1.24    999  in band      Another Fed rate hike in 2026?
+    200   2772   50   46.50   0.36..0.97      97  0.69..1.88      2.14   3.79  -3.09..-1.91    -6.65..-4.11    3/8   -23.81      -  loses        Will Anthropic have the best AI model at the end of 
+     48    301   20   19.00   1.41..3.87      98  0.66..1.82      0.00   0.00   0.66..1.82      3.50..9.58     0/8     0.08    463  above        Will Brazil's Q3 2026 GDP growth rate (QoQ) be betwe
+     50    460   50   47.50   1.34..3.15      78  0.52..1.23      0.57   1.29  -0.77..-0.06    -1.61..-0.13    3/8    -7.69  15379  loses        Will Mohammad Bagher Ghalibaf attend a US x Iran dip
+     50    319   50   47.50   1.31..2.91      99  0.65..1.44      2.00   2.72  -2.07..-1.28    -4.35..-2.69    4/8    -9.10  27483  loses        Will Samuel Alito announce his retirement by June 30
+     23    276   50   47.50   2.73..6.59      75  0.47..1.13      0.00   0.00   0.47..1.13      0.98..2.38     0/8     0.06     37  above        Will Spider-Man: Brand New Day have the 2nd best dom
+    152   2769   50   47.50   0.37..1.00      84  0.47..1.27      1.14   1.93  -1.46..-0.66    -3.08..-1.38    4/8    -7.53  14436  loses        Will Anthropic's market cap be between $2.25T and $2
+     50    749   50   47.00   1.11..2.80      96  0.53..1.34      0.29   0.66  -0.13..0.68     -0.28..1.44     1/8    -4.10   4731  sign unknown Will Morgan Wallen be the Billboard #1 top artist in
+    188   3451   50   47.00   0.29..0.79      99  0.54..1.47      1.14   0.38   0.16..1.09      0.34..2.32     3/8    -0.76    466  in band      Will Anthropic's market cap be between $2.0T and $2.
+     36    266   20   19.00   1.40..3.67      97  0.49..1.28      1.43   1.56  -1.07..-0.28    -5.62..-1.47    1/8   -10.41      -  loses        Will there be 50 or more West Nile neuroinvasive dis
+  across 22 markets, 154 market-days: 139 fills (0.90 a market-day), loss $1.27 a market-day; the rig's rule keeps 85% of the score, the half-tick rule 99%
+  verdicts on the low figure: in band 2, above the band 8, under it 0, sign unknown (low under zero, high over) 5, loses on both 7
+  median %/day on parked: -0.19 (low share) .. 2.38 (high share)
+  pot: $/day.  inside: score-weighted shares others rest inside the max spread, thinner side.  parked$: both sides' collateral.  share: of the pot, against this book (competitors all balanced .. all one-sided).  kept: the fraction of that score the rig's re-centre rule held over the replay.  reward: pot × share × kept, $/day.  fills/d, loss/d: the replay's, marked 60 min after each fill, less a tick.  net: reward − loss.  days±: UTC days with a fill / days replayed.  worst d: the worst day's net, $.  tell: market-days before the two-sigma error of the daily mean is under 0.1% of parked.
+
+  basket for $60: 3 markets, $56.80 parked; modelled net $1.97..8.26 a day = 3.28..13.76% of the budget (3.47..14.53% of parked); 2.14 fills a day expected, marked 60 min on
+  the target 0.1% of $60 is $0.06 a day; the basket's daily net has a spread of $2.36 on the week, so a live run would need about 6175 days before its mean is known to within that target
+    Will the Ornn B200 Index be at least $6.50 on October 31, 20: $19.00 parked, net $0.92..4.60/day, 0.86 fills/day
+    Will Brazil's Q3 2026 GDP growth rate (QoQ) be between -0.3%: $19.00 parked, net $0.66..1.82/day, 0.00 fills/day
+    Will Alphabet be the third-largest company in the world by m: $18.80 parked, net $0.38..1.83/day, 1.29 fills/day
+
+wrote /tmp/claude-0/-home-user-agent-2-playground/770d56de-33cb-5a4e-9f43-7a1c558adb65/scratchpad/yield_week.json

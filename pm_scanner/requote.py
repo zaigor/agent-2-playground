@@ -125,6 +125,7 @@ class Replay:
     ideal_minutes: float = 0.0
     quoting_minutes: float = 0.0  # minutes with both sides resting
     span_hours: float = 0.0
+    start_ts: int = 0  # the first reading's timestamp (yieldrate groups the fills by UTC day from it)
 
     @property
     def days(self) -> float:
@@ -148,7 +149,7 @@ class Replay:
     def to_dict(self) -> dict[str, Any]:
         return {"policy": self.policy.label, "fills": len(self.fills), "warned": self.warned_fills, "fills_per_day": round(self.fills_per_day, 3),
                 "loss_per_day_10": round(self.loss_per_day(10), 4), "loss_per_day_60": round(self.loss_per_day(60), 4), "recentres": self.recentres,
-                "score_share": round(self.score_share, 4), "readings": self.readings, "span_hours": round(self.span_hours, 2), "detail": [f.to_dict() for f in self.fills]}
+                "score_share": round(self.score_share, 4), "readings": self.readings, "span_hours": round(self.span_hours, 2), "start_ts": self.start_ts, "detail": [f.to_dict() for f in self.fills]}
 
 
 def mid_at(series: list[Point], ts: int) -> float | None:
@@ -196,7 +197,7 @@ def replay(series: list[Point], prints: list[tuple[int, float, float]], *, polic
     t1 = min(series[-1][0], end) if end is not None else series[-1][0]
     half = max_spread_cents / 200.0 + policy.extra_ticks * tick
     v = max_spread_cents
-    r = Replay(policy, span_hours=max(0.0, (t1 - t0) / 3600.0))
+    r = Replay(policy, span_hours=max(0.0, (t1 - t0) / 3600.0), start_ts=t0)
     bid: float | None = None
     ask: float | None = None
     quoted_mid: float | None = None

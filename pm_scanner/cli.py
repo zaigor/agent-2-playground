@@ -14,6 +14,7 @@ from .history import week_fetcher
 from .lp import LiveExchange, PaperExchange, Quoter, append_record, cheap_reason, choose_markets, depth_blockers, exit_blockers, history_blockers, merge_preview, parse_only, positions_report, read_log, refusal_streak, render_plan, render_positions
 from .requote import DEFAULT_POLICIES, render as render_requote, render_summary as render_requote_summary, replay_market, summarize as summarize_requote
 from .rewards import gamma_markets_by_condition, render_pocket, render_rewards, rewards_pocket, rewards_survey
+from .yieldrate import basket as yield_basket, collect as collect_yield, render as render_yield, render_basket as render_yield_basket
 from .signal import FixtureResolver, GammaResolver, load_signal_csv, render_signal, score_signal
 from .flow import MakerConfig, family_flow, maker_backtest, render_family_flow, render_maker, sampled_market_ids
 from .niches import DEFAULT_SURVEY_TAGS, UP_OR_DOWN_TAG_ID, default_since, load_survey_tags, render_survey, survey
@@ -854,6 +855,28 @@ def build_parser() -> argparse.ArgumentParser:
     rq.add_argument("--json", type=Path, default=None, help="write the replays here")
     rq.add_argument("--fixtures", type=Path, default=None, help="unused here: the replay reads live public data")
 
+    yd = sub.add_parser("yield", help="a daily rate on the money: the chooser's candidate markets (memo 18e's gates), each replayed on its public week with the rig's rule, read as net %/day of the collateral parked against a target band (memo section 21, 5 Oct)")
+    yd.add_argument("--target", type=float, default=0.1, help="the band's floor, %% a day on the money")
+    yd.add_argument("--max-target", type=float, default=0.5, help="the band's ceiling, %% a day")
+    yd.add_argument("--budget", type=float, default=60.0, help="the money: the basket is sized to it and the band read against it")
+    yd.add_argument("--markets", type=int, default=3, help="how many markets the basket may hold")
+    yd.add_argument("--top", type=int, default=30, help="how many candidates (best modelled reward first) to replay")
+    yd.add_argument("--days", type=int, default=7, help="7: the last week at five-minute mids; 1: the last day at one-minute mids")
+    yd.add_argument("--interval", type=int, default=60, help="seconds between readings in the replay, as the rig's --interval")
+    yd.add_argument("--fill", choices=("through", "at"), default="through", help="a print strictly beyond our price fills us (through; nearer the truth in deep books), or at it too (at: a ceiling)")
+    yd.add_argument("--horizon", type=int, choices=(10, 60), default=60, help="mark each fill against the mid this many minutes later (60: held an hour; 10: undone at once)")
+    yd.add_argument("--min-rate", type=float, default=20.0, help="candidate markets: pot per day at least this")
+    yd.add_argument("--min-reward", type=float, default=0.5, help="candidate markets: modelled reward at least this per day (18e's floor; the pocket's $20 excludes every deep book)")
+    yd.add_argument("--min-days", type=float, default=7.0, help="candidate markets: at least this many days to resolution")
+    yd.add_argument("--max-spread", type=float, default=0.5, help="candidate markets: book spread at most this")
+    yd.add_argument("--max-exit", type=float, default=2.0, help="candidate markets: undoing one fill into today's book must lose at most this")
+    yd.add_argument("--min-age", type=float, default=6.5, help="candidate markets: at least this many days of price history")
+    yd.add_argument("--min-depth", type=float, default=200.0, help="candidate markets: at least this many score-weighted shares inside the max spread on the thinner side (18e's deep books)")
+    yd.add_argument("--max-moves", type=float, default=2.0, help="candidate markets: at most this many 3c ten-minute moves a day last week")
+    yd.add_argument("--only", default=None, help="replay exactly these condition ids (comma-separated) instead of the chooser's list")
+    yd.add_argument("--json", type=Path, default=None, help="write every row, its fills and its daily series here")
+    yd.add_argument("--fixtures", type=Path, default=None, help="unused here: the scan reads live public data")
+
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
     f.add_argument("--platform", choices=["polymarket", "kalshi"], required=True)
     f.add_argument("--price", type=float, required=True)
@@ -906,6 +929,42 @@ def _run_requote(args, source) -> int:
                     print(f"    {when} {f.side} at {f.price} (quoted around {f.quoted_mid}, mid before {f.mid_before}, {'warned' if f.warned else 'no warning'}) mid +10m {f.mark_10} +60m {f.mark_60} loss {f.loss(10)} / {f.loss(60)}")
     if args.json:
         args.json.write_text(json.dumps([{"market": name, "replays": [r.to_dict() for r in reps]} for name, reps in rows], indent=1, default=str))
+        print(f"\nwrote {args.json}")
+    return 0
+
+
+def _run_yield(args, source) -> int:
+    from .weather import LiveTrades
+
+    log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
+    now = utcnow()
+    try:
+        rows = rewards_pocket(source.http, source.poly_books, now=now, min_rate=args.min_rate, log=log)
+        only = parse_only(args.only)
+        cand = [r for r in rows if only is None or r.condition_id in only]
+        worth_a_lookup = cand if only is not None else [r for r in cand if cheap_reason(r, min_days=args.min_days, max_spread=args.max_spread, min_reward=args.min_reward, min_depth=args.min_depth) is None]
+        log(f"{len(worth_a_lookup)} candidates pass the cheap gates; looking up the first {min(400, len(worth_a_lookup))} on Gamma")
+        markets = gamma_markets_by_condition(source.http, [r.condition_id for r in worth_a_lookup[:400]])
+        reasons: dict[str, int] = {}
+        # the chooser's gates with no budget: every candidate that would pass a live gate, best modelled reward first
+        plans = choose_markets(cand, markets, budget=1e9, max_markets=args.top, min_days=args.min_days, max_spread=args.max_spread, min_reward=args.min_reward, only=only, per_market=1e9, reasons=reasons, max_exit=args.max_exit,
+                               history=week_fetcher(source.http), min_age=args.min_age, max_moves=args.max_moves, min_depth=args.min_depth)
+        log(f"{len(plans)} plans pass every gate" + (("; passed over: " + ", ".join(f"{k}: {v}" for k, v in reasons.items())) if reasons else ""))
+        if not plans:
+            return 1
+        yrows = collect_yield(source.http, LiveTrades(http=source.http), plans, markets, days=args.days, interval=args.interval, fill=args.fill, horizon=args.horizon, log=log)
+    except Exception as exc:  # noqa: BLE001
+        print(f"yield failed: {exc}", file=sys.stderr)
+        return 2
+    if not yrows:
+        print("yield: no market had a replayable week", file=sys.stderr)
+        return 1
+    grain = "one-minute mids, last day" if args.days <= 1 else "five-minute mids, last week"
+    print(render_yield(yrows, budget=args.budget, lo_pct=args.target, hi_pct=args.max_target, grain=grain + f", fill={args.fill}", horizon=args.horizon))
+    print()
+    print(render_yield_basket(yield_basket(yrows, budget=args.budget, max_markets=args.markets, lo_pct=args.target, hi_pct=args.max_target), budget=args.budget, lo_pct=args.target, hi_pct=args.max_target, horizon=args.horizon))
+    if args.json:
+        args.json.write_text(json.dumps({"when": now.isoformat(timespec="seconds"), "days": args.days, "fill": args.fill, "horizon": args.horizon, "target": [args.target, args.max_target], "budget": args.budget, "rows": [r.to_dict() for r in yrows]}, indent=1, default=str))
         print(f"\nwrote {args.json}")
     return 0
 
@@ -1104,6 +1163,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "requote":
         return _run_requote(args, source)
+    if args.cmd == "yield":
+        return _run_yield(args, source)
 
     kwargs = _scan_kwargs(args)
 

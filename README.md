@@ -380,6 +380,30 @@ Memo section 20, 4 Oct: the 19:56 UTC fill came from a one-second 3,192-share
 print with no approach to escape from; the half-tick drift cost the rig a
 sixth of its score.
 
+### A daily rate on the money: `yield` (memo section 21)
+
+```
+python -m pm_scanner yield --budget 60 --target 0.1 --max-target 0.5            # the chooser's deep-book candidates, replayed on their week
+python -m pm_scanner yield --budget 60 --days 1 --horizon 10 --only <ids>       # the last day at one-minute mids, fills undone at once
+```
+
+Asks the question the other way round: not how much the rig can make, but
+which markets would pay a fraction of a percent a day on the money, net of
+their fills. The candidates are whatever the `lp` chooser's gates let through
+(by default 18e's: 200 score-weighted shares inside the max spread on the
+thinner side, seven days of price history, a real exit under $2), each
+replayed on its public week with the rig's rule (`requote`). Per market: the
+pot, the share a minimum quote takes of it against today's book (a range,
+competitors all balanced to all one-sided), the fraction of that score the
+rig's re-centre rule kept over the week, fills a day and what undoing them
+would cost an hour on (or ten minutes on, `--horizon 10`), the net as a
+percentage of the collateral parked, which UTC days had a fill, the worst
+day, and how many market-days a live reading would need before its mean is
+known to within the target. Then the basket a budget would hold. Read-only,
+public data; the share is one book's snapshot and the losses are mid marks,
+so the table is a model to be read against `lp --earnings` and
+`lp --positions`, not a forecast.
+
 ## Fee models (change them when the venues do)
 
 * Polymarket, Fee Structure V2 (2026): taker fee per share = `rate * p * (1-p)`;
@@ -416,6 +440,7 @@ pm_scanner/
   counts.py      count-window ladders: windows and brackets from the Gamma wording, catalog -> negative-binomial probabilities -> signal CSV; headroom of the market itself
   lp.py          the liquidity-reward test rig: minimum-size post-only quotes in unquoted rewarded markets, scoring and earnings read-back
   requote.py     re-quote policies (the rig's, follow, escape, wide, half-tick) replayed on a market's minute history and tape: fills, warning, undo cost, score kept
+  yieldrate.py   a daily rate on the money: the chooser's candidates joined with their replays, net %/day of the collateral parked against a target band, and a basket for a budget
   history.py     the CLOB's week of prices per market, measured: age in days and 3-cent moves per day (the chooser's restlessness filter)
   weather.py     temperature brackets: stations, trade-history prices, Open-Meteo forecasts, IEM observations, trend/backtest/intraday/flow/today
   cli.py         `scan`, `watch`, `summarize`, `israel`, `niches`, `weather`, `flow`, `ladder`, `rewards`, `signal`, `lp` and `fee` commands

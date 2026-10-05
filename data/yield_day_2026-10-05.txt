@@ -1,0 +1,34 @@
+Daily rate on the money, 22 markets the chooser's gates let through, each replayed on one-minute mids, last day, fill=through with the rig's rule; fills marked 10 minutes on. Target band 0.1..0.5% a day.
+    pot inside size parked$  share lo..hi% kept% reward lo..hi fills/d loss/d  net lo..hi $/d  %/d on parked  days± worst d   tell  verdict      question
+    170   1240  100   93.00   1.53..4.02      92  2.41..6.32      2.00  16.01 -13.60..-9.69   -14.63..-10.42   1/2   -13.88  46464  loses        Will Ilija Srdanović be the next prime minister of S
+     50    242   50   47.50   4.02..10.30     40  0.80..2.04      1.00   4.00  -3.21..-1.97    -6.75..-4.14    1/2    -3.90  18768  loses        Will the 30-year Treasury yield dip below 5.15% befo
+    129    288   20   19.00   1.23..3.17      96  1.53..3.93      5.01   5.71  -4.18..-1.78   -22.02..-9.35    1/2    -4.36      -  loses        Will the Ornn B200 Index be at least $6.50 on Octobe
+    330   2685  100   93.00   0.48..1.15      96  1.52..3.64      3.00   0.90   0.62..2.74      0.67..2.95     1/2     0.18     15  above        Will Aleksandar Vučić be the next Prime Minister of 
+     50    345   50   47.50   3.09..8.28      54  0.83..2.22      1.00   3.75  -2.92..-1.53    -6.15..-3.22    1/2    -3.02   8632  loses        Will an AI lab announce another Millennium Prize sol
+    119    326   20   18.80   1.22..3.26      95  1.38..3.68      3.00   2.50  -1.13..1.18     -5.99..6.28     2/2    -0.79   1202  sign unknown Will Alphabet be the third-largest company in the wo
+    200   1264   50   48.50   0.70..1.80     100  1.39..3.61      0.00   0.00   1.39..3.61      2.87..7.44     0/2     0.17    949  above        Will 1 Fed rate hike happen in 2026?
+    110   1006   50   47.50   1.19..3.44     100  1.31..3.77      0.00   0.00   1.31..3.77      2.75..7.94     0/2     0.16    868  above        Will there be no change in Fed interest rates after 
+    103    779   80   74.40   1.16..2.69      70  0.84..1.94      8.01   6.80  -5.97..-4.86    -8.02..-6.53    2/2    -4.30   2508  loses        Will David Eby be the next Premier of British Columb
+     54    547   50   47.50   2.04..5.63      57  0.63..1.73      3.00  13.01 -12.38..-11.27  -26.07..-23.74   1/2   -12.45      -  loses        Will Anthropic's IPO valuation be between $1.75T and
+    200   2461   50   46.50   0.44..1.24      81  0.72..2.01      1.00   2.75  -2.04..-0.75    -4.38..-1.61    1/2    -2.12   4515  loses        Will Google have the best AI model at the end of Dec
+    150    689   50   47.50   0.57..1.26      89  0.76..1.69      2.00   2.00  -1.24..-0.31    -2.61..-0.65    1/2    -1.33   1790  loses        Another Fed rate hike in 2026?
+     31    435   50   47.50   2.43..6.54     100  0.75..2.03      0.00   0.00   0.75..2.03      1.58..4.26     0/2     0.09    289  above        Will "Babydoll – Dominic Fike" be the #2 song for 20
+    200   2630   50   46.50   0.37..1.01      67  0.50..1.35      1.00   0.75  -0.25..0.60     -0.54..1.29     1/2    -0.31    128  sign unknown Will Anthropic have the best AI model at the end of 
+     48    270   20   19.00   1.55..4.20      83  0.62..1.68      0.00   0.00   0.62..1.68      3.25..8.82     0/2     0.08   1197  above        Will Brazil's Q3 2026 GDP growth rate (QoQ) be betwe
+     50    460   50   47.50   1.34..3.15      84  0.56..1.32      0.00   0.00   0.56..1.32      1.18..2.77     0/2     0.07    158  above        Will Mohammad Bagher Ghalibaf attend a US x Iran dip
+     50    319   50   47.50   1.31..2.91     100  0.66..1.46      1.00   2.00  -1.35..-0.55    -2.83..-1.15    1/2    -1.42   2007  loses        Will Samuel Alito announce his retirement by June 30
+     23    276   50   47.50   2.66..6.39     100  0.61..1.47      0.00   0.00   0.61..1.47      1.28..3.09     0/2     0.07    190  above        Will Spider-Man: Brand New Day have the 2nd best dom
+    152   3182   50   47.50   0.36..1.05      66  0.36..1.05      1.00   0.75  -0.39..0.30     -0.81..0.63     1/2    -0.43    200  sign unknown Will Anthropic's market cap be between $2.25T and $2
+    188   3456   50   47.00   0.29..0.78      97  0.52..1.42      1.00  -2.40   2.93..3.82      6.22..8.13     0/2     0.46   3639  above        Will Anthropic's market cap be between $2.0T and $2.
+     50    772   50   47.00   1.07..2.71      97  0.52..1.31      0.00   0.00   0.52..1.31      1.10..2.78     0/2     0.06    140  above        Will Morgan Wallen be the Billboard #1 top artist in
+     36    261   20   19.00   1.42..3.69      97  0.50..1.29      0.00   0.00   0.50..1.29      2.61..6.81     0/2     0.06    782  above        Will there be 50 or more West Nile neuroinvasive dis
+  across 22 markets, 22 market-days: 33 fills (1.50 a market-day), loss $2.66 a market-day; the rig's rule keeps 85% of the score, the half-tick rule 99%
+  verdicts on the low figure: in band 0, above the band 10, under it 0, sign unknown (low under zero, high over) 3, loses on both 9
+  median %/day on parked: -0.54 (low share) .. 2.77 (high share)
+  pot: $/day.  inside: score-weighted shares others rest inside the max spread, thinner side.  parked$: both sides' collateral.  share: of the pot, against this book (competitors all balanced .. all one-sided).  kept: the fraction of that score the rig's re-centre rule held over the replay.  reward: pot × share × kept, $/day.  fills/d, loss/d: the replay's, marked 10 min after each fill, less a tick.  net: reward − loss.  days±: UTC days with a fill / days replayed.  worst d: the worst day's net, $.  tell: market-days before the two-sigma error of the daily mean is under 0.1% of parked.
+
+  basket for $60: 1 markets, $47.00 parked; modelled net $2.93..3.82 a day = 4.88..6.37% of the budget (6.22..8.13% of parked); 1.00 fills a day expected, marked 10 min on
+  the target 0.1% of $60 is $0.06 a day; the basket's daily net has a spread of $1.42 on the week, so a live run would need about 2233 days before its mean is known to within that target
+    Will Anthropic's market cap be between $2.0T and $2.25T at m: $47.00 parked, net $2.93..3.82/day, 1.00 fills/day
+
+wrote /tmp/claude-0/-home-user-agent-2-playground/770d56de-33cb-5a4e-9f43-7a1c558adb65/scratchpad/yield_day.json

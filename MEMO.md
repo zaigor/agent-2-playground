@@ -2665,6 +2665,179 @@ $2.49, −$2.71; everything $14.52 for $18.70 paid, −$4.18. The pair exit is
 against $0.99 paid. Nothing to do until the run ends; the 48-hour reading
 and the disposal go here on 6 Oct.
 
+## 21. A daily rate on the money (5 Oct): the band is not the constraint, the fills are, and neither a week nor a day of history can tell 0.1% a day from zero
+
+**The question**, from the user, the evening of 18e's second day: turn it
+round. Not how much the market-making rig can make, but 0.1 to 0.2 percent
+a day on the money, never more than 0.5; find the markets that would pay
+that, and backtest it. On the $60 budget the band is $0.06 to $0.12 a day,
+$0.30 at its ceiling. Compounded, 0.1 percent a day is ×1.44 a year and 0.5
+percent a day is ×6.2, so the band is modest in cents and not in rate; the
+question is whether this strategy's net lands in it, and whether any
+history can tell.
+
+**The tool** (`yield`, new, `pm_scanner/yieldrate.py`, read-only, public
+data). The candidates are whatever the `lp` chooser's own gates let through
+at 18e's settings (pots of $20 a day or more, 200 or more score-weighted
+shares inside the max spread on the thinner side, seven days of prices, two
+or fewer 3c moves a day, an exit under $2, the mid in 15–85c, seven or more
+days to resolution). Each is replayed over its own week of five-minute mids
+and its trade tape with the rig's rule at the reward minimum size, as
+`requote` does (section 20, 4 Oct). Per market: the pot; the share a
+minimum two-sided quote at half the max spread takes against the book at the
+scan (a range, competitors all balanced to all one-sided, section 17b's
+model); the fraction of that score the rig's full-tick re-centre rule kept
+over the week; fills a day; what undoing each would cost against the mid an
+hour on (or ten minutes on, `--horizon 10`), less a tick; the net as a
+percentage of the collateral both sides park; the fills grouped by UTC day
+into a daily net series, its spread, and the market-days a live reading
+would need before the two-sigma error of its mean is under the target. Then
+the basket a budget would hold. The caveats are `requote`'s: a share from
+one book, not a week of them (18e's competitiveness figure went 3 to 16 to
+1.4 within a day); prints, not our queue position; mids, not bids;
+five-minute bars hide the moves inside them, which is why the run was
+repeated on the last day at one-minute mids.
+
+**The week** (5 Oct, 21:01 UTC; `data/yield_week_2026-10-05.txt`). 1,760
+rewarded markets at $20 a day or more; 123 pass the cheap gates (passed
+over: 611 end within seven days, 356 have a mid outside 15–85c, 337 model
+under $0.50 a day, 285 have under 200 shares inside, 28 are excluded
+families, 5 are wider than 50c); 22 pass every gate (passed over at the
+dearer ones: 65 would lose more than $2 undoing a fill, 22 have under 6.5
+days of prices, 13 moved 3c more than twice a day, 1 has no exit). Sorted by
+fills a day on the week, fills marked an hour on:
+
+| market | pot $/d | inside | size | parked $ | share % | reward $/d | fills/d | loss $/d | net %/d of parked | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Will Brazil's Q3 2026 GDP growth rate (QoQ) be between -0.… | 48 | 301 | 20 | 19.00 | 1.4–3.9 | 0.66–1.82 | 0.00 | 0.00 | +3.50–+9.58 | above |
+| Will Spider-Man: Brand New Day have the 2nd best domestic … | 23 | 276 | 50 | 47.50 | 2.7–6.6 | 0.47–1.13 | 0.00 | 0.00 | +0.98–+2.38 | above |
+| Will Ilija Srdanović be the next prime minister of Serbia? | 170 | 1102 | 100 | 93.00 | 1.7–4.3 | 2.54–6.58 | 0.29 | 1.07 | +1.58–+5.92 | above |
+| Will there be no change in Fed interest rates after the Ja… | 110 | 1006 | 50 | 47.50 | 1.2–3.5 | 0.87–2.51 | 0.29 | 0.14 | +1.53–+4.98 | above |
+| Will the 30-year Treasury yield dip below 5.15% before 202… | 50 | 253 | 50 | 47.50 | 3.9–10.1 | 1.05–2.72 | 0.29 | 1.14 | -0.19–+3.32 | sign unknown |
+| Will Morgan Wallen be the Billboard #1 top artist in 2026? | 50 | 749 | 50 | 47.00 | 1.1–2.8 | 0.53–1.34 | 0.29 | 0.66 | -0.28–+1.44 | sign unknown |
+| Will an AI lab announce another Millennium Prize solution … | 50 | 345 | 50 | 47.50 | 3.1–8.4 | 0.90–2.42 | 0.43 | 1.04 | -0.28–+2.92 | sign unknown |
+| Will "Babydoll – Dominic Fike" be the #2 song for 2026? | 31 | 435 | 50 | 47.50 | 2.5–6.7 | 0.52–1.42 | 0.57 | 0.11 | +0.87–+2.75 | above |
+| Will Mohammad Bagher Ghalibaf attend a US x Iran diplomati… | 50 | 460 | 50 | 47.50 | 1.3–3.1 | 0.52–1.23 | 0.57 | 1.29 | -1.61–-0.13 | loses |
+| Will Anthropic's IPO valuation be between $1.75T and $2.00… | 54 | 547 | 50 | 47.50 | 2.0–5.6 | 0.97–2.68 | 0.71 | 2.82 | -3.90–-0.29 | loses |
+| Another Fed rate hike in 2026? | 150 | 1114 | 50 | 47.50 | 0.5–1.2 | 0.51–1.19 | 0.71 | 0.36 | +0.32–+1.75 | in band |
+| Will the Ornn B200 Index be at least $6.50 on October 31, … | 129 | 304 | 20 | 19.00 | 1.6–4.5 | 1.97–5.65 | 0.86 | 1.04 | +4.86–+24.23 | above |
+| Will Aleksandar Vučić be the next Prime Minister of Serbia… | 330 | 2506 | 100 | 93.00 | 0.5–1.3 | 1.74–4.23 | 1.00 | -0.06 | +1.94–+4.62 | above |
+| Will Anthropic's market cap be between $2.0T and $2.25T at… | 188 | 3451 | 50 | 47.00 | 0.3–0.8 | 0.54–1.47 | 1.14 | 0.38 | +0.34–+2.32 | in band |
+| Will Anthropic's market cap be between $2.25T and $2.5T at… | 152 | 2769 | 50 | 47.50 | 0.4–1.0 | 0.47–1.27 | 1.14 | 1.93 | -3.08–-1.38 | loses |
+| Will Alphabet be the third-largest company in the world by… | 119 | 428 | 20 | 18.80 | 0.9–2.4 | 0.87–2.32 | 1.29 | 0.49 | +2.04–+9.74 | above |
+| Will 1 Fed rate hike happen in 2026? | 200 | 1229 | 50 | 48.50 | 0.7–1.8 | 1.44–3.71 | 1.43 | 2.32 | -1.83–+2.86 | sign unknown |
+| Will there be 50 or more West Nile neuroinvasive disease c… | 36 | 266 | 20 | 19.00 | 1.4–3.7 | 0.49–1.28 | 1.43 | 1.56 | -5.62–-1.47 | loses |
+| Will David Eby be the next Premier of British Columbia? | 103 | 726 | 80 | 74.40 | 1.2–2.7 | 1.09–2.51 | 1.57 | 2.06 | -1.30–+0.61 | sign unknown |
+| Will Google have the best AI model at the end of December … | 200 | 2468 | 50 | 46.50 | 0.4–1.2 | 0.69–1.91 | 1.72 | 3.04 | -5.06–-2.41 | loses |
+| Will Samuel Alito announce his retirement by June 30, 2027… | 50 | 319 | 50 | 47.50 | 1.3–2.9 | 0.65–1.44 | 2.00 | 2.72 | -4.35–-2.69 | loses |
+| Will Anthropic have the best AI model at the end of Decemb… | 200 | 2772 | 50 | 46.50 | 0.4–1.0 | 0.69–1.88 | 2.14 | 3.79 | -6.65–-4.11 | loses |
+
+Across the 22, 154 market-days: 139 fills, 0.90 a market-day; loss $1.27 a
+market-day; the median fill costs $1.20 an hour on (mean $1.40, the worst
+$13.20; 28 of 100 fills cost nothing or less, the price having come back
+within the hour). The rig's rule keeps 85 percent of the score, the half-tick
+rule 99 (the same figures as the 11-market replay of 4 Oct; the flag
+`--recentre-ticks 0.5` remains the user's call in the command).
+
+**The reading, in four parts.**
+
+*The band is not the constraint.* Before fills, every one of the 22 pays
+more than the band's ceiling: the low share of the pot is worth 0.98 to 10.4
+percent of parked a day (median 1.66), the high share 2.4 to 29.7 (median
+4.33). Finding markets that pay 0.1 to 0.5 percent a day gross is not a
+selection problem; every deep book does, by ten times or more.
+
+*The fills set the sign.* Reward low..high across the 22 is $0.92..$2.40 a
+market-day against a loss of $1.27, so the 22 taken as one $1,047 book net
+−0.74..+2.37 percent of parked a day: a low figure under zero and a high
+one over it, which is the honest reading of the whole table. By market, on
+the low figure: 8 above the band, 2 in it, 5 of unknown sign, 7 lose on both
+figures. The order is the fill count: the markets with 0.3 fills a day or
+fewer over the week come out positive or within a third of a percent of
+zero, those with 1.4 or more negative
+(Alphabet and Vučić aside, carried by pots and shares), and a week's count
+is 0 to 15 fills, a Poisson number whose relative error is the thing itself.
+"In band" is a knife edge: at the median low reward of $0.69 a day and $1.20
+a fill, a market on $47.50 parked stays between 0.1 and 0.5 percent only if
+it fills between 0.37 and 0.53 times a day, one fill every two or three days
+and neither more nor fewer; nothing a chooser can hold a market to.
+
+*A week cannot tell, and neither can a quarter.* The daily net of one market
+has a spread of $1.97 (median; $0.14 to $8.54), against a target of $0.05 a
+day on $47.50 parked, so the two-sigma error of a live reading falls under
+the target after about 6,900 market-days. The basket the model picks for
+$60, three 20-share books (the Ornn B200 index, Brazil's Q3 GDP, Alphabet
+third-largest; $56.80 parked), models $1.97 to $8.26 a day, 3.3 to 13.8
+percent of the budget, with a daily spread of $2.36; to know its mean to
+within the target takes 6,200 days, to within the band's ceiling ($0.30) 250
+days, to within 1 percent a day ($0.60) 62 days. The band cannot be targeted
+at this budget and cannot be verified at it either; what $60 can learn, in
+two months, is whether the net is above or below about 1 percent a day.
+
+*The day contradicts the week* (`data/yield_day_2026-10-05.txt`: the same
+22 on the last day's one-minute mids, fills marked ten minutes on). 33 fills
+on 22 market-days, 1.5 a market-day, 4 with warning; loss $2.66 a
+market-day; the 22 as one book net −3.7..−0.7 percent a day marked ten
+minutes on, −1.5..+1.5 an hour on; 10 markets above the band, 0 in it, 3
+unknown, 9 lose. The sign flips between week and day in 8 of 22: Srdanović
++1.6 to −14.6 percent a day (two fills, $9.50 and $6.50 to undo at ten minutes), the Ornn index +4.9
+to −22.0 (five fills in a day), Alphabet +2.0 to −6.0, West Nile −5.6 to
++2.6, "1 Fed hike" −1.8 to +2.9. Of the week's three-market basket, one
+loses 22 percent of its parked in the day and one is of unknown sign; the
+day's own basket is a single market (the Anthropic $2.0–2.25T bracket, whose
+one fill came back for a gain). A selection made on a week's fills does not
+hold the next day.
+
+**Two findings on the side.** The "undo a fill at once" candidate of the
+previous entry is not supported by today's two samples: across the 22,
+marking the fills ten minutes on costs more than an hour on, $32.82 against
+$27.88 a day on the week and $58.55 against $35.71 on the day (the median
+fill is cheaper at ten minutes, $0.80 against $1.20, the mean dearer, $1.65
+against $1.40: the big sweeps are at their worst before any of the price
+comes back). The 11-market day of 4 Oct read the other way ($11.32 against
+$17.29). It stays a candidate and not a rule, and is not in the rig. And the
+band's ceiling caps nothing: the worst days in the week table run to −$11,
+−$19 and −$24 on $47 parked, a quarter to a half of it; what bounds a day is the size
+and the abort rules (18e), not a target rate.
+
+**The three live days read against the same band** (readings from the log
+and the user's pastes, sections 18d, 18e and 20; the 5 Oct payout is the
+15:10 UTC figure and will be final after midnight):
+
+| day | quoting | rewards paid | fills, at the fill second | by the bids later |
+|---|---|---|---|---|
+| 3 Oct | the rain market, 3 min | none recorded | −$1.08 (sold) | |
+| 4 Oct | Watermelon 96 min; three pocket markets about 70 min; the restart 2 min; Anthropic 9.3 h | +$1.55 (Anthropic $0.38 of it) | −$0.40 (pair), −$1.55 (café), −$1.05 (pair) and −$0.41 (2.53 YES over), −$0.49 (Anthropic) | café −$2.71 and Anthropic −$1.47 at 15:10 UTC on 5 Oct |
+| 5 Oct | Anthropic, one side, outside the spread most of the day | +$0.04 by 15:10 UTC | none | |
+| total | under 14 hours of quoting | +$1.60 | −$4.98 | −$7.12 |
+
+On the $60 budget that is +0.9 percent a day gross over the three days (+2.6
+on 4 Oct alone, when most of the budget was quoted), above the band's
+ceiling as the model says it would be; the fills took 2.8 percent a day at
+their fill-second readings and 4.0 by the latest bids, for a net of −1.9 to
+−3.1 percent a day. One reading of three days is no better than the model's
+week, and it agrees with it: the gross rate is far above the band and the
+sign is set by the fills.
+
+**What this answers.** Can suitable markets be found for 0.1 to 0.5 percent a
+day? The gross side says every deep book qualifies and the net side says the
+sign cannot be chosen from history: the week's safest three include the
+day's worst. Can it be backtested? It has been, on 22 markets, a week and a
+day, and the result is a net between −0.7 and +2.4 percent a day with the
+sign unknown, a daily spread forty times the target, and selections that do
+not persist. So the band is not something to aim a run at. The question
+18e's end leaves open tomorrow is the pre-registered one, whether three deep
+books at the minimum size run for a week; the arithmetic here says what
+such a week can and cannot show: it can tell a net of ±1 percent a day from
+zero after about two months at the smallest size in three books, and it
+cannot tell the band from zero at any length a test budget would be left
+out for. Nothing in the rig changed for this section; the two commands:
+
+```
+python -m pm_scanner yield --budget 60 --target 0.1 --max-target 0.5            # the week, the chooser's candidates
+python -m pm_scanner yield --budget 60 --days 1 --horizon 10 --only <ids>       # the day, one-minute mids, fills undone at once
+```
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
