@@ -2592,6 +2592,57 @@ python -m pm_scanner requote --only <condition ids> --days 7 --fill at
 python -m pm_scanner requote --only <id> --days 1 --fill at --detail   # every fill, marked
 ```
 
+**18e, the first payout (4 Oct UTC; the user's 03:00 Jerusalem paste, read
+here at 05:10 UTC on 5 Oct).** `lp --earnings 2026-10-04`: the account
+earned $1.5535 for the day, of which the Anthropic market paid $0.3826; the
+rest is the morning's 18d markets (Kostyantynivka $0.44, the café $0.33,
+Caedrel $0.18, Meta Watermelon $0.14, Fable's output price $0.06, Alphabet
+$0.03). The rig's own fill line, 19:56:39 UTC, eight seconds after the
+print of the previous entry: 50 YES at 0.27, `sell_now` $13.01,
+`loss_if_sold_now` $0.49, `book_absorbs` true. Under the $2 abort, so the
+run went on with one order, the NO bid capped by the pair rule at 0.72 (a
+YES ask at 0.28, which completes the pair at $0.99 if the price comes back);
+the 23:52 scoring line reads 1 order, 0 scoring, the mid by then near 0.22
+and the ask 6c from it, outside the 4.5c max spread. The pot at 23:52: $139
+a day, competitiveness 16.33, against 3.03 at the start and 7.26 at 18:37.
+`lp --positions` at 00:00 UTC: Anthropic 50 YES, average 0.27, cost $13.50,
+site mark 0.22, best bid 0.21 with 4,074 shares, sell now $10.09, P&L
+−$3.41; the café 20 YES at 0.26, bid 0.11, sell now $2.10, −$3.10; selling
+everything returns $12.19 for $18.70 paid, −$6.51. (Topuria's 2.53 leftover
+YES no longer appears in the positions feed.)
+
+The pre-registered reading for the day. Pass needed the fills' summed
+`loss_if_sold_now` under the payout: $0.49 logged at the fill against $0.38
+paid, so not a Pass, and by the bids at midnight the same 50 shares are
+$3.41 under water. Against the model: $3.4 to $7.6 a day at 14:30 for a
+full day two-sided; the rig quoted two-sided for 5.2 hours (14:41 to 15:08,
+15:13 to 19:56), which pro-rates to $0.74 to $1.65, so the payout is a half
+of the low figure and under a quarter of the high one. The share: the
+competitiveness number went 3.03, 7.65, 7.26, 16.33 in nine hours, which is
+the "share collapses as others re-quote around it" clause, written down as
+a Fail condition. The 48-hour clause (the fills' loss over the payout) is
+read at 14:30 UTC today; with one order resting outside the spread nothing
+more is earned unless the mid climbs back above 0.235, and the one thing
+that can still happen is the pair completing at 0.28, which returns the $50
+with fifty cents over. So the run stays to its end as pre-registered: no
+bid is resting, nothing can fill badly, and the capped ask is the designed
+exit. The disposal of the 50 YES after 14:30, by the bids' reading at that
+hour or held, is the user's call and goes here.
+
+Two observations, not rules. First, the loss grew after the fill: $0.49 at
+the fill second, $3.41 five hours later, the price going on in the fill's
+direction, as the café's did (1.55 at the fill, 3.87 within the hour) and
+Topuria's. The replay of the previous entry has the same shape in the
+one-minute day, $11.32 a market-day marked ten minutes after the fills
+against $17.29 an hour after, and only a little of it in the week ($5.39
+against $5.47). A rule that undoes a fill at once, into the bids, at the
+fill-second loss, is the candidate this suggests, on the inventory side
+rather than the quote side: the thing to escape is the position after an
+informed print, not the price before it. It is not in the rig and would
+need its own section and pre-registration. Second, the crowding: a pot whose
+competitiveness quintuples within a day is a pot the big quoters have found;
+the chooser read it at 3.03 and the 48 hours were spent under 7 to 16.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
