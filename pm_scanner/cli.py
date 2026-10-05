@@ -14,7 +14,7 @@ from .history import week_fetcher
 from .lp import LiveExchange, PaperExchange, Quoter, append_record, cheap_reason, choose_markets, depth_blockers, exit_blockers, history_blockers, merge_preview, parse_only, positions_report, read_log, refusal_streak, render_plan, render_positions
 from .requote import DEFAULT_POLICIES, render as render_requote, render_summary as render_requote_summary, replay_market, summarize as summarize_requote
 from .rewards import gamma_markets_by_condition, render_pocket, render_rewards, rewards_pocket, rewards_survey
-from .yieldrate import basket as yield_basket, collect as collect_yield, render as render_yield, render_basket as render_yield_basket
+from .yieldrate import basket as yield_basket, collect as collect_yield, render as render_yield, render_basket as render_yield_basket, render_hold as render_yield_hold, render_hours as render_yield_hours, render_sweep as render_yield_sweep
 from .signal import FixtureResolver, GammaResolver, load_signal_csv, render_signal, score_signal
 from .flow import MakerConfig, family_flow, maker_backtest, render_family_flow, render_maker, sampled_market_ids
 from .niches import DEFAULT_SURVEY_TAGS, UP_OR_DOWN_TAG_ID, default_since, load_survey_tags, render_survey, survey
@@ -874,6 +874,8 @@ def build_parser() -> argparse.ArgumentParser:
     yd.add_argument("--min-depth", type=float, default=200.0, help="candidate markets: at least this many score-weighted shares inside the max spread on the thinner side (18e's deep books)")
     yd.add_argument("--max-moves", type=float, default=2.0, help="candidate markets: at most this many 3c ten-minute moves a day last week")
     yd.add_argument("--only", default=None, help="replay exactly these condition ids (comma-separated) instead of the chooser's list")
+    yd.add_argument("--sweep", action="store_true", help="also test the levers on the same history: the quote's distance from the mid (the touch, a tick in, the rig's, a tick out), holding a fill for the pair against undoing it, and quoting only the quiet hours (chosen on the first days, read on the rest)")
+    yd.add_argument("--window", type=int, default=12, help="with --sweep: the length in hours of the quoting window tried")
     yd.add_argument("--json", type=Path, default=None, help="write every row, its fills and its daily series here")
     yd.add_argument("--fixtures", type=Path, default=None, help="unused here: the scan reads live public data")
 
@@ -952,7 +954,8 @@ def _run_yield(args, source) -> int:
         log(f"{len(plans)} plans pass every gate" + (("; passed over: " + ", ".join(f"{k}: {v}" for k, v in reasons.items())) if reasons else ""))
         if not plans:
             return 1
-        yrows = collect_yield(source.http, LiveTrades(http=source.http), plans, markets, days=args.days, interval=args.interval, fill=args.fill, horizon=args.horizon, log=log)
+        yrows = collect_yield(source.http, LiveTrades(http=source.http), plans, markets, days=args.days, interval=args.interval, fill=args.fill, horizon=args.horizon, log=log,
+                              pocket={r.condition_id: r for r in cand}, sweep=args.sweep)
     except Exception as exc:  # noqa: BLE001
         print(f"yield failed: {exc}", file=sys.stderr)
         return 2
@@ -963,8 +966,16 @@ def _run_yield(args, source) -> int:
     print(render_yield(yrows, budget=args.budget, lo_pct=args.target, hi_pct=args.max_target, grain=grain + f", fill={args.fill}", horizon=args.horizon))
     print()
     print(render_yield_basket(yield_basket(yrows, budget=args.budget, max_markets=args.markets, lo_pct=args.target, hi_pct=args.max_target), budget=args.budget, lo_pct=args.target, hi_pct=args.max_target, horizon=args.horizon))
+    if args.sweep:
+        print()
+        print(render_yield_sweep(yrows, horizon=args.horizon, interval=args.interval))
+        print()
+        print(render_yield_hold(yrows, horizons=(6.0, 24.0, 48.0) if args.days > 1 else (1.0, 6.0, 12.0), undo_minutes=args.horizon))
+        print()
+        print(render_yield_hours(yrows, horizon=args.horizon, length=args.window, split_days=4.0 if args.days > 1 else 0.5))
     if args.json:
-        args.json.write_text(json.dumps({"when": now.isoformat(timespec="seconds"), "days": args.days, "fill": args.fill, "horizon": args.horizon, "target": [args.target, args.max_target], "budget": args.budget, "rows": [r.to_dict() for r in yrows]}, indent=1, default=str))
+        args.json.write_text(json.dumps({"when": now.isoformat(timespec="seconds"), "days": args.days, "fill": args.fill, "horizon": args.horizon, "target": [args.target, args.max_target], "budget": args.budget, "rows": [r.to_dict() for r in yrows],
+                                         "sweeps": [{"condition_id": r.plan.condition_id, "comp": r.comp, "rows": [{"extra_ticks": s.extra_ticks, "policy": s.replay.policy.label, "reward_low": round(s.reward_low, 4), "reward_high": round(s.reward_high, 4), "fills": len(s.replay.fills), "loss_10": round(s.replay.loss_per_day(10), 4), "loss_60": round(s.replay.loss_per_day(60), 4), "score_minutes": round(s.replay.score_minutes, 2), "readings": s.replay.readings} for s in r.sweeps]} for r in yrows if r.sweeps]}, indent=1, default=str))
         print(f"\nwrote {args.json}")
     return 0
 

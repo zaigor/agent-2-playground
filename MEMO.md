@@ -2838,6 +2838,146 @@ python -m pm_scanner yield --budget 60 --target 0.1 --max-target 0.5            
 python -m pm_scanner yield --budget 60 --days 1 --horizon 10 --only <ids>       # the day, one-minute mids, fills undone at once
 ```
 
+### 21a. The levers (5 Oct, late): distance, holding for the pair, the hours, and the pocket at the edge
+
+**The question**, the user's second that evening: even small money, is there a
+risk-to-reward setting where the arithmetic is on our side? Size is not that
+setting. Both sides of the ledger scale with it: the reward is pot × our
+score ÷ (ours + theirs), linear in shares while ours is small against theirs;
+the fills cost shares × the adverse move. So the sign is fixed by the market
+and by four things the maker chooses: how far from the mid the quote rests,
+what it does with a fill (undo it, or hold for the capped other side to
+complete the pair), which hours it rests, and which markets. `yield --sweep`
+tests the first three on the same 22 markets as section 21, the week at
+five-minute mids and the last day at one-minute mids; a scratch run joins
+them, choosing on the first four days of the week and reading on the last
+three (`data/yield_sweep_week_2026-10-05.txt`,
+`data/yield_sweep_day_2026-10-05.txt`). One correction first: the reward in
+this entry is the pot against the score the quote *really rested*, not the
+0.25 × size of the model. The rig's prices are rounded outward to the tick, so
+"half the max spread" (2.25c) rests at 2.5 or 3c, a weight of 0.20 or 0.11,
+not 0.25; with the half-tick drift on top, the 22 quotes rested 69 percent of
+the modelled score. The rewards of section 21's table are overstated by about
+a third for that reason, and so was 18e's modelled figure (its first payout,
+read as half the low model in section 20, is three quarters of the corrected
+one). The model in `rewards.pocket_scan` should use the rounded distances; it
+is not changed while 18e runs, because the chooser's `--min-reward` gate and
+the pre-registered "quarter of the modelled figure" read off it.
+
+**Distance.** Per market-day across the 22, the rewards against the book's
+competitor totals at the scan, low (every competitor two-sided) to high
+(every competitor one-sided):
+
+| quote (from the mid, after rounding) | score rested | reward $/mkt-day | fills/mkt-day, week | loss $/mkt-day, week (1h marks) | net, week | fills, day | loss, day (1h marks) | net, day |
+|---|---|---|---|---|---|---|---|---|
+| the touch (1c in a 2c book) | 25.4 | 2.01–5.07 | 1.90 | 2.90 | −0.88 to +2.17 | 3.23 | 5.61 | −3.72 to −0.89 |
+| a tick in (1.5–2c) | 16.6 | 1.33–3.44 | 1.36 | 1.93 | −0.59 to +1.52 | 2.05 | 3.49 | −2.25 to −0.33 |
+| the rig's (2.5–3c) | 8.7 | 0.68–1.77 | 0.89 | 1.25 | −0.57 to +0.53 | 1.41 | 1.90 | −1.24 to −0.19 |
+| a tick out (3.5–4c) | 4.1 | 0.29–0.75 | 0.70 | 0.79 | −0.50 to −0.04 | 1.09 | 1.55 | −1.28 to −0.84 |
+
+Nearer the mid, the reward grows faster than the fills: the touch earns three
+times the rig's reward for 2.3 times its loss on the week, and the ratio of
+reward to loss is 0.69 to 1.75 at the touch against 0.54 to 1.42 at the rig's
+distance and 0.37 to 0.95 a tick out. The quadratic weight favours the
+inside. But on the low figure every distance loses on the week, and on the
+day (a bad day, 1.4 fills a market-day at the rig's distance) every distance
+loses on both figures, the touch worst. Wider is not safer: it halves the
+reward and keeps most of the fills.
+
+**Holding for the pair.** The rig's rule after a fill is to hold and let the
+capped other side complete the pair a tick over the fill. The week's 137
+fills at the rig's distance, marked on the five-minute mids:
+
+| horizon | fills marked | mid back at the fill price | back a tick beyond | the rest lose, mean $ | EV hold, $/fill | EV undo at 1h, $/fill | worst fill $ |
+|---|---|---|---|---|---|---|---|
+| 6h | 127 | 58% | 46% | 3.04 | −1.20 to −1.44 | −1.44 | 11.25 |
+| 24h | 105 | 74% | 62% | 3.76 | −0.93 to −1.20 | −1.41 | 13.25 |
+| 48h | 80 | 78% | 68% | 4.95 | −1.00 to −1.32 | −1.41 | 11.50 |
+
+Three fills in four come back within a day, and holding beats undoing by
+$0.20 to $0.50 a fill, about $0.20 a market-day; the fourth fill does not
+come back and costs $3.80 by then, and the one in twenty that is an informed
+sweep costs $11 to $13, a quarter of the parked money. Holding out for three
+ticks instead of one (the pair at $0.97) does better on the first four days
+and worse on the last three. The day's 31 fills read the same way at one to
+six hours and the other way at twelve. Both tests of "undo at once" in
+section 21 stand: the ten-minute mark is the worst place to undo.
+
+**The hours.** The week's fills by UTC hour, the rig's distance: 69 of 137
+between 18:00 and 24:00, 25 of them in the 20:00 hour alone with $51 of the
+week's $195 of loss; 00:00 to 12:00 UTC had 48 fills. A quote that rests only
+in a window earns the pot for those minutes (the programme samples every
+minute) and meets those hours' fills. The windows below were chosen on the
+whole week's histogram, so the first four days are not a clean fit either;
+the last three are the test:
+
+| quote | hours (UTC) | exit | first 4 days, net $/mkt-day | last 3 days, net $/mkt-day | fills/mkt-day, last 3 |
+|---|---|---|---|---|---|
+| the rig's | all | undo 1h | −0.57 to +0.52 | −0.57 to +0.53 | 0.94 |
+| the rig's | all | hold 24h | −0.48 to +0.62 | −0.36 to +0.74 | 0.94 |
+| the rig's | 00–18 | undo 1h | +0.17 to +1.00 | −0.26 to +0.57 | 0.55 |
+| the rig's | 00–18 | hold 24h | +0.27 to +1.10 | −0.14 to +0.68 | 0.55 |
+| the rig's | 06–18 | hold 24h | +0.16 to +0.71 | −0.05 to +0.49 | 0.41 |
+| a tick in | all | hold 24h | −0.30 to +1.81 | −0.27 to +1.84 | 1.32 |
+| a tick in | 00–18 | hold 24h | +0.55 to +2.14 | +0.02 to +1.60 | 0.77 |
+| a tick in | 06–18 | hold 24h | +0.34 to +1.40 | +0.01 to +1.07 | 0.59 |
+| the touch | all | hold 24h | −0.20 to +2.86 | −0.47 to +2.58 | 1.97 |
+| the touch | 00–18 | hold 24h | +0.81 to +3.10 | −0.13 to +2.16 | 1.26 |
+| a tick out | 00–18 | hold 24h | +0.16 to +0.51 | −0.21 to +0.14 | 0.41 |
+
+Out of sample the window still removes 40 percent of the loss for 25 percent
+of the reward, and holding still adds $0.20 a market-day, so the levers are
+real in direction. Stacked, they move the low figure from −$0.57 a market-day
+to between −$0.14 and +$0.02 (the best cell: a tick in, 00:00–18:00 UTC,
+hold a day), and the high figure from +$0.53 to +$1.60. Every cell that
+reads positive on the low figure in the first four days is zero or negative
+in the last three; the worst single fill in the last three days is −$5 to
+−$15 in every cell.
+
+**Which figure.** Everything above is positive on the high figure and nothing
+is positive on the low one, so the question is where the real share sits.
+The one payout read so far says: at or under the low figure. 18e's first day
+paid $0.38 for 5.2 hours two-sided; the corrected low model for those hours
+is $0.43 to $0.97 (the $3.4 to $7.6 a day of 18e × 0.69 × 5.2/24), so the
+rig earned three quarters of the low figure. The deep books are quoted by
+two-sided bots, which is what the low figure assumes.
+
+**The pocket at the edge** (the one structural idea left). In a book where
+nobody else rests inside the max spread, the share is 100 percent whatever
+the weight, so a quote at the edge of the max spread (4c, weight 0.012)
+takes the whole pot with the fewest fills; the quadratic weight that punishes
+distance in a deep book does not apply when alone. Checked on the seven 18d
+markets at 22:30 UTC: five now have hundreds to thousands of score-weighted
+shares inside (Kostyantynivka 3,190/5,714, the café 134/582), one has 42/6,
+and one, "Fable's output price at or below $40" ($20 pot, mid 0.29), is
+empty, 100 percent at any distance. Its week: 0.57 fills a day a tick out,
+$1.17 a day of loss at the hour marks, against a $20 pot if alone all day.
+That is the 17b arithmetic again, and 18d is the answer to it: the pockets
+closed within ninety minutes of being quoted, the café's realized share in
+its 70 minutes was about 14 percent of its pot, and the first order of any
+size in a thin book goes through the quote. Not a run; the idea is recorded
+because it is the only one whose structure changes the sign, and the two
+things it needs, an empty book that stays empty and a thin book whose mid
+holds, are the two things 18d measured and did not find.
+
+**Answer.** There is a setting that improves the risk-to-reward, and it is
+not size: quote a tick nearer the mid than the rig does, hold a fill for the
+pair for a day rather than undo it, and rest only outside the US afternoon.
+On the week's history, read out of sample, it brings the realistic figure to
+zero and the optimistic one to about $1.60 a market-day on $47 parked (3.4
+percent a day), with a fat left tail of one fill in twenty costing a quarter
+of the parked money. The arithmetic is on our side only if the share is the
+optimistic one, and the one payout we have says it is the pessimistic one.
+That is the finding; it is not a Pass of anything. Nothing in the rig is
+changed by this entry; the three settings exist as flags or small changes,
+and whether any of them goes into a next pre-registered run is a decision
+for section 22 after 18e ends, not a change mid-run.
+
+```
+python -m pm_scanner yield --budget 60 --sweep --only <ids>                 # the week: distance, holding, hours
+python -m pm_scanner yield --budget 60 --sweep --days 1 --horizon 10 --only <ids>
+```
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)

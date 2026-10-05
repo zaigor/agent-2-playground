@@ -1,0 +1,56 @@
+Daily rate on the money, 22 markets the chooser's gates let through, each replayed on one-minute mids, last day, fill=through with the rig's rule; fills marked 10 minutes on. Target band 0.1..0.5% a day.
+    pot inside size parked$  share lo..hi% kept% reward lo..hi fills/d loss/d  net lo..hi $/d  %/d on parked  days± worst d   tell  verdict      question
+    170   1331  100   93.00   1.45..3.85      92  2.28..6.04      2.00  16.01 -13.73..-9.97   -14.76..-10.72   1/2   -13.95  46553  loses        Will Ilija Srdanović be the next prime minister of S
+     50    345   50   47.50   3.11..8.35      52  0.82..2.19      1.00   3.75  -2.94..-1.56    -6.18..-3.29    1/2    -3.02   8533  loses        Will an AI lab announce another Millennium Prize sol
+    110    778   50   47.50   1.38..3.78     100  1.51..4.13      0.00   0.00   1.51..4.13      3.17..8.70     0/2     0.16   1263  above        Will there be no change in Fed interest rates after 
+    330   3832  100   93.00   0.44..1.12      97  1.39..3.57      3.00   2.00  -0.61..1.57     -0.65..1.69     1/2    -0.75    185  sign unknown Will Aleksandar Vučić be the next Prime Minister of 
+    200   1346   50   48.50   0.71..1.89     100  1.42..3.78      0.00   0.00   1.42..3.78      2.93..7.79     0/2     0.15   1079  above        Will 1 Fed rate hike happen in 2026?
+    121    214   20   19.00   0.99..2.29      96  1.15..2.66      5.00   5.70  -4.55..-3.04   -23.92..-16.00   1/2    -4.67      -  loses        Will the Ornn B200 Index be at least $6.50 on Octobe
+    119    418   20   18.80   0.85..2.20      94  0.95..2.47      3.00   2.50  -1.55..-0.03    -8.23..-0.15    2/2    -1.15   3160  loses        Will Alphabet be the third-largest company in the wo
+     57    639   50   47.50   1.72..4.76      56  0.55..1.51      3.00  13.01 -12.46..-11.50  -26.24..-24.21   1/2   -12.51      -  loses        Will Anthropic's IPO valuation be between $1.75T and
+     31    379   50   47.50   2.62..6.89     100  0.81..2.14      0.00   0.00   0.81..2.14      1.71..4.50     0/2     0.09    363  above        Will "Babydoll – Dominic Fike" be the #2 song for 20
+    150    937   50   47.50   0.52..1.19      89  0.70..1.59      2.00   2.00  -1.30..-0.41    -2.75..-0.86    1/2    -1.38   1863  loses        Another Fed rate hike in 2026?
+     50    359   50   47.50   1.52..3.50      83  0.63..1.44      0.00   0.00   0.63..1.44      1.32..3.04     0/2     0.07    217  above        Will Mohammad Bagher Ghalibaf attend a US x Iran dip
+     48    279   20   19.00   1.56..4.31      92  0.69..1.90      0.00   0.00   0.69..1.90      3.63..10.00    0/2     0.07   1654  above        Will Brazil's Q3 2026 GDP growth rate (QoQ) be betwe
+    200   2746   50   46.50   0.37..1.01      66  0.49..1.33      1.00   0.75  -0.26..0.58     -0.57..1.24     1/2    -0.31    124  sign unknown Will Anthropic have the best AI model at the end of 
+     50    634   50   47.00   1.46..3.79      97  0.70..1.83      0.00   0.00   0.70..1.83      1.50..3.90     0/2     0.07    278  above        Will Morgan Wallen be the Billboard #1 top artist in
+    103    717   80   74.40   0.70..1.52      70  0.51..1.10      7.00  15.21 -14.70..-14.11  -19.76..-18.97   2/2   -12.75  42129  loses        Will David Eby be the next Premier of British Columb
+    188   2348   50   47.00   0.37..0.97      97  0.69..1.79      1.00  -2.20   2.89..3.99      6.15..8.49     0/2     0.61   2489  above        Will Anthropic's market cap be between $2.0T and $2.
+    200   3722   50   46.50   0.33..1.00      80  0.53..1.59      1.00   2.75  -2.22..-1.16    -4.77..-2.49    1/2    -2.27   5013  loses        Will Google have the best AI model at the end of Dec
+     50    307   50   47.50   1.30..2.86     100  0.65..1.43      1.00   2.00  -1.35..-0.57    -2.85..-1.21    1/2    -1.42   1964  loses        Will Samuel Alito announce his retirement by June 30
+     23    246   50   47.50   2.81..6.65     100  0.64..1.53      0.00   0.00   0.64..1.53      1.36..3.21     0/2     0.07    228  above        Will Spider-Man: Brand New Day have the 2nd best dom
+    152   2945   50   47.50   0.35..0.98      66  0.36..0.98      1.00   0.75  -0.39..0.23     -0.83..0.49     1/2    -0.43    195  sign unknown Will Anthropic's market cap be between $2.25T and $2
+     37    280   20   19.00   1.32..3.44      97  0.48..1.24      0.00   0.00   0.48..1.24      2.50..6.52     0/2     0.05    780  above        Will there be 50 or more West Nile neuroinvasive dis
+     20    305   20   19.00   1.36..3.69      39  0.11..0.29      0.00   0.00   0.11..0.29      0.55..1.51     0/2     0.01     38  above        Will the 30-year Treasury yield dip below 5.15% befo
+  across 22 markets, 22 market-days: 31 fills (1.41 a market-day), loss $2.92 a market-day; the rig's rule keeps 86% of the score, the half-tick rule 99%
+  verdicts on the low figure: in band 0, above the band 10, under it 0, sign unknown (low under zero, high over) 3, loses on both 9
+  median %/day on parked: -0.57 (low share) .. 1.51 (high share)
+  pot: $/day.  inside: score-weighted shares others rest inside the max spread, thinner side.  parked$: both sides' collateral.  share: of the pot, against this book (competitors all balanced .. all one-sided).  kept: the fraction of that score the rig's re-centre rule held over the replay.  reward: pot × share × kept, $/day.  fills/d, loss/d: the replay's, marked 10 min after each fill, less a tick.  net: reward − loss.  days±: UTC days with a fill / days replayed.  worst d: the worst day's net, $.  tell: market-days before the two-sigma error of the daily mean is under 0.1% of parked.
+
+  basket for $60: 1 markets, $47.00 parked; modelled net $2.89..3.99 a day = 4.81..6.65% of the budget (6.15..8.49% of parked); 1.00 fills a day expected, marked 10 min on
+  the target 0.1% of $60 is $0.06 a day; the basket's daily net has a spread of $1.17 on the week, so a live run would need about 1528 days before its mean is known to within that target
+    Will Anthropic's market cap be between $2.0T and $2.25T at m: $47.00 parked, net $2.89..3.99/day, 1.00 fills/day
+
+  distance from the mid, 22 markets, 22 market-days, fills marked 10 min on:
+  quote       score/mkt  reward lo..hi $/d fills/mkt-d loss/mkt-d  net lo..hi $/mkt-d  %/d of parked mkts +
+  the touch       24.39     1.89..4.72            3.23       6.61    -4.72..-1.88    -10.19..-4.07    5/22
+  a tick in       15.69     1.24..3.17            2.05       4.36    -3.13..-1.20     -6.76..-2.59    8/22
+  the rig's        8.49     0.66..1.71            1.41       2.92    -2.26..-1.21     -4.89..-2.62   10/22
+  a tick out       3.93     0.27..0.71            1.09       2.54    -2.27..-1.83     -4.91..-3.96   12/22
+  score/mkt: the mean two-sided score the quote rested per market (size × ((v − s) / v)^2, the tick rounding and the drift included).  reward: that score against the book's competitor totals at the scan.  net: reward − loss, per market-day; the last column is the markets positive on the low figure.
+
+  holding a fill for the pair (the rig's rule) against undoing it 10 min on, every fill of the rig's quote across the markets:
+   horizon fills marked came back at  through rest lose $   EV hold $/fill  EV undo  worst $
+       1h    31     31          61%      42%        2.99   -1.05..-1.59      -2.07    13.20
+       6h    31     21          57%      43%        2.82   -1.13..-1.39      -1.84     8.00
+      12h    31     15          53%      47%        4.12   -1.85..-1.93      -1.56     9.20
+  came back: within the horizon a reading showed the mid at the fill price again (at) or a tick beyond (through), when the capped other side completes the pair for a tick's gain.  rest lose: mean undo cost at the horizon of the fills that did not come back (through).  EV hold: per fill, a tick's gain when it came back (at .. through), the horizon loss when not; EV undo: minus the mean undo cost at the undo mark.  worst: the costliest single fill at the horizon.
+
+  fills by UTC hour, the rig's quote across the markets (31 fills, fills marked 10 min on):
+  00:0   01:3   02:0   03:0   04:0   05:0   06:2   07:1   08:1   09:0   10:2   11:1   12:0   13:1   14:2   15:0   16:1   17:1   18:4   19:3   20:1   21:2   22:5   23:1  
+  busiest hours: 22h 5 fills $9.20, 18h 4 fills $6.00, 01h 3 fills $6.75, 19h 3 fills $16.00, 06h 2 fills $3.50, 10h 2 fills $7.70
+  best 12-hour window on the first 0.5 days: 10:00-22:00 UTC, net $0.56 a market-day against $-1.31 quoting all day (reward $0.41 vs $0.82, loss $-0.15 vs $2.13)
+  the same window on the remaining 0.5 days: net $-3.30 a market-day against $-2.89 all day (reward $0.41 vs $0.82, loss $3.71 vs $3.71)
+  a quote that rests only in some hours earns the pot for those minutes only (the programme samples every minute) and meets only those hours' fills; the window is chosen on the first days and read on the rest, so the second line is the test.
+
+wrote /tmp/claude-0/-home-user-agent-2-playground/770d56de-33cb-5a4e-9f43-7a1c558adb65/scratchpad/sweep_day.json

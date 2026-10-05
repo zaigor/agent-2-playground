@@ -385,6 +385,7 @@ sixth of its score.
 ```
 python -m pm_scanner yield --budget 60 --target 0.1 --max-target 0.5            # the chooser's deep-book candidates, replayed on their week
 python -m pm_scanner yield --budget 60 --days 1 --horizon 10 --only <ids>       # the last day at one-minute mids, fills undone at once
+python -m pm_scanner yield --budget 60 --sweep --only <ids>                       # the levers: distance from the mid, holding for the pair, the hours quoted
 ```
 
 Asks the question the other way round: not how much the rig can make, but
@@ -402,7 +403,13 @@ day, and how many market-days a live reading would need before its mean is
 known to within the target. Then the basket a budget would hold. Read-only,
 public data; the share is one book's snapshot and the losses are mid marks,
 so the table is a model to be read against `lp --earnings` and
-`lp --positions`, not a forecast.
+`lp --positions`, not a forecast. `--sweep` tests the three levers a
+market maker has on the same history: the quote's distance from the mid (at
+the touch, a tick in, the rig's half max spread, a tick out), with the
+reward re-read from the score the quote really rested; holding a fill for
+the capped other side to complete the pair (the rig's rule) against undoing
+it, at 6, 24 and 48 hours; and quoting only a window of hours, chosen on
+the first four days and read on the rest (memo 21a).
 
 ## Fee models (change them when the venues do)
 

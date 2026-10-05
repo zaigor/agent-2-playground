@@ -63,7 +63,7 @@ class Policy:
     name: str
     confirm: int = 3  # readings a tick or more away before a re-centre (the rig's --recentre-confirm)
     guard_ticks: float = 0.0  # re-centre at once when the mid is within this many ticks of a quote (0 = never)
-    extra_ticks: int = 0  # quote this many ticks wider than half the max spread
+    extra_ticks: int = 0  # quote this many ticks wider than half the max spread (negative: nearer the mid, -2 is the touch in a 2c book)
     recentre_ticks: float = 1.0  # a reading counts as away when the mid is this many ticks from where we quoted (the rig's --recentre-ticks)
 
     @property
@@ -74,7 +74,7 @@ class Policy:
         if self.guard_ticks:
             bits.append(f"guard={self.guard_ticks:g}t")
         if self.extra_ticks:
-            bits.append(f"+{self.extra_ticks}t")
+            bits.append(f"{self.extra_ticks:+d}t")
         return " ".join(bits)
 
 

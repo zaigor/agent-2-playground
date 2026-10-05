@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pm_scanner.lp import QuotePlan
-from pm_scanner.requote import HALF_TICK, RIG, Fill, Replay
+from pm_scanner.requote import HALF_TICK, RIG, Fill, Policy, Replay
 from pm_scanner.yieldrate import YieldRow, basket, daily_series, evaluate, render, render_basket
 
 DAY = 86400
@@ -77,3 +77,74 @@ def test_basket_fits_the_budget_and_skips_markets_under_the_band():
     assert "no market" in render_basket([], budget=60.0, lo_pct=0.1, hi_pct=0.5, horizon=60)
     d = good.to_dict()
     assert d["condition_id"] == "a" and d["kept"] == 1.0 and len(d["daily"]) == 8 and d["pct_low"] > 0
+
+
+# --------------------------------------------------------------------------- #
+# The levers: distance, holding for the pair, the hours
+# --------------------------------------------------------------------------- #
+
+from pm_scanner.yieldrate import (  # noqa: E402
+    DISTANCE_TICKS, SweepRow, best_window, distance_policies, fills_by_hour, hold_outcomes, render_hold, render_hours, render_sweep, reward_from_replay,
+    summarize_hold, window_net,
+)
+
+
+def _series(values, *, start=T0, step=300):
+    return [(start + i * step, v) for i, v in enumerate(values)]
+
+
+def test_distance_policies_and_reward_from_the_rested_score():
+    pols = distance_policies()
+    assert [p.extra_ticks for p in pols] == list(DISTANCE_TICKS) and pols[2] == RIG and pols[0].label == "rig confirm=3 -2t"
+    rep = Replay(RIG, readings=1440, score_minutes=1440 * 5.0, span_hours=24.0, start_ts=T0)  # a mean two-sided score of 5 all day
+    lo, hi = reward_from_replay(100.0, rep, (45.0, 95.0))  # competitors 45 (all one-sided) .. 95 (all balanced)
+    assert round(lo, 2) == 5.0 and round(hi, 2) == 10.0  # 5/(5+95), 5/(5+45)
+    assert reward_from_replay(100.0, Replay(RIG), (1.0, 2.0)) == (0.0, 0.0)
+    row = SweepRow(0, Replay(RIG, fills=[_fill(T0, mark=0.25)], readings=1440, score_minutes=1440 * 5.0, span_hours=24.0, start_ts=T0), lo, hi, 49.5)
+    assert row.label == "the rig's" and row.net(60) == (5.0 - 1.5, 10.0 - 1.5)
+
+
+def test_hold_outcomes_read_the_pair_completion_and_the_horizon_mark():
+    # a bid fill at 0.27; the mid falls to 0.24, comes back to 0.27 after two hours and to 0.28 after three, then sits at 0.26
+    series = _series([0.30] * 3 + [0.24] * 24 + [0.27] * 12 + [0.28] * 12 + [0.26] * 200)  # five-minute bars
+    f = _fill(T0 + 600, mark=0.24)  # fills at T0+10min
+    one, three, six = (hold_outcomes([f], series, horizon_h=h)[0] for h in (1.0, 3.5, 6.0))
+    assert not one.completes_at and not one.completes_through and one.mark == 0.24 and one.loss() == 2.0  # 50 × (0.27 − 0.23)
+    assert three.completes_at and three.completes_through  # the 0.28 bars start at T0 + 39 × 5 min = 3h15
+    assert six.completes_at and six.mark == 0.26 and six.loss() == 1.0
+    late = hold_outcomes([_fill(series[-1][0] - 60, mark=0.26)], series, horizon_h=6.0)[0]
+    assert late.censored and late.loss() is None and not late.completes_at  # the series ends before the horizon
+    assert hold_outcomes([f], [], horizon_h=1.0) == []
+    d = summarize_hold([one], undo_minutes=60)
+    assert d["marked"] == 1 and d["complete_at"] == 0 and round(d["ev_hold_through"], 2) == -2.0 and round(d["ev_undo"], 2) == -2.0  # the +60 mark is 0.24 too: 50 × (0.27 − 0.23)
+    d6 = summarize_hold([six], undo_minutes=60)
+    assert d6["complete_at"] == 1 and round(d6["ev_hold_at"], 2) == 0.5  # the pair completes a tick over the fill: 50 × 0.01
+    assert summarize_hold([late])["marked"] == 0
+
+
+def test_hours_histogram_window_and_the_out_of_sample_split():
+    plan = _plan(share=(0.01, 0.02))  # $1.40 a day low reward
+    # fills at 14:00 UTC on days 1..4 (in sample) and at 14:00 on day 6 (out of sample), none elsewhere
+    day0 = T0 - (T0 % DAY)
+    fills = [_fill(day0 + d * DAY + 14 * 3600, mark=0.25) for d in (1, 2, 3, 4, 6)]
+    rep = Replay(RIG, fills=fills, readings=7 * 1440, score_minutes=7 * 1440, ideal_minutes=7 * 1440, span_hours=7 * 24.0, start_ts=day0)
+    row = evaluate(plan, [rep], horizon=60)
+    hist = fills_by_hour([row])
+    assert len(hist) == 24 and hist[14] == (14, 5, 7.5) and sum(c for _h, c, _l in hist) == 5
+    reward, loss, days = window_net([row], set(range(24)), horizon=60)
+    assert round(days, 6) == 7.0 and round(reward, 2) == round(1.4 * 7, 2) and loss == 7.5
+    reward_q, loss_q, _ = window_net([row], set(range(0, 12)), horizon=60)  # the quiet half: half the reward, none of the fills
+    assert round(reward_q, 2) == round(0.7 * 7, 2) and loss_q == 0.0
+    start, r_in, l_in, d_in = best_window([row], length=12, horizon=60, until=day0 + 4 * DAY)
+    assert 14 not in {(start + i) % 24 for i in range(12)} and l_in == 0.0 and round(d_in, 6) == 4.0
+    r_out, l_out, d_out = window_net([row], {(start + i) % 24 for i in range(12)}, horizon=60, since=day0 + 4 * DAY)
+    assert l_out == 0.0 and round(d_out, 6) == 3.0  # the out-of-sample fill at 14h is outside the window too
+    text = render_hours([row], horizon=60, length=12, split_days=4.0)
+    assert "best 12-hour window" in text and "the same window on the remaining" in text
+    row.comp = (10.0, 20.0)
+    row.sweeps = [SweepRow(k, Replay(Policy("rig", confirm=3, extra_ticks=k), readings=1440, score_minutes=1440 * (3 - k), span_hours=24.0, start_ts=day0), *reward_from_replay(140.0, Replay(RIG, readings=1440, score_minutes=1440 * (3 - k)), (10.0, 20.0)), 49.5) for k in DISTANCE_TICKS]
+    text = render_sweep([row], horizon=60)
+    assert "the touch" in text and "a tick out" in text and "mkts +" in text
+    assert "no market carried" in render_sweep([evaluate(plan, [rep], horizon=60)], horizon=60)
+    text = render_hold([row], horizons=(6.0, 24.0), undo_minutes=60)
+    assert "holding a fill for the pair" in text and "no fill has a mark" in text  # the row has no series
