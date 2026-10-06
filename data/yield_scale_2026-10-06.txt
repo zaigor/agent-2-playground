@@ -1,0 +1,47 @@
+# the 25 deepest books of 6 Oct (data/yield_deepest_2026-10-06.txt, deepest_week.json) scaled to larger parked amounts;
+# reward = pot x kept x k s/(1 - s + k s) with s the share at plan size (share saturates as our score grows against the competitors' total);
+# hold loss = k x 24 fills x $0.13/fill (the 24h EV-hold figure of the hold table) / 7 days; tell = (2 sigma / 0.1% of parked)^2 days, sigma from the per-market daily sd, independent (ind) or fully correlated (corr).
+# scale.py, 6 Oct 07:20 UTC
+markets 25  parked at plan size $1407  pots $2149/day  fills/week 24  undo loss $2.66/day  hold loss $0.45/day
+ceiling if we owned every pot, kept-weighted: $2063/day
+
+ parked $     k reward lo reward hi hold loss   net lo   net hi  %lo/day  %hi/day pot share lo tell days ind tell corr
+     1407   1.0      1.68      4.62      0.45     1.24     4.18    0.088    0.297         0.1%            71       140
+     2000   1.4      2.39      6.56      0.63     1.76     5.93    0.088    0.296         0.1%            71       140
+     5000   3.6      5.96     16.29      1.58     4.37    14.71    0.087    0.294         0.3%            71       140
+    10000   7.1     11.87     32.21      3.17     8.70    29.04    0.087    0.290         0.6%            71       140
+    20000  14.2     23.55     62.99      6.33    17.21    56.66    0.086    0.283         1.1%            71       140
+    50000  35.5     57.51    147.84     15.84    41.67   132.00    0.083    0.264         2.7%            71       140
+   100000  71.1    110.80    269.10     31.67    79.13   237.43    0.079    0.237         5.2%            71       140
+
+undo-at-1h instead of hold (the replay's own loss column):
+  parked $1407: undo loss $2.66/day  net lo $-0.98  net hi $1.97
+  parked $10000: undo loss $18.89/day  net lo $-7.02  net hi $13.32
+
+per market at plan size (sorted by pot):
+  pot  size  parked  inside   sh lo   sh hi  rew lo fills  undo60  end d  question
+  283   100    93.0   29622   0.03%   0.07%   0.084     1   -0.55    195  Will Marine Le Pen win the 2027 French presidential election
+  266   100    92.0   12073   0.13%   0.32%   0.329     3   -0.65     22  Will Gadi Eizenkot be the next Prime Minister of Israel?
+  250   100    93.0   13447   0.18%   0.55%   0.448    12   13.05    543  Will Pedro Sánchez be the next Prime Minister of Spain?
+  105    50    47.5   11759   0.06%   0.16%   0.050     1    0.25     65  Will the Fed increase interest rates by 25 bps after the Dec
+  102    50    47.5   38085   0.02%   0.06%   0.022     0    0.00    268  Will Gukesh Dommaraju win the 2026 World Chess Championship?
+  100    50    47.5   25508   0.03%   0.07%   0.029     0    0.00   1183  Will Payward announce bankruptcy by December 31, 2029?
+   96   100    93.0   28069   0.03%   0.08%   0.032     0    0.00    195  Will Édouard Philippe win the 2027 French presidential elect
+   95    50    47.5   24260   0.03%   0.07%   0.028     5    3.50     65  Will there be no change in Fed interest rates after the Dece
+   52    50    46.5   17694   0.07%   0.20%   0.036     0    0.00     29  Will the Republican Party win the FL-14 House seat?
+   51    60    55.8   11167   0.09%   0.24%   0.041     1    1.50     29  Will the Democrats win the Texas governor race in 2026?
+   51    50    46.5   12977   0.08%   0.24%   0.043     0    0.00     29  Will the Democratic Party win the MI-04 House seat?
+   51    50    46.5   14726   0.08%   0.23%   0.041     0    0.00     29  Will the Democratic Party win the MO-02 House seat?
+   51    50    46.5   14801   0.07%   0.21%   0.037     0    0.00     29  Will the Democratic Party win the AL-02 House seat?
+   51    60    55.8   32333   0.05%   0.14%   0.023     0    0.00     29  Will the Democrats win the Florida governor race in 2026?
+   51    60    55.8   23105   0.04%   0.11%   0.022     0    0.00     29  Will the Republicans win the Maine Senate race in 2026?
+   50    60    55.8   11435   0.13%   0.38%   0.061     0    0.00     29  Will the Republicans win the Oregon governor race in 2026?
+   50    50    46.5   10341   0.12%   0.35%   0.059     1    1.50     29  Will the Democratic Party win the TX-15 House seat?
+   50    50    46.5   13267   0.09%   0.28%   0.047     0    0.00     29  Will the Republican Party win the FL-09 House seat?
+   50    50    46.5   22422   0.05%   0.14%   0.023     0    0.00     87  Israel x Iran ceasefire continues through December 31?
+   49    50    46.5   12062   0.10%   0.30%   0.050     0    0.00     29  Will the Democratic Party win the FL-07 House seat?
+   49    50    46.5   10411   0.10%   0.27%   0.048     0    0.00     29  Will the Republican Party win the MI-04 House seat?
+   49    50    46.5   12864   0.10%   0.28%   0.046     0    0.00     29  Will the Republican Party win the MI-10 House seat?
+   49    60    55.8   10148   0.08%   0.19%   0.039     0    0.00     29  Will the Republicans win the Florida governor race in 2026?
+   49    50    46.5   12240   0.07%   0.17%   0.015     0    0.00     29  Will the Republican Party win the AL-02 House seat?
+   49    60    55.8   20510   0.07%   0.18%   0.030     0    0.00     29  Will the Republicans win the Nebraska Senate race in 2026?
