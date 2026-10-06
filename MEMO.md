@@ -2978,6 +2978,139 @@ python -m pm_scanner yield --budget 60 --sweep --only <ids>                 # th
 python -m pm_scanner yield --budget 60 --sweep --days 1 --horizon 10 --only <ids>
 ```
 
+### 21b. The deep-out-of-the-money quote (6 Oct): where the premium exists, what it pays, and how rare the fills really are
+
+**The question**, the user's, in the morning: are we talking about the same
+thing? What they have in mind is writing a far-out-of-the-money option: a
+resting order so far from the price that it is rarely hit, earning a small
+premium while it waits, and 0.1 to 0.2 percent a day of that kind would do.
+Section 21a swept one tick wider than the rig and no further, so the
+scenario had not been tested on its own terms. Three things were, this
+morning, on public history (`data/yield_deep_orders_2026-10-06.txt`,
+`data/yield_wide_edge_2026-10-06.txt`, `data/yield_deepest_2026-10-06.txt`).
+
+**Where the premium exists.** The analogy breaks in one place that the
+data cannot repair: in an options market the premium is paid by whoever
+buys the option, and a deeper strike pays less but never nothing. Here the
+premium is Polymarket's reward pot, paid only to orders within the market's
+max spread of the mid, with a weight of ((v − s)/v)² inside it, and nothing
+at all beyond. Of 1,718 pots at $20 a day or more this morning, 1,181 have a
+max spread of 4.5c, 296 have 6.5c (the US Senate and governor races,
+Netanyahu, the 2027 French election), 86 have 5.5c, 55 have 8.5c, and the
+rest are narrower. So the farthest a paying quote can rest is 4c from the
+mid in most markets and 6 to 8c in a few hundred, and at that edge its
+weight is 1 to 5 percent of a quote at the mid. A truly deep order, 6, 8 or
+11c away, earns no premium anywhere; what it can earn is the price coming
+back after the sweep that filled it.
+
+**The deep order with no premium** (the 22 books of section 21, the week,
+orders half the max spread plus 2 to 8 ticks from the mid, marked at the
+mid less a tick):
+
+| order, from the mid | fills a market-day | fills a week | P&L per fill at 1h / 6h / 24h | P&L a market-day at 24h | back to the pre-fill mid within 24h | worst fill |
+|---|---|---|---|---|---|---|
+| 2.5–3c, the rig's (pays) | 0.89 | 6.2 | −1.40 / −1.32 / −1.25 | −0.85 | 44% | −13.25 |
+| 3.5–4c (pays) | 0.70 | 4.9 | −1.13 / −1.08 / −0.88 | −0.46 | 44% | −12.75 |
+| 4.5–5c (the edge) | 0.57 | 4.0 | −1.00 / −1.01 / −0.82 | −0.33 | 41% | −12.25 |
+| 5.5–6c (no premium) | 0.51 | 3.5 | −0.66 / −0.59 / −0.39 | −0.14 | 41% | −10.75 |
+| 7.5–8c (no premium) | 0.41 | 2.9 | −0.31 / +0.07 / −0.37 | −0.10 | 33% | −9.75 |
+| 10.5–11c (no premium) | 0.29 | 2.0 | +0.30 / +0.97 / +0.15 | +0.03 | 38% | −8.25 |
+
+The fills do not become rare as the order moves out. An order 11c from the
+mid in these books is still hit twice a week, a third as often as the rig's
+at 3c, because what fills a resting order here is not the price drifting a
+tick but a sweep of 5 to 20c in a second, and a sweep that goes 11c hits
+everything on the way. After the fill the price comes back to where it was
+within a day in two cases of five; the mean P&L per fill is negative to 8c
+out and about zero at 11c, and the worst fill at every distance is $8 to
+$13, a fifth to a quarter of the parked money. Without the premium the deep
+order is a bet on reversion with zero expectancy and a fat left tail.
+
+**The far edge of the paying zone, where it is widest** (the 6.5c markets
+with 200 or more shares inside, long-dated, mid in 15–85c: 136 of 196
+qualified; the 14 deepest replayed over the week at the rig's distance and
+one to four ticks wider). These are the deepest books on the site: 27,000 to
+103,000 score-weighted shares inside the spread (the Texas Senate races,
+Netanyahu as next prime minister, the Alaska, Ohio, Kansas, Maine and
+Michigan Senate races, Bab el-Mandeb), with reward minimums of 60 to 200
+shares. A minimum quote at the rig's distance (3.5–4c in a 6.5c spread)
+takes 0.01 to 0.07 percent of the pot: $0.01 to $0.18 a day on $56 to $190
+parked. A tick wider halves that, two ticks wider leaves a cent or two, and
+beyond that the weight rounds to nothing. The fills: 4 at the rig's distance
+in 98 market-days, 2 a tick wider, 1 at two ticks, 12 of the 14 markets
+unfilled all week at any distance; the four fills gained, by the hour mark.
+
+**The deepest books on the site, at the rig's own distance** (`yield --min-reward
+0 --min-depth 10000 --top 25 --sweep`, 06:30 UTC; `data/yield_deepest_2026-10-06.txt`).
+The 6.5c result pointed at what the chooser had been excluding: its
+`--min-reward 0.5` floor, written for 18e, drops every book so deep that a
+minimum quote earns under fifty cents a day, and those are the books where
+fills are rare. With the floor at zero and the depth gate at 10,000
+score-weighted shares inside, 78 markets pass the cheap gates and 25 every
+gate (passed over: 569 end within seven days, 357 have a mid outside 15–85c,
+44 are excluded families, 36 would lose over $2 undoing a fill). They are the
+US House seats, Senate and governor races of 3 November, the Fed's next
+decisions, the next prime ministers of Spain and Israel, Le Pen and Philippe
+for 2027, a chess championship, a ceasefire; 10,000 to 38,000 shares inside,
+reward minimums of 50, 60 or 100 shares, $46.50 to $93 parked.
+
+The week: 175 market-days, 24 fills (one per seven market-days), the rig's
+rule keeping 96 percent of the score (the half-tick drift hardly occurs in
+these books). The reward the quote really rests, pot against the book's
+competitor totals: $0.06 to $0.17 a market-day on $56 parked, 0.11 to 0.30
+percent a day gross. On the low figure 18 of 25 are in the band, 3 under it,
+4 lose: Pedro Sánchez as next prime minister (1.7 fills a day, a −$14 day),
+the Fed's "no change" market (0.7 a day), and one fill each in the TX-15
+House seat and the Texas governor race. Eighteen markets were not filled at
+all in the week; their reward is 0.03 to 0.11 percent of parked a day on the
+low figure, 0.08 to 0.32 on the high, one to six cents a day each.
+
+| quote | fills a market-day | loss $/market-day (1h marks) | net $/market-day, low..high | markets positive |
+|---|---|---|---|---|
+| the touch | 0.53 | 0.51 | −0.39 to −0.18 | 15/25 |
+| a tick in | 0.22 | 0.21 | −0.12 to +0.03 | 19/25 |
+| the rig's | 0.14 | 0.11 | −0.05 to +0.06 | 21/25 |
+| a tick out | 0.12 | 0.07 | −0.03 to +0.04 | 21/25 |
+
+The rig's distance is the right one here: nearer, the fills triple; wider,
+the reward falls faster than the fills. The fills themselves behave
+differently from section 21's: 84 percent came back to the fill price within
+a day (19 marked fills), the rest cost $2.03 by then, so holding a fill for
+the capped other side to complete the pair, the rig's rule, is worth −$0.13
+a fill against −$1.26 for undoing it at the hour; the worst fill cost $11.70.
+With the hour's undo the 25 net −$0.11 to −$0.005 a market-day; with the
+rig's hold they net +$0.04 to +$0.15, which is 0.08 to 0.27 percent of
+parked a day, on both the low and the high figure. No hour window holds out
+of sample (24 fills are too few to place).
+
+**Answer.** Yes, this is the scenario, and it exists, in one place: the
+deepest books, at the rig's own distance, not further out. There the premium
+is 0.1 to 0.3 percent of parked a day gross, a fill comes about once a week
+per market and comes back five times in six, and with the rig's hold rule the
+week nets 0.08 to 0.27 percent a day on both share figures. It is the band
+the user named, found where the chooser's floor had been excluding it;
+section 21's "the band cannot be found" was true of the books that floor
+admits. What it is in money: four to fifteen cents a day a market, $46.50 to
+$93 parked each, so $60 holds one and three of the 50-share House seats need
+about $140. What it is in risk: one fill in six does not come back and costs
+$2 by the next day, a month of premium; the worst in 175 market-days cost
+$12, a quarter of the parked money; and four of the 25 markets, the ones in
+the news (a prime minister being chosen, the Fed), lost on the week, so the
+kind within the kind matters. What is not known: the share is one book's
+snapshot against bots that are two-sided (the low figure is the one to
+believe, as 18e's payout showed), 24 fills are a small sample for the
+reversion rate, and fifteen of the 25 resolve on 3 November, 29 days out,
+with their books likely to wake before then (the 48-hour pull rule stands).
+Nothing in the rig changes for this entry. If a run follows 18e, this is its
+shape: `--min-reward 0 --min-depth 10000` written in the command, the rig's
+distance, the hold rule as it is, one market at $60 or three at about $140,
+pre-registered in section 22 with the band as its Pass line and a fill that
+does not come back as its Fail line.
+
+```
+python -m pm_scanner yield --budget 60 --min-reward 0 --min-depth 10000 --top 25 --sweep
+```
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)

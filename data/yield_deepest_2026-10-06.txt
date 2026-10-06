@@ -1,0 +1,59 @@
+Daily rate on the money, 25 markets the chooser's gates let through, each replayed on five-minute mids, last week, fill=through with the rig's rule; fills marked 60 minutes on. Target band 0.1..0.5% a day.
+    pot inside size parked$  share lo..hi% kept% reward lo..hi fills/d loss/d  net lo..hi $/d  %/d on parked  days± worst d   tell  verdict      question
+    250  13447  100   93.00   0.18..0.55      97  0.45..1.34      1.71   1.86  -1.42..-0.53    -1.52..-0.57    2/8   -14.35  15782  loses        Will Pedro Sánchez be the next Prime Minister of Spa
+    266  12073  100   92.00   0.13..0.32      98  0.33..0.82      0.43  -0.09   0.42..0.92      0.46..1.00     0/8     0.09     32  in band      Will Gadi Eizenkot be the next Prime Minister of Isr
+    283  29622  100   93.00   0.03..0.07     100  0.08..0.19      0.14  -0.08   0.16..0.27      0.18..0.29     0/8     0.02     17  in band      Will Marine Le Pen win the 2027 French presidential 
+    105  11759   50   47.50   0.06..0.16      75  0.05..0.12      0.14   0.04   0.01..0.09      0.03..0.19     1/8    -0.20     13  in band      Will the Fed increase interest rates by 25 bps after
+     50  11435   60   55.80   0.13..0.38      94  0.06..0.18      0.00   0.00   0.06..0.18      0.11..0.32     0/8     0.02      0  in band      Will the Republicans win the Oregon governor race in
+     50  10341   50   46.50   0.12..0.35      99  0.06..0.17      0.14   0.21  -0.16..-0.04    -0.33..-0.09    1/8    -1.44    515  loses        Will the Democratic Party win the TX-15 House seat?
+     49  12062   50   46.50   0.10..0.30     100  0.05..0.15      0.00   0.00   0.05..0.15      0.11..0.32     0/8     0.01      0  in band      Will the Democratic Party win the FL-07 House seat?
+     49  10411   50   46.50   0.10..0.27     100  0.05..0.13      0.00   0.00   0.05..0.13      0.10..0.28     0/8     0.01      0  in band      Will the Republican Party win the MI-04 House seat?
+     51  11167   60   55.80   0.09..0.24      86  0.04..0.10      0.14   0.21  -0.17..-0.11    -0.31..-0.20    1/8    -1.46    359  loses        Will the Democrats win the Texas governor race in 20
+     50  13267   50   46.50   0.09..0.28     100  0.05..0.14      0.00   0.00   0.05..0.14      0.10..0.30     0/8     0.01      0  in band      Will the Republican Party win the FL-09 House seat?
+     49  12864   50   46.50   0.09..0.28     100  0.05..0.14      0.00   0.00   0.05..0.14      0.10..0.30     0/8     0.01      0  in band      Will the Republican Party win the MI-10 House seat?
+     51  12977   50   46.50   0.08..0.24     100  0.04..0.12      0.00   0.00   0.04..0.12      0.09..0.26     0/8     0.01      0  in band      Will the Democratic Party win the MI-04 House seat?
+     51  14726   50   46.50   0.08..0.23     100  0.04..0.12      0.00   0.00   0.04..0.12      0.09..0.25     0/8     0.01      0  in band      Will the Democratic Party win the MO-02 House seat?
+     49  10148   60   55.80   0.08..0.19     100  0.04..0.09      0.00   0.00   0.04..0.09      0.07..0.17     0/8     0.01      0  in band      Will the Republicans win the Florida governor race i
+     51  14801   50   46.50   0.07..0.21     100  0.04..0.11      0.00   0.00   0.04..0.11      0.08..0.23     0/8     0.01      0  in band      Will the Democratic Party win the AL-02 House seat?
+     52  17694   50   46.50   0.07..0.20     100  0.04..0.11      0.00   0.00   0.04..0.11      0.08..0.23     0/8     0.01      0  in band      Will the Republican Party win the FL-14 House seat?
+     49  12240   50   46.50   0.07..0.17      46  0.01..0.04      0.00   0.00   0.01..0.04      0.03..0.08     0/8     0.00      0  under        Will the Republican Party win the AL-02 House seat?
+     96  28069  100   93.00   0.03..0.08     100  0.03..0.07      0.00   0.00   0.03..0.07      0.03..0.08     0/8     0.01      0  under        Will Édouard Philippe win the 2027 French presidenti
+     49  20510   60   55.80   0.06..0.18      93  0.03..0.08      0.00   0.00   0.03..0.08      0.05..0.15     0/8     0.01      0  in band      Will the Republicans win the Nebraska Senate race in
+    100  25508   50   47.50   0.03..0.07     100  0.03..0.07      0.00   0.00   0.03..0.07      0.06..0.15     0/8     0.01      0  in band      Will Payward announce bankruptcy by December 31, 202
+     95  24260   50   47.50   0.03..0.07      99  0.03..0.07      0.71   0.50  -0.47..-0.43    -0.99..-0.91    3/8    -1.97    907  loses        Will there be no change in Fed interest rates after 
+     50  22422   50   46.50   0.05..0.14      92  0.02..0.07      0.00   0.00   0.02..0.07      0.05..0.14     0/8     0.01      0  in band      Israel x Iran ceasefire continues through December 3
+     51  32333   60   55.80   0.05..0.14     100  0.02..0.07      0.00   0.00   0.02..0.07      0.04..0.12     0/8     0.01      0  in band      Will the Democrats win the Florida governor race in 
+    102  38085   50   47.50   0.02..0.05     100  0.02..0.06      0.00   0.00   0.02..0.06      0.05..0.12     0/8     0.01      0  in band      Will Gukesh Dommaraju win the 2026 World Chess Champ
+     51  23105   60   55.80   0.04..0.11     100  0.02..0.06      0.00   0.00   0.02..0.06      0.04..0.10     0/8     0.01      0  under        Will the Republicans win the Maine Senate race in 20
+  across 25 markets, 175 market-days: 24 fills (0.14 a market-day), loss $0.11 a market-day; the rig's rule keeps 96% of the score, the half-tick rule 100%
+  verdicts on the low figure: in band 18, above the band 0, under it 3, sign unknown (low under zero, high over) 0, loses on both 4
+  median %/day on parked: 0.06 (low share) .. 0.17 (high share)
+  pot: $/day.  inside: score-weighted shares others rest inside the max spread, thinner side.  parked$: both sides' collateral.  share: of the pot, against this book (competitors all balanced .. all one-sided).  kept: the fraction of that score the rig's re-centre rule held over the replay.  reward: pot × share × kept, $/day.  fills/d, loss/d: the replay's, marked 60 min after each fill, less a tick.  net: reward − loss.  days±: UTC days with a fill / days replayed.  worst d: the worst day's net, $.  tell: market-days before the two-sigma error of the daily mean is under 0.1% of parked.
+
+  basket for $60: 1 markets, $55.80 parked; modelled net $0.06..0.18 a day = 0.10..0.30% of the budget (0.11..0.32% of parked); 0.00 fills a day expected, marked 60 min on
+  the target 0.1% of $60 is $0.06 a day; the basket's daily net has a spread of $0.02 on the week, so a live run would need about 0 days before its mean is known to within that target
+    Will the Republicans win the Oregon governor race in 2026?: $55.80 parked, net $0.06..0.18/day, 0.00 fills/day
+
+  distance from the mid, 25 markets, 175 market-days, fills marked 60 min on:
+  quote       score/mkt  reward lo..hi $/d fills/mkt-d loss/mkt-d  net lo..hi $/mkt-d  %/d of parked mkts +
+  the touch       32.07     0.12..0.33            0.53       0.51    -0.39..-0.18     -0.69..-0.32   15/25
+  a tick in       20.86     0.09..0.24            0.22       0.21    -0.12..0.03      -0.21..0.06    19/25
+  the rig's       12.32     0.06..0.17            0.14       0.11    -0.05..0.06      -0.08..0.11    21/25
+  a tick out       6.53     0.04..0.12            0.12       0.07    -0.03..0.04      -0.05..0.08    21/25
+  score/mkt: the mean two-sided score the quote rested per market (size × ((v − s) / v)^2, the tick rounding and the drift included).  reward: that score against the book's competitor totals at the scan.  net: reward − loss, per market-day; the last column is the markets positive on the low figure.
+
+  holding a fill for the pair (the rig's rule) against undoing it 60 min on, every fill of the rig's quote across the markets:
+   horizon fills marked came back at  through rest lose $   EV hold $/fill  EV undo  worst $
+       6h    24     24          75%      67%        2.27   -0.56..-0.64      -0.77     6.55
+      24h    24     19          84%      84%        2.03   -0.13..-0.13      -1.26    11.70
+      48h    24     17          88%      82%        2.10   -0.10..-0.17      -1.20    10.70
+  came back: within the horizon a reading showed the mid at the fill price again (at) or a tick beyond (through), when the capped other side completes the pair for a tick's gain.  rest lose: mean undo cost at the horizon of the fills that did not come back (through).  EV hold: per fill, a tick's gain when it came back (at .. through), the horizon loss when not; EV undo: minus the mean undo cost at the undo mark.  worst: the costliest single fill at the horizon.
+
+  fills by UTC hour, the rig's quote across the markets (24 fills, fills marked 60 min on):
+  00:0   01:0   02:0   03:0   04:0   05:0   06:0   07:1   08:0   09:3   10:1   11:1   12:1   13:1   14:5   15:0   16:1   17:1   18:0   19:2   20:1   21:4   22:2   23:0  
+  busiest hours: 14h 5 fills $-5.45, 21h 4 fills $5.10, 09h 3 fills $9.45, 19h 2 fills $-0.75, 22h 2 fills $2.05, 07h 1 fills $-1.75
+  best 12-hour window on the first 4 days: 21:00-09:00 UTC, net $0.03 a market-day against $-0.12 quoting all day (reward $0.03 vs $0.07, loss $0.01 vs $0.19)
+  the same window on the remaining 3.0 days: net $-0.03 a market-day against $0.07 all day (reward $0.03 vs $0.07, loss $0.06 vs $-0.00)
+  a quote that rests only in some hours earns the pot for those minutes only (the programme samples every minute) and meets only those hours' fills; the window is chosen on the first days and read on the rest, so the second line is the test.
+
+wrote /tmp/claude-0/-home-user-agent-2-playground/770d56de-33cb-5a4e-9f43-7a1c558adb65/scratchpad/deepest_week.json
