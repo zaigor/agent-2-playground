@@ -2670,11 +2670,16 @@ and `--earnings 2026-10-06`, read at 18:29 UTC with the public book).** The
 `end` line is stamped 18:22:56 UTC, three hours and fifty-three minutes after
 the `--until` of 14:30. The rig ends at its first reading past the hour on
 the wall clock (`time.time`, `lp.py` run loop) and cancels every order first,
-so a gap of that length means no reading was taken for at least that long
+so a gap of that length means no reading was taken for at least that long,
+with the capped NO bid resting on the exchange meanwhile. The user's paste
+settles when: the last two `scoring` lines are 07:25:37 and 07:35:49 UTC (1
+order, 1 scoring), and the ten-minute line due at 07:45 never came, so the
+rig took no reading from about 07:40 to 18:22, ten and three quarter hours
 (the machine asleep or the process paused; `systemd-inhibit --what=sleep`
-holds off idle sleep, not a closed lid), with the capped NO bid resting on
-the exchange meanwhile; the last `scoring` line before the gap says when the
-readings stopped and is still to be pasted. The state at the end: the YES
+holds off idle sleep, not a closed lid). The one order resting through the
+gap was the designed exit and no bid was out, so nothing could fill badly;
+a rig that is meant to run unattended needs a watchdog on its own readings,
+recorded here and not built. The state at the end: the YES
 bid filled (50 at 0.27, 4 Oct 19:56:39), the NO bid at 0.72 (a YES ask at
 0.28) never filled, 16 replacements, 1 fill, no stop, no abort. The public
 tape since 5 Oct 15:00 UTC has sixteen prints, all between YES 0.24 and
@@ -2682,9 +2687,11 @@ tape since 5 Oct 15:00 UTC has sixteen prints, all between YES 0.24 and
 shares, ask 0.25 with 1,771, mid 0.245.
 
 The payouts: 4 Oct $0.3826 (two-sided for 5.2 hours, then one order), 5 Oct
-at least $0.044 (the 15:10 UTC reading; the day's final figure is `--earnings
-2026-10-05`, not yet pasted), 6 Oct $0.0992 for the hours to the end, of
-which $0.0574 by 07:35. The run's total is about $0.55. The pot at 07:35 on
+$0.2469 (`--earnings 2026-10-05`, pasted after this entry was first written;
+the 15:10 reading of $0.044 was a partial day, and the one capped order
+earned the rest once the mid came back to 0.25 and put it inside the max
+spread), 6 Oct $0.0992 for the hours to the end, of which $0.0574 by 07:35.
+The run's total is $0.73. The pot at 07:35 on
 6 Oct read $152 a day with competitiveness 19.59 (3.03 at the start, 16.33 at
 the first midnight, 1.43 on the second afternoon). `--positions` at the end:
 Anthropic 50 YES at 0.27, cost $13.50, site mark 0.24, best bid 0.24 with
@@ -2692,18 +2699,19 @@ Anthropic 50 YES at 0.27, cost $13.50, site mark 0.24, best bid 0.24 with
 with 30 shares, sell now $2.10, −$3.10; everything $13.65 for $18.70 paid,
 −$5.05.
 
-The pre-registered reading, clause by clause. Pass, per UTC day: 4 Oct is not
+The pre-registered reading, clause by clause (figures as corrected for the
+5 Oct payout). Pass, per UTC day: 4 Oct is not
 a Pass (the fill's `loss_if_sold_now` $0.49 against $0.38 paid, read on
 5 Oct); 5 and 6 Oct had no fill and earned $0.04 and $0.10 with one capped
 order, a shape the Pass test was not written for (its payout clause reads a
 two-sided quote), so no day passes. Fail, over the 48 hours: the fill's
-loss by the bids at the end is $1.96 against about $0.55 of payout, three and
-a half times over, so the first clause fails (at the fill second the same
-figure was $0.49, about equal to the payout; the clause names the reading,
+loss by the bids at the end is $1.96 against $0.73 of payout, two and
+two thirds times over, so the first clause fails (at the fill second the same
+figure was $0.49, two thirds of the payout; the clause names the reading,
 and the reading at the end is the one that counts for a position still
 held). The second clause, a payout under a quarter of the modelled figure:
 against the model as written, $3.4 to $7.6 a day two-sided, 48 hours model
-to $6.8 to $15.2 and $0.55 is under a quarter of the low figure; against the
+to $6.8 to $15.2 and $0.73 is under a quarter of the low figure; against the
 model pro-rated to the 5.2 two-sided hours actually quoted, $0.74 to $1.65,
 the 4 Oct payout of $0.38 is half of the low figure and above a quarter, so
 this clause fails on the letter and not on the pro-rated reading, and the
@@ -2742,6 +2750,31 @@ The recommendation written here is no live run on this strategy as it
 stands; a run would need a new section with a 30-day moves gate in the
 chooser and its own pre-registration, and the user's decision, not a
 default.
+
+**Where the market-making strategy stands (6 Oct, evening; the user asked
+whether this is its end).** On the evidence in sections 17 to 21d: the
+passive reward quote, as this rig makes it, does not pay. The premium side
+is real, stable and small (a minimum quote in a deep book takes well under
+one percent of a $50-to-$300 pot, five to fifteen cents a market-day on the
+share figure the payouts bear out); the fill side is a storm process whose
+median fill comes back and whose tail costs a month of premium each time,
+and the month of ten-minute mids says the tail arrives in deep calm books
+about as often as it does anywhere else. Every lever the data offered was
+read (size, distance, holding for the pair, the hours, the depth of the
+book, the width of the pot's spread) and none changed the sign of a month.
+Live: 18d aborted on fills in thin books, 18e failed on one fill in a deep
+one; the account's two held positions are $5.05 under water by the bids and
+the three days with payout readings earned $1.90 in rewards. What was not
+tested, and would each be a different strategy with its own section: a
+quoter fast enough to pull orders inside the second a sweep begins (the
+18e fill was one 3,192-share print, so even that may not help); quotes
+hedged across the correlated brackets of one event; and the reverse of the
+rig, taking after a sweep in a deep book on the 80-percent reversion the
+hold tables measure, which pays the taker fee and carries the same tail.
+None has an edge shown anywhere in this memo, and the general reading of the
+programme is that it pays the fast and the large for a service a slow small
+quoter provides at a loss. Recorded as the state, not as a decision; the
+decision is the user's.
 
 ## 21. A daily rate on the money (5 Oct): the band is not the constraint, the fills are, and neither a week nor a day of history can tell 0.1% a day from zero
 
