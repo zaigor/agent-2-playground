@@ -3111,6 +3111,78 @@ does not come back as its Fail line.
 python -m pm_scanner yield --budget 60 --min-reward 0 --min-depth 10000 --top 25 --sweep
 ```
 
+### 21c. The $10,000 question (6 Oct, 07:30 UTC): the zone scaled, what it would pay, and what a week cannot tell
+
+The user asked it plainly: with $10,000 and any number of markets, is there
+a sustainable money-making strategy in these findings, and what does it
+yield. The reading below is the week of 29 September to 6 October, replayed
+as in 21b (five-minute mids, a fill when a print goes through our price, the
+rig's quote and re-centre rule), scaled. Two things in it are new. The
+`--top 25` of the 21b command was a cap, not the universe: with the cap off,
+42 books of 10,000 or more score-weighted shares inside pass every gate
+(`data/yield_deep10k_2026-10-06.txt`), and at 3,000 inside 84 do
+(`data/yield_deep3k_2026-10-06.txt`). And the scaling
+(`data/yield_scale_2026-10-06.txt`, `scale.py` in the scratchpad): the
+reward of a market at k times the plan's size is pot × kept × ks/(1 − s + ks),
+with s the share at plan size, so it saturates as our score grows against the
+competitors' total; the fill loss is k times the replay's, because a print
+through our price takes everything resting at it whatever our size; the hold
+rule's cost is the hold table's 24-hour EV per fill times the fills; the
+"tell" is (2σ/0.1% of parked)² days, with σ the per-market daily standard
+deviations added as independent or as fully correlated. Each universe is
+scaled uniformly, every market at the same multiple of its minimum size,
+because choosing the markets that were in band on this week is the selection
+section 21 showed does not persist.
+
+| universe (week of 29 Sep) | mkts | parked at plan | fills/wk | at $10,000: multiple, shares a side | net $/day low..high | %/day of $10,000 | worst day (undo) | tell, days |
+|---|---|---|---|---|---|---|---|---|
+| the 25 of 21b (06:30 scan) | 25 | $1,407 | 24 in 7 mkts | 7.1×, 355–711 | 8.70..29.04 | 0.087..0.29 | −$109 | 71–140 |
+| 10,000+ inside, cap off | 42 | $2,283 | 28 in 10 mkts | 4.4×, 219–438 | 3.26..19.31 | 0.033..0.19 | −$86 | 31–101 |
+| 3,000+ inside | 84 | $4,345 | 93 in 27 mkts | 2.3×, 46–230 | 4.69..34.47 | 0.047..0.34 | −$37 | 11–127 |
+
+The pots of the 42 sum to $2,742 a day and of the 84 to $5,803; at $10,000
+our share of them is 0.3 percent on the low figure and the saturation is
+invisible until about $50,000 (1.3 percent), so the money is not the
+constraint at this size, the fills are, as in section 21. The 17 books that
+the cap had hidden are the deepest of all (Senate races with 25,000 to
+75,000 inside, the 2028 primaries) and pay 0.01 to 0.03 percent a day: they
+dilute the 42 against the 25. Undoing fills at an hour instead of holding
+for the pair turns the 42 negative at $10,000 (reward $7.29 against $15.33 of
+undo loss a day), so the sign rests on the hold rule as it did in 21b; the
+hold table of the 42 reads EV −$0.03..−0.23 a fill at 24 hours and
++$0.18..−0.09 at 48, of the 84 −$0.20..−0.34 and −$0.24..−0.38. The daily
+series at $10,000 on the 42: +4, +6, −10, −86, +7, −9, +29, +2; on the 84:
++3, −18, +3, −37, +9, −12, +25, +5. Of the 42, 32 resolve within 40 days
+(3 November), $1,674 of the $2,283 parked and $1.03 of the $1.67 a day of low
+reward; of the 84, 59. The fills concentrate: in the 84, the Anthropic
+market-cap bracket of 18e (15 fills), Harry Kane's Ballon d'Or (14), Sánchez
+(12), Feijóo and Vučić (7 each), the Fed (7); 27 of 84 books filled at all.
+
+**Answer.** Not demonstrated, and not demonstrable from a week. The findings
+say a zone exists where the premium is modest and the fills are rare, and
+that on this week it would have paid, on the low share figure with the rig's
+hold rule, 0.03 to 0.09 percent a day: $3 to $9 a day on $10,000, about
+$100 to $250 a month, with days of −$40 to −$110 inside it. The high figure
+($19 to $34 a day) assumes competitors who are one-sided, and 18e's payout
+ran at three quarters of the low figure, so the low one is the reading.
+Whether that mean is really above zero would take one to four months of
+running at that size to know (31 to 140 market-days on the 42 by the σ of
+this week), and the universe that produced it empties on 3 November, with
+its books likely to wake in the last week; what replaces it is unknown. The
+live evidence is one market for 48 hours whose first day was not a Pass.
+What $10,000 buys that $60 does not is the tell: at $60 the band is below
+the noise for years, at $10,000 it is a season. The way there is the ladder
+the memo has used: the section 22 run at $60 to $140 on the 21b shape, then
+a multiple of three to five per passed stage, each pre-registered, which puts
+$10,000 four stages and some months away, and a rig that today runs one
+market at a time and has not been run on forty. Nothing in the rig changes
+for this entry.
+
+```
+python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 10000 --top 300 --sweep --json <path>
+python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 3000 --top 300 --sweep --json <path>
+```
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)

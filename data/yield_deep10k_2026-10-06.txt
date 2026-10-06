@@ -1,0 +1,78 @@
+Daily rate on the money, 42 markets the chooser's gates let through, each replayed on five-minute mids, last week, fill=through with the rig's rule; fills marked 60 minutes on. Target band 0.1..0.5% a day.
+    pot inside size parked$  share lo..hi% kept% reward lo..hi fills/d loss/d  net lo..hi $/d  %/d on parked  days± worst d   tell  verdict      question
+    241  13742  100   93.00   0.15..0.41      97  0.35..0.97      1.71   1.86  -1.51..-0.90    -1.63..-0.96    2/8   -14.45  15800  loses        Will Pedro Sánchez be the next Prime Minister of Spa
+    105  10239   50   47.50   0.07..0.19      79  0.06..0.16      0.14   0.04   0.03..0.12      0.06..0.25     1/8    -0.19     13  in band      Will the Fed increase interest rates by 25 bps after
+     55  10088   60   55.80   0.14..0.41      98  0.08..0.22      0.00   0.00   0.08..0.22      0.14..0.39     0/8     0.02      0  in band      Will Jonathan Kreiss-Tomkins win the 2026 Alaska gov
+    283  42460  100   93.00   0.03..0.06     100  0.07..0.17      0.14  -0.08   0.15..0.25      0.16..0.26     0/8     0.02     17  in band      Will Marine Le Pen win the 2027 French presidential 
+     50  10738   60   55.80   0.13..0.36      81  0.05..0.15      0.00   0.00   0.05..0.15      0.09..0.26     0/8     0.02      0  in band      Will the Democrats win the Oregon governor race in 2
+     50  10628   60   55.80   0.12..0.35     100  0.06..0.17      0.00   0.00   0.06..0.17      0.11..0.31     0/8     0.02      0  in band      Will the Democrats win the Kansas governor race in 2
+     50  10971   50   46.50   0.11..0.32      99  0.05..0.16      0.14   0.21  -0.16..-0.05    -0.34..-0.11    1/8    -1.45    515  loses        Will the Democratic Party win the TX-15 House seat?
+     49  11758   50   46.50   0.10..0.31     100  0.05..0.15      0.00   0.00   0.05..0.15      0.11..0.33     0/8     0.02      0  in band      Will the Democratic Party win the FL-07 House seat?
+     50  13254   60   55.80   0.09..0.26      97  0.05..0.13      0.14   0.04   0.00..0.08      0.01..0.15     1/8    -0.25     14  in band      Will the Republicans win the Wisconsin governor race
+     50  11998   50   46.50   0.09..0.26      95  0.04..0.12      0.14   0.07  -0.03..0.05     -0.06..0.11     1/8    -0.46     57  sign unknown Will the Democratic Party win the PA-01 House seat?
+     51  11924   50   46.50   0.09..0.25     100  0.05..0.13      0.00   0.00   0.05..0.13      0.10..0.27     0/8     0.01      0  in band      Will the Democratic Party win the MI-04 House seat?
+     49  12940   50   46.50   0.09..0.27     100  0.05..0.13      0.00   0.00   0.05..0.13      0.10..0.28     0/8     0.01      0  in band      Will the Republican Party win the MI-10 House seat?
+     50  13946   50   46.50   0.09..0.27     100  0.04..0.13      0.00   0.00   0.04..0.13      0.10..0.29     0/8     0.01      0  in band      Will the Republican Party win the FL-09 House seat?
+     51  13350   50   46.50   0.09..0.25     100  0.04..0.13      0.00   0.00   0.04..0.13      0.10..0.28     0/8     0.01      0  in band      Will the Democratic Party win the MO-02 House seat?
+     50  14623   50   46.50   0.08..0.24      81  0.03..0.10      0.14   0.25  -0.22..-0.15    -0.47..-0.32    1/8    -1.72    704  loses        Will the Republican Party win the TX-15 House seat?
+     50  12344   50   46.50   0.08..0.21     100  0.04..0.11      0.00   0.00   0.04..0.11      0.08..0.23     0/8     0.01      0  in band      Will the Democratic Party win the FL-09 House seat?
+     49  16342   60   55.80   0.08..0.22      80  0.03..0.08      0.57   0.90  -0.87..-0.82    -1.56..-1.46    1/8    -6.27   6365  loses        Will the Republicans win the Vermont governor race i
+     52  17531   50   46.50   0.07..0.21     100  0.04..0.11      0.00   0.00   0.04..0.11      0.08..0.24     0/8     0.01      0  in band      Will the Republican Party win the FL-14 House seat?
+     51  16907   50   46.50   0.07..0.19     100  0.03..0.10      0.00   0.00   0.03..0.10      0.07..0.20     0/8     0.01      0  in band      Will the Democratic Party win the AL-02 House seat?
+     95  21137   50   47.50   0.03..0.08      99  0.03..0.08      0.71   0.50  -0.47..-0.42    -0.99..-0.89    3/8    -1.97    907  loses        Will there be no change in Fed interest rates after 
+     96  28509  100   93.00   0.03..0.08     100  0.03..0.07      0.00   0.00   0.03..0.07      0.03..0.08     0/8     0.01      0  under        Will Édouard Philippe win the 2027 French presidenti
+     49  12878   50   46.50   0.06..0.17      45  0.01..0.04      0.00   0.00   0.01..0.04      0.03..0.08     0/8     0.00      0  under        Will the Republican Party win the AL-02 House seat?
+     49  20765   60   55.80   0.06..0.18      93  0.03..0.08      0.00   0.00   0.03..0.08      0.05..0.15     0/8     0.01      0  in band      Will the Republicans win the Nebraska Senate race in
+     51  13628   60   55.80   0.06..0.14     100  0.03..0.07      0.00   0.00   0.03..0.07      0.05..0.13     0/8     0.01      0  in band      Will the Republicans win the Maine Senate race in 20
+    102  18840   50   47.50   0.03..0.07     100  0.03..0.07      0.00   0.00   0.03..0.07      0.06..0.15     0/8     0.01      0  in band      Will Gukesh Dommaraju win the 2026 World Chess Champ
+     49  16074   60   55.80   0.06..0.14     100  0.03..0.07      0.00   0.00   0.03..0.07      0.05..0.12     0/8     0.01      0  in band      Will the Republicans win the Florida governor race i
+     51  27710   60   55.80   0.05..0.15     100  0.03..0.08      0.00   0.00   0.03..0.08      0.05..0.14     0/8     0.01      0  in band      Will the Democrats win the Florida governor race in 
+     50  21820   50   46.50   0.05..0.15      92  0.02..0.07      0.00   0.00   0.02..0.07      0.05..0.15     0/8     0.01      0  in band      Israel x Iran ceasefire continues through December 3
+    100  25682   50   47.50   0.02..0.06     100  0.02..0.06      0.00   0.00   0.02..0.06      0.05..0.12     0/8     0.01      0  in band      Will Payward announce bankruptcy by December 31, 202
+     50  15828   60   55.80   0.04..0.10     100  0.02..0.05      0.00   0.00   0.02..0.05      0.04..0.09     0/8     0.01      0  under        Will the Republicans win the Iowa Senate race in 202
+     49  26233   60   55.80   0.04..0.10     100  0.02..0.05      0.00   0.00   0.02..0.05      0.03..0.09     0/8     0.01      0  under        Will the Democrats win the Maine Senate race in 2026
+     51  29666   60   55.80   0.04..0.09      99  0.02..0.05      0.00   0.00   0.02..0.05      0.03..0.08     0/8     0.01      0  under        Will the Democrats win the Kansas Senate race in 202
+     51  28756   60   55.80   0.03..0.09     100  0.02..0.04      0.14  -0.30   0.32..0.34      0.57..0.62     0/8     0.01    710  above        Will an independent win the Nebraska Senate race in 
+     50  28132   60   55.80   0.03..0.09     100  0.02..0.04      0.00   0.00   0.02..0.04      0.03..0.08     0/8     0.01      0  under        Will the Democrats win the Iowa Senate race in 2026?
+     51  24942   60   55.80   0.03..0.08      87  0.01..0.04      0.00   0.00   0.01..0.04      0.03..0.06     0/8     0.00      0  under        Will the Republicans win the Ohio Senate race in 202
+     49  44090   60   55.80   0.03..0.10     100  0.02..0.05      0.00   0.00   0.02..0.05      0.03..0.08     0/8     0.00      0  under        Will the Democrats win the Michigan Senate race in 2
+     49  51543   60   55.80   0.03..0.08      96  0.01..0.04      0.00   0.00   0.01..0.04      0.02..0.07     0/8     0.00      0  under        Will the Republicans win the Kansas Senate race in 2
+     52  50247   60   55.80   0.02..0.05     100  0.01..0.03      0.00   0.00   0.01..0.03      0.02..0.05     0/8     0.00      0  under        Will Dan Sullivan win the Alaska Senate race in 2026
+     49  74795   60   55.80   0.02..0.06      89  0.01..0.03      0.00   0.00   0.01..0.03      0.02..0.05     0/8     0.00      0  under        Will the Democrats win the Ohio Senate race in 2026?
+     30  29550   50   46.50   0.03..0.08      98  0.01..0.02      0.00   0.00   0.01..0.02      0.02..0.05     0/8     0.00      0  under        Will Gavin Newsom win the 2028 Democratic presidenti
+     35  40656   50   47.00   0.02..0.06      99  0.01..0.02      0.00   0.00   0.01..0.02      0.02..0.04     0/8     0.00      0  under        Will Alexandria Ocasio-Cortez win the 2028 Democrati
+     48  71514   60   55.80   0.01..0.04     100  0.01..0.02      0.00   0.00   0.01..0.02      0.01..0.03     0/8     0.00      0  under        Will Mary Peltola win the Alaska Senate race in 2026
+  across 42 markets, 294 market-days: 28 fills (0.10 a market-day), loss $0.08 a market-day; the rig's rule keeps 96% of the score, the half-tick rule 100%
+  verdicts on the low figure: in band 21, above the band 1, under it 14, sign unknown (low under zero, high over) 1, loses on both 5
+  median %/day on parked: 0.05 (low share) .. 0.12 (high share)
+  pot: $/day.  inside: score-weighted shares others rest inside the max spread, thinner side.  parked$: both sides' collateral.  share: of the pot, against this book (competitors all balanced .. all one-sided).  kept: the fraction of that score the rig's re-centre rule held over the replay.  reward: pot × share × kept, $/day.  fills/d, loss/d: the replay's, marked 60 min after each fill, less a tick.  net: reward − loss.  days±: UTC days with a fill / days replayed.  worst d: the worst day's net, $.  tell: market-days before the two-sigma error of the daily mean is under 0.1% of parked.
+
+  basket for $10000: 3 markets, $204.60 parked; modelled net $0.54..0.81 a day = 0.01..0.01% of the budget (0.27..0.40% of parked); 0.29 fills a day expected, marked 60 min on
+  the target 0.1% of $10000 is $10.00 a day; the basket's daily net has a spread of $0.77 on the week, so a live run would need about 0 days before its mean is known to within that target
+    Will an independent win the Nebraska Senate race in 2026?: $55.80 parked, net $0.32..0.34/day, 0.14 fills/day
+    Will Marine Le Pen win the 2027 French presidential election: $93.00 parked, net $0.15..0.25/day, 0.14 fills/day
+    Will Jonathan Kreiss-Tomkins win the 2026 Alaska governor el: $55.80 parked, net $0.08..0.22/day, 0.00 fills/day
+
+  distance from the mid, 42 markets, 294 market-days, fills marked 60 min on:
+  quote       score/mkt  reward lo..hi $/d fills/mkt-d loss/mkt-d  net lo..hi $/mkt-d  %/d of parked mkts +
+  the touch       31.33     0.08..0.22            0.38       0.41    -0.32..-0.18     -0.59..-0.34   22/42
+  a tick in       20.30     0.06..0.15            0.16       0.18    -0.12..-0.03     -0.23..-0.05   30/42
+  the rig's       11.83     0.03..0.09            0.10       0.08    -0.05..0.01      -0.09..0.02    35/42
+  a tick out       6.02     0.02..0.06            0.08       0.06    -0.04..0.00      -0.07..0.00    38/42
+  score/mkt: the mean two-sided score the quote rested per market (size × ((v − s) / v)^2, the tick rounding and the drift included).  reward: that score against the book's competitor totals at the scan.  net: reward − loss, per market-day; the last column is the markets positive on the low figure.
+
+  holding a fill for the pair (the rig's rule) against undoing it 60 min on, every fill of the rig's quote across the markets:
+   horizon fills marked came back at  through rest lose $   EV hold $/fill  EV undo  worst $
+       6h    28     28          75%      57%        1.91   -0.42..-0.66      -0.87     6.55
+      24h    28     22          82%      73%        1.71   -0.03..-0.23      -1.34    11.70
+      48h    28     20          90%      75%        1.45    0.18..-0.09      -1.29    10.70
+  came back: within the horizon a reading showed the mid at the fill price again (at) or a tick beyond (through), when the capped other side completes the pair for a tick's gain.  rest lose: mean undo cost at the horizon of the fills that did not come back (through).  EV hold: per fill, a tick's gain when it came back (at .. through), the horizon loss when not; EV undo: minus the mean undo cost at the undo mark.  worst: the costliest single fill at the horizon.
+
+  fills by UTC hour, the rig's quote across the markets (28 fills, fills marked 60 min on):
+  00:0   01:0   02:0   03:1   04:0   05:0   06:0   07:1   08:0   09:3   10:0   11:0   12:2   13:1   14:6   15:0   16:3   17:3   18:1   19:2   20:1   21:3   22:1   23:0  
+  busiest hours: 14h 6 fills $-3.70, 09h 3 fills $9.45, 16h 3 fills $6.35, 17h 3 fills $0.75, 21h 3 fills $6.50, 12h 2 fills $0.75
+  best 12-hour window on the first 4 days: 21:00-09:00 UTC, net $0.03 a market-day against $-0.11 quoting all day (reward $0.02 vs $0.04, loss $-0.01 vs $0.15)
+  the same window on the remaining 3.0 days: net $-0.02 a market-day against $0.05 all day (reward $0.02 vs $0.04, loss $0.04 vs $-0.01)
+  a quote that rests only in some hours earns the pot for those minutes only (the programme samples every minute) and meets only those hours' fills; the window is chosen on the first days and read on the rest, so the second line is the test.
+
+wrote /tmp/claude-0/-home-user-agent-2-playground/770d56de-33cb-5a4e-9f43-7a1c558adb65/scratchpad/deep10k_all.json
