@@ -115,6 +115,8 @@ def test_fetch_mids_and_replay_market_read_the_market_record():
     assert len(fetch_mids(http, "tok", days=1)) == 30 and http.calls[-1][1] == {"market": "tok", "interval": "1d", "fidelity": 1}
     fetch_mids(http, "tok", days=7)
     assert http.calls[-1][1] == {"market": "tok", "interval": "1w", "fidelity": 5}
+    assert len(fetch_mids(http, "tok", days=30)) == 30 and http.calls[-1][1] == {"market": "tok", "interval": "max", "fidelity": 10}
+    assert fetch_mids(http, "tok", days=8)[0][0] >= T0 + 29 * 60 - 8 * 86400  # cut to the last `days` days of what came back
     m = SimpleNamespace(raw={"rewardsMaxSpread": 4.5, "rewardsMinSize": 50, "orderPriceMinTickSize": 0.01}, yes_token="tok", condition_id="0xc", outcomes=OUT, question="Q")
     assert market_params(m) == (4.5, 50.0, 0.01)
     got = replay_market(http, _Tape(), m, days=1, fill="through")

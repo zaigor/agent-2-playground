@@ -861,7 +861,7 @@ def build_parser() -> argparse.ArgumentParser:
     yd.add_argument("--budget", type=float, default=60.0, help="the money: the basket is sized to it and the band read against it")
     yd.add_argument("--markets", type=int, default=3, help="how many markets the basket may hold")
     yd.add_argument("--top", type=int, default=30, help="how many candidates (best modelled reward first) to replay")
-    yd.add_argument("--days", type=int, default=7, help="7: the last week at five-minute mids; 1: the last day at one-minute mids")
+    yd.add_argument("--days", type=int, default=7, help="7: the last week at five-minute mids; 1: the last day at one-minute mids; 8..30: that many days at ten-minute mids (the CLOB keeps no finer history past 30 days)")
     yd.add_argument("--interval", type=int, default=60, help="seconds between readings in the replay, as the rig's --interval")
     yd.add_argument("--fill", choices=("through", "at"), default="through", help="a print strictly beyond our price fills us (through; nearer the truth in deep books), or at it too (at: a ceiling)")
     yd.add_argument("--horizon", type=int, choices=(10, 60), default=60, help="mark each fill against the mid this many minutes later (60: held an hour; 10: undone at once)")
@@ -916,7 +916,7 @@ def _run_requote(args, source) -> int:
         rows.append(got)
     if not rows:
         return 1
-    grain = "one-minute mids, last day" if args.days <= 1 else "five-minute mids, last week"
+    grain = "one-minute mids, last day" if args.days <= 1 else ("five-minute mids, last week" if args.days <= 7 else f"ten-minute mids, last {min(args.days, 30)} days")
     print(render_requote(rows, title=f"re-quote policies replayed on {grain}, readings every {args.interval}s, fill={args.fill}"))
     if len(rows) > 1:
         print()
@@ -962,7 +962,7 @@ def _run_yield(args, source) -> int:
     if not yrows:
         print("yield: no market had a replayable week", file=sys.stderr)
         return 1
-    grain = "one-minute mids, last day" if args.days <= 1 else "five-minute mids, last week"
+    grain = "one-minute mids, last day" if args.days <= 1 else ("five-minute mids, last week" if args.days <= 7 else f"ten-minute mids, last {min(args.days, 30)} days")
     print(render_yield(yrows, budget=args.budget, lo_pct=args.target, hi_pct=args.max_target, grain=grain + f", fill={args.fill}", horizon=args.horizon))
     print()
     print(render_yield_basket(yield_basket(yrows, budget=args.budget, max_markets=args.markets, lo_pct=args.target, hi_pct=args.max_target), budget=args.budget, lo_pct=args.target, hi_pct=args.max_target, horizon=args.horizon))

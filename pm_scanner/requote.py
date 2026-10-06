@@ -313,12 +313,25 @@ def render_summary(summary: list[dict[str, Any]], *, title: str = "") -> str:
 # Fetching, for the CLI
 # --------------------------------------------------------------------------- #
 
+MIDS_MAX_DAYS = 30
+
+
 def fetch_mids(http, token: str, *, days: int = 1) -> list[Point]:
     """The CLOB's sampled midpoints for `token`: one a minute for the last day (`days` 1), one
-    every five minutes for the last week (the endpoint's finest grain for a week)."""
+    every five minutes for the last week (the endpoint's finest grain for a week), one every ten
+    minutes for up to the last 30 days (`days` over 7; the endpoint's `max` interval, which at
+    any fidelity under twelve hours reaches back 30 days and no further, probed 6 Oct 2026: a
+    `startTs`/`endTs` window is anchored to now, not to its end, and twelve-hour or daily
+    fidelity reaches the market's whole life but is no use to a quote three cents from the mid).
+    Over 7 the series is cut to the last `days` days."""
     from .polymarket import CLOB_URL
 
-    interval, fidelity = ("1d", 1) if days <= 1 else ("1w", 5)
+    if days <= 1:
+        interval, fidelity = "1d", 1
+    elif days <= 7:
+        interval, fidelity = "1w", 5
+    else:
+        interval, fidelity = "max", 10
     data = http.get_json(f"{CLOB_URL}/prices-history", {"market": token, "interval": interval, "fidelity": fidelity})
     out: list[Point] = []
     for x in (data or {}).get("history") or []:
@@ -327,6 +340,9 @@ def fetch_mids(http, token: str, *, days: int = 1) -> list[Point]:
         except (KeyError, TypeError, ValueError):
             continue
     out.sort()
+    if days > 7 and out:
+        since = out[-1][0] - min(days, MIDS_MAX_DAYS) * 86400
+        out = [pt for pt in out if pt[0] >= since]
     return out
 
 
