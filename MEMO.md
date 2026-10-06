@@ -3422,6 +3422,87 @@ python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 3000 --top 
 python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 10000 --top 300 --sweep --days 30 --only <the 44 ids> --json <path>
 ```
 
+### 21e. Before closing (6 Oct, evening): what the memo said it would try and did not, and the two checks that were cheap enough to run
+
+The user asked, before closing the positions and ending the project, whether
+anything the memo had promised was still unchecked. The list, from a search
+of every "not tested", "candidate", "recorded, not adopted" and "next step"
+in the memo:
+
+* **Closed by a later section.** Section 17b's "if the payout arrives, run a
+  week across twenty markets" (the payout arrived; 18a to 18e found the fills
+  and closed it). Section 21a's "undo a fill at once" (read on two samples in
+  21a: the ten-minute mark costs more than the hour mark; not supported).
+  The pocket at the edge of the max spread (21a, read against 18d's thin
+  books). The deep-out-of-the-money quote (21b). The longer horizon (21d).
+* **Not pursued by decision, section 17c, still unchecked:** long-dated
+  longshot selling, information processing on public feeds, in-play sports
+  and sub-minute crypto, resolution-rule misreadings, other venues. The
+  reasons stand as written there.
+* **Operational, no bearing on the verdicts:** `rewards.pocket_scan` still
+  models the quote at a quarter of the max spread (the memo applied the 0.69
+  correction by hand); the restart loop does not cover a crashing rig; a
+  watchdog on the rig's own readings (the 18e gap). None changes a result.
+* **Section 19g:** fixing the count model's dispersion would be fitting on
+  the test set; not done, by design.
+* **Named in 20 and 21d and not tested**, each a different strategy: a quoter
+  fast enough to pull inside the second a sweep begins; quotes hedged across
+  an event's correlated brackets; the reverse of the rig (taking after a
+  sweep); and a chooser gate that reads a book's calm over its life rather
+  than its last week. The first two need infrastructure this project does
+  not have. The last two were cheap enough to read from public data tonight,
+  on the 46 deep books of the 30-day run
+  (`data/yield_last_checks_2026-10-06.txt`).
+
+**The reverse of the rig does not pay.** Take 10 minutes after each of the
+315 sweeps that went through the rig's quote, crossing the spread by a tick
+and paying the market's taker fee (Gamma's schedule: 0.04 on 40 of the 46,
+0.05 on two, 0.03 on one, none on three), 50 shares, out when the mid is
+back at the pre-sweep mid within 24 hours (sold a tick under it), else at
+the 24-hour mid: 58 percent of the events got there, and the mean event
+lost $1.71 ($0.83 fee-free), the median $1.40, the worst $14.08, $537 over
+the month; aiming only at the rig's own fill price, 81 percent got there and
+the mean event lost $2.25. Without the two storm markets the mean is the
+same (−$1.70). The reversion the hold tables measure is real and is not
+worth the spread and the fee to a taker; it was worth a tick to the rig
+only because the rig was already filled.
+
+**The quiet books can be named in advance, and that is the one lead left.**
+For each of the 46, the share of days whose close moved 3c or more over the
+market's life *before* 6 September, the start of the 30-day window, is a
+figure that was available on 6 September. Set the gate there and read the 30
+days afterwards (the hold EV here is a quick reading, a tick when the
+10-minute mid is back at the fill price within 24 hours, else the 24-hour
+loss plus a tick; it runs about $0.40 a fill kinder than the tool's, which
+also counts the crossing of the spread at the horizon):
+
+| gate on the life before the window | books | parked | fills, 30 d | per mkt-day | undo loss $/d | net with hold, %/d low..high | storms in |
+|---|---|---|---|---|---|---|---|
+| all 46 | 46 | $2,608 | 315 | 0.23 | 11.85 | −0.01..+0.16 | both |
+| 60+ days of life, 5% or fewer lively days | 12 | $718 | 16 | 0.044 | 0.40 | +0.05..+0.12 | none |
+| 60+ days, 8% or fewer | 24 | $1,379 | 136 | 0.19 | 2.36 | +0.02..+0.12 | Maduro (6.8%) |
+| 60+ days, 12% or fewer | 30 | $1,759 | 155 | 0.17 | 2.47 | +0.05..+0.16 | Maduro |
+| the rest: young, or over 8% | 22 | $1,229 | 179 | 0.27 | 9.49 | −0.05..+0.21 | Vučić (20%, 64 days old) |
+
+The 5-percent gate names twelve books (the 2028 primaries, the 2027 French
+candidates, the chess championship, and seven Senate and governor races) and
+they had six times fewer fills than the rest over the month that followed,
+with no storm among them, on $718 parked and sixteen fills: on the tool's own accounting (`data/yield_deep10k_quiet12_30d_2026-10-06.txt`) the sixteen fills cost $0.03 to $0.57 each held to 24 hours (88 percent back at the fill price, 62 percent a tick through, the worst $4.20), so the twelve net +$0.01 to +$0.79 a day on $718, 0.00 to 0.11 percent, under the band on the low share figure and inside it on the high; verdicts in band 4, under 2, sign unknown 3, loses 3; the four full weeks read +$0.23, −$0.16, −$0.50 and −$0.03 a day undoing at an hour. At $10,000, fourteen times the plan size (700 to 1,400 shares a side in books of 10,000 to 75,000), the reward is $4.35 to $11.01 a day against $0.22 to $4.23 of hold loss, net $0.12 to $10.79 a day, 0.001 to 0.11 percent.
+Everything the memo has said about small samples applies with more force to
+sixteen fills than to 24; the twelve are seven parts election books that
+resolve on 3 November and wake before then; the gate's thresholds were
+chosen tonight looking at the same month they are read on, so the 5 percent
+is not out of sample, only the ordering is; and the premium is $0.32 to
+$0.79 a day on $718, which at $60 is one book for three to seven cents a
+day. It is recorded as the one thing the data points to that was not run,
+so that closing the project is a decision made knowing it; it is not a
+recommendation to run it.
+
+```
+PYTHONPATH=. python3 <scratchpad>/last_checks.py          # the two checks (saved as data/yield_last_checks_2026-10-06.txt)
+python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 10000 --top 300 --sweep --days 30 --only <the 12 ids> --json <path>
+```
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
