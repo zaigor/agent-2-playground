@@ -3183,6 +3183,131 @@ python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 10000 --top
 python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 3000 --top 300 --sweep --json <path>
 ```
 
+### 21d. The longer horizon (6 Oct, 11:30 UTC): thirty days of mids, the whole life in daily closes, and what the extra weeks say
+
+The user asked whether the week was simply too short a horizon and, if so,
+for a longer one. It was too short, and the public record allows two
+extensions, probed at midday on the deep books of 21c. The CLOB's
+`prices-history` keeps mids at one-minute to three-hour fidelity for the
+last 30 days and no further: `interval=max` at fidelity 10 returns 30.0 days
+for a market listed 250 days ago, a `startTs`/`endTs` window longer than
+about two weeks is refused as "too long", and a shorter one is anchored to
+now rather than to its end (a window of 45 to 31 days ago returned one point
+at its start and the last fourteen days). At twelve-hour or daily fidelity
+the same endpoint returns the market's whole life (250 days for the House
+seats, 459 for the 2028 primaries), which is no use for a quote three cents
+from a mid that moves inside a day but does say how the last month compares
+with the rest. The data-api tape has no such cap: the deep books have traded
+a few hundred times in their lives (Sánchez 947 prints since June, FL-14 724
+since February), all of it within one page, so the fills side of a replay is
+complete for any span the mids cover. `fetch_mids` now takes `--days` up to
+30 at ten-minute mids (commit d3cb5a3); the week's five-minute grain and the
+day's one-minute grain are unchanged, and the re-centre rule's three
+confirming readings fall inside one ten-minute mid as they did inside one
+five-minute mid.
+
+**The whole life in daily closes** (`data/yield_life_daily_2026-10-06.txt`).
+Across the 42 books, the share of market-days whose close moved 3c or more
+from the day before, the rig's distance in a 4.5c book, by month:
+
+| month | 2025-10 | 11 | 12 | 2026-01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 | 10 (6 days) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ≥3c days | 5.4% | 4.7% | 6.3% | 11.9% | 16.9% | 15.3% | 15.6% | 17.3% | 12.3% | 7.9% | 8.8% | 9.9% | 8.2% |
+
+The last month is not the calmest these books have had (late 2025 was
+calmer, when most of them were a few weeks old and thin) and it is about half
+as lively as the first half of 2026, when 15 to 17 percent of days moved 3c.
+A fill rate measured on September is therefore a reading of a quiet season:
+the same quotes in February to May would have met moves of this size on
+roughly twice as many days. Within the 42 the ranking is as 21b had it: the
+Fed pair (32 and 29 percent of the last 30 days, against 8 and 16 before),
+the ceasefire (26 percent, as before) and Sánchez (13 percent, as before)
+move most; the Senate and governor races moved on 6 to 19 percent of recent
+days against 1 to 9 percent earlier in their lives, which is the 3 November
+books waking up; and the House seats that moved on 28 to 42 percent of their
+early days (price discovery in a thin book) moved on 0 to 16 percent of the
+last 30.
+
+**Thirty days at ten-minute mids** (`data/yield_deep10k_30d_2026-10-06.txt`,
+`data/yield_deep3k_30d_2026-10-06.txt`; the chooser's gates re-run at midday,
+so the sets are 46 and 88 books rather than 42 and 84). The month reverses
+the week. At the rig's own distance:
+
+| universe, 30 days | mkt-days | fills | per mkt-day | reward $/mkt-d low..high | undo loss $/mkt-d | net, undo | hold EV $/fill 24h | came back 24h | worst fill |
+|---|---|---|---|---|---|---|---|---|---|
+| 46 books, 10,000+ inside | 1,367 | 315 | 0.23 | 0.05..0.14 | 0.26 | −0.21..−0.12 | −0.69..−0.79 | 84% | $29.75 |
+| 88 books, 3,000+ inside | 2,611 | 546 | 0.21 | 0.06..0.16 | 0.25 | −0.19..−0.09 | −0.71..−0.81 | 81% | $29.75 |
+
+The week of 29 September had 0.10 fills a market-day and a hold EV of
+−$0.03..−0.23 a fill; the month has twice the fills and three times the
+cost per held fill, because the fills that do not come back within a day
+cost $4.56 on average over the month against $1.71 on the week. The hold
+rule still halves the cost of a fill (−$0.69..−0.79 against −$1.16 undoing at
+an hour) but no longer brings it near zero. At $10,000, every market at the
+same multiple of its plan size (3.8× for the 46, 192 to 383 shares a side;
+2.1× for the 88), the reward is $9.80 to $26.86 a day on the 46 and the
+hold-rule loss $27.78 to $31.81, net −$22 to −$1 a day, −0.22 to −0.01
+percent; on the 88, $13.15 to $36.07 against $27.77 to $31.68, net −$18.50
+to +$8.30, −0.19 to +0.08 percent. The week-by-week series at $10,000 on
+the 46, undo accounting: −$57 a day in the week of 7 September, −$88 in the
+week of 14 September (169 fills), +$2 in the week of 21 September, −$12 in
+the week of 28 September, +$13 on the two days of October; 14 of 31 days
+positive, the worst day −$283 (2.8 percent of the money). On the 88 every
+week is negative on the low figure (−$43, −$65, −$11, −$16, −$12 a day).
+Verdicts on the low figure over the month, the 46: in band 4 (Eizenkot, an
+independent in the Nebraska Senate race, two House seats), under 16, sign
+unknown 12, loses 14; the 88: in band 32, under 7, sign unknown 23, loses
+26. Of the 21b week's 7 in band, the month keeps 2.
+
+**Where the month's losses came from.** Two of the 46 books took 207 of the
+315 fills: Vučić as next Prime Minister of Serbia (100 fills, $213 lost on
+$93 parked, in the weeks of 7 and 14 September) and Maduro as leader of
+Venezuela at the end of 2026 (107 fills, $48 lost). Both passed every gate
+at midday today, including the one written for exactly this (`--max-moves
+2`, 3c jumps a day over the last week: 0.71 and 0.29), because the gate
+reads the last week and the last week was calm; their books are 13,000 and
+10,400 deep, and a fill in them was cheap to undo at the scan. In the 88 a
+third Venezuela market (Delcy Rodríguez, 78 fills) joins them. The Fed pair
+(21 fills, $17 lost), Sánchez (13 fills, $11) and the FL-09 and TX-15 House
+seats (8 fills, $26) make most of the rest. Without the two storms the 44
+remaining books had 108 fills in 1,320 market-days, 0.082 a market-day, the
+week's rate, in 34 of the 44; their reward is $1.86 to $5.03 a day against
+$3.17 of undo loss, −0.05 to +0.08 percent of parked a day undoing at an
+hour, and with the hold rule (EV −$0.46..−0.65 a fill at 24 hours: 74 percent came back, the rest cost $2.51, the worst $11.75) −0.02 to +0.14 percent a day: at $10,000, 203 to 405 shares a side, reward $7.59 to $20.46 a day against $6.71 to $9.48 of hold-rule loss, net −$1.90 to +$13.75, with two weeks of the five at −$10 and −$12 a day and a worst day of −$92 (`data/yield_deep10k_calm44_30d_2026-10-06.txt`). That is the cleanest statement
+of what a month of the quiet books pays, and it is a selection made after
+the fact: a rule that excludes Vučić and Maduro in advance does not exist
+in the rig today. The nearest one would read `--max-moves` over 30 days
+instead of 7, which is a change to the chooser and not to the money code,
+recorded here and not adopted.
+
+**Answer.** The horizon was the matter, and the longer one gives the solid
+conclusion in the other direction. On a month of ten-minute mids the deep
+books at the rig's distance lose on both share figures with the hold rule at
+every size, −0.22 to −0.01 percent of the money a day on the 46, with one
+day in the month costing 2.8 percent of it; the week of 29 September that
+sections 21b and 21c read was the calmest week of the five, and the
+whole-life daily closes say September itself was about half as lively as
+the first half of the year. The premium side is stable and small, 0.05 to
+0.14 cents a market-day on the low figure; the fill side is a storm process:
+two markets in forty-six, calm for a week and deep enough to pass every
+gate, produced two thirds of a month's fills and more than the month's
+premium. The quiet books alone come out near zero over the month
+(−0.02 to +0.14 percent a day at $10,000, the low figure under zero), and "the quiet books" can be named only afterwards. No
+further horizon is available at this grain (the CLOB keeps 30 days), and
+none is needed for the question asked: a sustainable 0.1 to 0.5 percent a
+day is not in this data at any size. What remains of the idea is the
+section 22 decision, which is now a question of whether a $60 to $140 run on
+the 21b shape is worth making at all, given that its week was the best of
+five. The 18e verdict at 14:30 UTC today is read first. Nothing in the rig
+changes for this entry; `fetch_mids` gained the 30-day grain and nothing
+else moved.
+
+```
+python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 10000 --top 300 --sweep --days 30 --json <path>
+python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 3000 --top 300 --sweep --days 30 --json <path>
+python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 10000 --top 300 --sweep --days 30 --only <the 44 ids> --json <path>
+```
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
