@@ -2665,6 +2665,84 @@ $2.49, −$2.71; everything $14.52 for $18.70 paid, −$4.18. The pair exit is
 against $0.99 paid. Nothing to do until the run ends; the 48-hour reading
 and the disposal go here on 6 Oct.
 
+**18e, the end (6 Oct; the user's paste of `tail -3 lp.jsonl`, `--positions`
+and `--earnings 2026-10-06`, read at 18:29 UTC with the public book).** The
+`end` line is stamped 18:22:56 UTC, three hours and fifty-three minutes after
+the `--until` of 14:30. The rig ends at its first reading past the hour on
+the wall clock (`time.time`, `lp.py` run loop) and cancels every order first,
+so a gap of that length means no reading was taken for at least that long
+(the machine asleep or the process paused; `systemd-inhibit --what=sleep`
+holds off idle sleep, not a closed lid), with the capped NO bid resting on
+the exchange meanwhile; the last `scoring` line before the gap says when the
+readings stopped and is still to be pasted. The state at the end: the YES
+bid filled (50 at 0.27, 4 Oct 19:56:39), the NO bid at 0.72 (a YES ask at
+0.28) never filled, 16 replacements, 1 fill, no stop, no abort. The public
+tape since 5 Oct 15:00 UTC has sixteen prints, all between YES 0.24 and
+0.26; nothing reached 0.28. The book at 18:29 UTC: YES bid 0.24 with 5,882
+shares, ask 0.25 with 1,771, mid 0.245.
+
+The payouts: 4 Oct $0.3826 (two-sided for 5.2 hours, then one order), 5 Oct
+at least $0.044 (the 15:10 UTC reading; the day's final figure is `--earnings
+2026-10-05`, not yet pasted), 6 Oct $0.0992 for the hours to the end, of
+which $0.0574 by 07:35. The run's total is about $0.55. The pot at 07:35 on
+6 Oct read $152 a day with competitiveness 19.59 (3.03 at the start, 16.33 at
+the first midnight, 1.43 on the second afternoon). `--positions` at the end:
+Anthropic 50 YES at 0.27, cost $13.50, site mark 0.24, best bid 0.24 with
+5,882 shares, sell now $11.54, P&L −$1.96; the café 20 YES at 0.26, bid 0.11
+with 30 shares, sell now $2.10, −$3.10; everything $13.65 for $18.70 paid,
+−$5.05.
+
+The pre-registered reading, clause by clause. Pass, per UTC day: 4 Oct is not
+a Pass (the fill's `loss_if_sold_now` $0.49 against $0.38 paid, read on
+5 Oct); 5 and 6 Oct had no fill and earned $0.04 and $0.10 with one capped
+order, a shape the Pass test was not written for (its payout clause reads a
+two-sided quote), so no day passes. Fail, over the 48 hours: the fill's
+loss by the bids at the end is $1.96 against about $0.55 of payout, three and
+a half times over, so the first clause fails (at the fill second the same
+figure was $0.49, about equal to the payout; the clause names the reading,
+and the reading at the end is the one that counts for a position still
+held). The second clause, a payout under a quarter of the modelled figure:
+against the model as written, $3.4 to $7.6 a day two-sided, 48 hours model
+to $6.8 to $15.2 and $0.55 is under a quarter of the low figure; against the
+model pro-rated to the 5.2 two-sided hours actually quoted, $0.74 to $1.65,
+the 4 Oct payout of $0.38 is half of the low figure and above a quarter, so
+this clause fails on the letter and not on the pro-rated reading, and the
+memo already read the first-day payout as "at or under the low figure"
+(section 21). The third clause, the share collapsing as others re-quote,
+was flagged on the first day on Polymarket's competitiveness number and then
+read as unreliable (1.43 the next afternoon, 19.59 the morning after); on the
+payouts themselves the one-sided order earned $0.04 to $0.10 a day, which is
+what the two-sided rule pays a lone order, not a collapse. **Verdict: Fail,
+on the fills' loss against the payout; not a Pass on any day.** The three
+markets for a week do not follow. The one thing the test was built to show,
+that a deep calm book makes a fill cheap to undo, read $0.49 at the fill
+second and $1.96 forty-six hours later: the book was deep (5,882 shares at
+the bid now) and the price did not come back, which is the "rest lose" row
+of the hold tables in 21b and 21d, one fill in six on the week and one in
+four to five on the month.
+
+The disposal is the user's call, by these readings. The 50 Anthropic YES:
+sold into the bids now they return about $11.54 after the fee (the bid 0.24
+holds 5,882 shares, so the size is no obstacle), −$1.96 on $13.50; the
+designed exit, a YES ask at 0.28, is 4c above the bid and 3c above the ask,
+has 1,697 shares resting ahead of it at that price, and the market resolves
+on 1 January 2028, so an ask left there can rest for a long time and pays
+$0.50 over cost if it fills; the rig is ended and will not manage it. The 20
+café YES: the bid 0.11 holds 30 shares, sell now $2.10, −$3.10 on $5.20; the
+market resolves on 1 December 2026. Nothing is sold or placed by this entry.
+
+**Section 22, the state.** The pre-registered follow-on (three deep books for
+a week) is off, by the Fail. The 21b shape (`--min-reward 0 --min-depth
+10000`, the rig's distance, the hold rule) was the candidate for a new run;
+21d read it on thirty days and found the week it was built on was the best
+of five, the month negative on both share figures with the hold rule, and
+the quiet books alone at −0.02 to +0.14 percent a day at $10,000 and about
+zero at $60, with no rule in the rig that names the quiet books in advance.
+The recommendation written here is no live run on this strategy as it
+stands; a run would need a new section with a 30-day moves gate in the
+chooser and its own pre-registration, and the user's decision, not a
+default.
+
 ## 21. A daily rate on the money (5 Oct): the band is not the constraint, the fills are, and neither a week nor a day of history can tell 0.1% a day from zero
 
 **The question**, from the user, the evening of 18e's second day: turn it
