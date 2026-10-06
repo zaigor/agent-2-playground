@@ -3254,10 +3254,13 @@ week of 14 September (169 fills), +$2 in the week of 21 September, −$12 in
 the week of 28 September, +$13 on the two days of October; 14 of 31 days
 positive, the worst day −$283 (2.8 percent of the money). On the 88 every
 week is negative on the low figure (−$43, −$65, −$11, −$16, −$12 a day).
-Verdicts on the low figure over the month, the 46: in band 4 (Eizenkot, an
-independent in the Nebraska Senate race, two House seats), under 16, sign
-unknown 12, loses 14; the 88: in band 32, under 7, sign unknown 23, loses
-26. Of the 21b week's 7 in band, the month keeps 2.
+Verdicts over the month as the tool reads them (in band when the low figure
+is at or above zero and the high one reaches 0.1 percent), the 46: in band
+16, under 4, sign unknown 12, loses 14; the 88: in band 32, under 7, sign
+unknown 23, loses 26. On the low figure alone only four of the 46 reach 0.1
+percent a day over the month (Eizenkot, an independent in the Nebraska
+Senate race, the FL-07 and MI-04 House seats). Of the 21b week's 18 in
+band, the month keeps 9.
 
 **Where the month's losses came from.** Two of the 46 books took 207 of the
 315 fills: Vučić as next Prime Minister of Serbia (100 fills, $213 lost on
