@@ -3503,6 +3503,329 @@ PYTHONPATH=. python3 <scratchpad>/last_checks.py          # the two checks (save
 python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 10000 --top 300 --sweep --days 30 --only <the 12 ids> --json <path>
 ```
 
+### 21f. The fat tail (7 Oct): are the least probable contracts mispriced?
+
+**The question, as you put it.** Black-Scholes prices options off a normal
+distribution of returns; real returns have fat tails, so the model is right
+near the money and wrong far out of it. Is there a Polymarket analogue, a set
+of markets whose least probable contracts are priced off a thin-tailed model
+and pay more often than their price says?
+
+**What the analogy actually predicts.** In the option market the model's
+error is not the trader's opportunity, because the market does not quote
+Black-Scholes: it quotes a smile, out-of-the-money strikes at a higher
+implied volatility than the at-the-money one, which is the fat tail priced
+in. The question is only whether the smile over- or under-corrects, and the
+long record there is that it over-corrects: the seller of far
+out-of-the-money options earns a premium on average and pays it back in the
+crashes, which is the volatility risk premium. The betting and
+prediction-market record points the same way and has a name, the
+favourite-longshot bias: low-probability contracts trade above their
+realised frequency and high-probability ones below it. Page and Clemen
+(Economic Journal, 2013, 1,787 Intrade markets, 500,000 transactions) found
+it and showed it grows with time to expiry, and gave the mechanism that
+section 17c already named: money parked in a contract earns no interest, the
+favourite costs more to hold, so its price is pushed down and the longshot's
+up. The 2026 Polymarket calibration study on arXiv (188,509 resolved binary
+markets, November 2022 to December 2025, Brier skill 0.40 overall, 0.26 in
+sports to 0.57 in politics) reports the same compression toward 0.50:
+longshots overpriced, favourites underpriced, with low-priced tokens
+carrying negative realised returns. A smaller independent analysis of 7,661
+resolved markets found the extremes well calibrated and the mispricing in
+the middle. So the prior, before any reading of ours, is that the tail is
+mispriced in the direction opposite to the one you ask about: the trade
+would be selling it, and selling it is 17c's capital charge, a few cents a
+share for months of locked money.
+
+**What the memo had already measured.** Section 14's weather tape: in the
+0-10c band the makers earned +8.21 per $100 on $87,589, which is the buyers
+of 3c contracts losing to expiry. Section 15's site-wide screen, the band
+column of `data/flow_families_2026-09-30.txt`: in the 0-10c band the makers
+lost in 30 of the 40 families (takers in that band gained), and the memo
+noted that sports longshot buyers below 30c won in that sample. The two
+readings disagree in sign, neither separates who bought the longshot from
+who sold it, and both were about makers, not about the contract. Section
+17a found the tails of the Fed-rate and Senate-vote ladders inverted by a
+few cents against each other (executable on 27-36 pairs, 9% a year at best
+for 92 days of locked capital). None of this is a calibration of the tail
+contract itself, which is what the question needs.
+
+**The test.** Every resolved market whose end date fell in the 60 days to
+6 October (Gamma `/events?closed=true`, one day of end dates per call set,
+the 5- and 15-minute crypto series excluded; two days were cut at Gamma's
+offset cap, 8 August and 5 September): 115,077 events, 307,752 markets with
+$100 or more of volume, 158,377 binary ones that resolved 0/1 with $1,000 or
+more. Grouped by tag: sports, crypto (hit-price, multi-strike and range
+ladders on coins), finance (the same ladders on stocks, metals and oil),
+weather, politics, other (pop culture, tech, mention markets). For the two
+ladder groups, which are the literal analogue of an option chain, the pull
+was extended back to August 2025 by tag (crypto 44,412 eligible markets,
+finance 16,818). Three readings, from the most to the least precise about
+what a trader could do:
+
+1. *Per market, the CLOB's daily closes* (`prices-history` at daily
+   fidelity, which still answers for markets closed a year ago): the last
+   close at least 1, 3 and 7 days before the market's end, the cheap side's
+   price q against whether it came in, one observation per market, Wilson
+   intervals. Read for every finance ladder of the fourteen months, 12,000
+   of the crypto ladders drawn at random plus every crypto touch ladder,
+   every politics and "other" market of the 60 days and 5,000 weather
+   markets drawn at random: about 40,000 markets with a close to read, one
+   call each. "The end" was taken two ways, and the difference matters
+   below: the market's actual end (Gamma's close time, or the first close
+   pinned at the outcome if earlier, which for a market that resolves early
+   is the day the event happened), and the scheduled end (Gamma's
+   `endDate`, fixed when the market was made, the only one a trader can
+   act on).
+2. *Per market, the same closes further out* (14 and 30 days) on a
+   2,500-market sample across all six groups, sports included.
+3. *Every trade on the tape* of those 2,500 markets (510,605 trades, $26.6M),
+   held to expiry: the contract bought at YES price p pays (y − p), size
+   weighted, with the taker's side kept so that "who bought the longshot"
+   is visible, and a standard error clustered by market because every trade
+   in a market shares its outcome.
+
+A fourth reading was tried first and discarded, and the reason belongs in
+the record because section 10 relies on the same field. Gamma freezes
+`lastTradePrice` and `oneDayPriceChange` at close, and their difference was
+taken (memo 10, checked on 1,020 weather markets: correlation 0.90, median
+gap 1.5c) as the price a day before the end; it needs no calls, so it gave
+a 123,747-market census in a minute. Against the daily closes of the same
+markets it agrees in the middle and fails in the tails: on 6,908 finance
+rungs with both readings the median gap is 2.1c but the 90th percentile is
+15c, and the frozen figure's sub-2c tails "came in" 2.55% of the time
+where the closes' sub-2c tails came in 0.84%; on the 2,500-market sample,
+2.34% against 0.71% under 2c, 6.1% against 3.5% at 2-5c, 10.3% against 6.2%
+at 5-10c, in every group. The mechanism is the last trade: an illiquid rung
+that is coming in often has no trade after its longshot days, so its "last
+trade" is 2c from a week earlier while the quoted price had already
+climbed, and the field books a 2c contract that paid. On sports the field
+is not a price at all (its 98-100c band "resolved YES" 31% of the time).
+For weather, where every rung trades to the end, the shortcut holds (median
+gap 0.3c); for ladders it flatters exactly the hypothesis under test, and
+the finance "underpricing" it showed (401 sub-2c rungs coming in 2.5%, 547
+at 15c coming in 17.6%) is what it looks like before the correction. Its
+tables are kept in `data/tails_frozen_60d_2026-10-07.txt` as the record of
+the artefact; everything below is from the closes and the tape.
+
+**Reading 1, the census of daily closes: the tail is too dear everywhere,
+by a third to two thirds under 5c.** The cheap side at the last close at
+least a day before the market's actual end (the median close used was
+exactly a day out, the mean 1.4-1.5 days), q against how often it came in,
+Wilson 95% intervals:
+
+| group (markets with closes) | q band | n | mean q | came in | 95% | buyer of the tail, per $100 |
+| --- | --- | --- | --- | --- | --- | --- |
+| finance ladders, 14 months (15,041) | 0-2c | 2,982 | 1.30 | 0.50 | 0.31..0.83 | −61 |
+| | 2-5c | 2,552 | 3.14 | 1.57 | 1.15..2.13 | −50 |
+| | 5-10c | 2,068 | 7.10 | 6.58 | 5.59..7.73 | −7 |
+| | 10-20c | 2,047 | 14.42 | 14.36 | 12.91..15.95 | 0 |
+| crypto ladders, 14 months, 12,000 drawn (8,336) | 0-2c | 2,983 | 1.38 | 1.01 | 0.71..1.43 | −27 |
+| | 2-5c | 1,880 | 2.94 | 1.86 | 1.34..2.58 | −37 |
+| | 5-10c | 793 | 6.98 | 5.67 | 4.27..7.51 | −19 |
+| | 10-20c | 858 | 14.69 | 15.73 | 13.45..18.32 | +7 |
+| politics, 60 days (2,850) | 0-2c | 1,028 | 1.21 | 0.39 | 0.15..1.00 | −68 |
+| | 2-5c | 533 | 3.06 | 1.13 | 0.52..2.43 | −63 |
+| | 5-10c | 296 | 7.04 | 6.42 | 4.15..9.81 | −9 |
+| | 10-20c | 337 | 14.50 | 12.46 | 9.35..16.42 | −14 |
+| other, 60 days (4,768) | 0-2c | 1,096 | 1.25 | 0.64 | 0.31..1.31 | −49 |
+| | 2-5c | 896 | 3.21 | 1.67 | 1.02..2.74 | −48 |
+| | 5-10c | 535 | 7.10 | 3.74 | 2.43..5.70 | −47 |
+| | 10-20c | 567 | 14.50 | 11.64 | 9.25..14.54 | −20 |
+| weather, 60 days, 5,000 drawn (4,956; most live one day, so few have a close a day out) | 0-2c | 385 | 1.24 | 0.78 | 0.27..2.27 | −37 |
+| | 2-5c | 521 | 3.14 | 2.11 | 1.18..3.74 | −33 |
+| | 5-10c | 425 | 6.80 | 6.35 | 4.40..9.09 | −7 |
+| | 10-20c | 400 | 14.67 | 14.00 | 10.94..17.74 | −5 |
+
+The same shape in every group: under 5c the contract comes in half as often
+as its price says or less, and the interval excludes the price wherever n
+is in the thousands; from 5c up it is within a point or two of fair. Three
+and seven days out the finance and crypto tails read the same (finance
+2-5c seven days out: 985 rungs at 3.22c came in 0.81%, 0.41..1.59). Read
+against the scheduled end instead, the one a trader can act on, finance is
+the same (4,462 rungs at 0.66c came in 0.34%; 1,956 at 3.23c came in 1.69%;
+1,857 at 7.20c came in 5.71%; 2,003 at 14.34c came in 12.73%) and so is the
+crypto draw (4,492 at 0.67c came in 0.40%; 1,117 at 3.07c came in 2.78%;
+602 at 7.05c came in 6.81%); politics cannot be read that way because its
+scheduled ends are often months after the event (section 20's "by 2029"
+markets). By quarter the finance tails under 5c were dear in every one of
+the five (−92, −53, −47, −25 and −100 per $100 for a buyer), the crypto
+draw's in five of six (2026-Q3, with the August week, +16). The stock
+ladders, the nearest thing on the site to an option chain, are the clearest
+case of all: 2,552 rungs priced 3.14c the night before expiry, 40 of which
+came in. The option market's smile is here too, and as there, it
+over-corrects.
+
+**The one exception, and it has a mechanism: the crypto touch ladders.**
+Split by ladder type, the crypto "reach $X this week / this month" rungs,
+which pay if the price touches the level at any time before expiry, are the
+one kind whose tails came in more than they cost. The clean reading is
+against the scheduled end, every one of the 8,835 eligible touch rungs of
+the fourteen months (3,679 had a close to read a day or more before their
+scheduled expiry; the close used was 2.4 days out on average, 1.2 median):
+
+| touch rungs, close ≥ 1 day before scheduled expiry | n | mean q | came in | 95% | buyer, per $100 |
+| --- | --- | --- | --- | --- | --- |
+| 0-2c | 2,861 | 0.36 | 0.38 | 0.21..0.69 | +8 |
+| 2-5c | 247 | 3.10 | 8.50 | 5.63..12.65 | +175 |
+| 5-10c | 106 | 7.10 | 19.81 | 13.34..28.40 | +179 |
+| 10-20c | 156 | 14.78 | 18.59 | 13.27..25.42 | +26 |
+
+Under 2c, where most rungs sit by the last night, the price is right. At
+2-10c, 353 rungs still alive on the last night came in 42 times where their
+prices promised 15: two and three quarter times the price, a seven-sigma
+count, and the band above it (10-20c) a quarter more than its price with
+the interval reaching fair. Three days out the same rungs read 4.67% for
+3.04c (514 rungs, 3.16..6.85) and 9.05% for 6.77c (210, 5.87..13.70), one
+and a half times; seven days out they read at or under their price (119 at
+3.10c came in 2.52%, 97 at 14.40c came in 5.15%). So the mispricing lives
+in the last day or two of a rung that is still within reach. The "ends
+above $X" rungs and the "between $X and $Y" ranges on the same coins, read
+the same way, were dear like everything else (1,946 rungs at 0.74c came in
+0.36%, 514 at 3.06c came in 1.95%, 269 at 7.04c came in 4.46%; ranges 467 at
+3.05c came in 1.93%), and the stock touch ladders show nothing (1,302 at
+1.29c came in 0.38%, 1,098 at 3.14c came in 1.82%, 893 at 7.06c came in
+7.95%). That pattern is what your analogy predicts, made specific: a touch
+is a barrier, and for a diffusing price the chance of touching a level
+before expiry is about twice the chance of finishing beyond it (the
+reflection principle), so a trader who prices a "reach $X" rung the way he
+prices an "above $X" rung sells it at half its value; a coin moves far
+enough in a day for the difference to show, a stock against a daily close
+does not. Two checks on the reading itself. Read against the actual end
+(the touch itself, for a rung that is touched), the same rungs show 13.5%
+for 6.9c and 30.9% for 14.6c, which is inflated by construction: the
+touched rung is read at the close before its touch, the untouched one at
+the close before expiry, so a 10c rung that decays to 3c and dies is a miss
+in the 2-5c band while one that is touched is a hit in the 5-10c band; the
+scheduled-end figures above are the honest ones and are the ones used. The
+$1,000 volume floor is not the story either: at a $100 floor the actual-end
+figures are the same (209 at 6.85c came in 12.9%, 205 at 14.55c came in
+29.8%). The tape agrees in sign without any of this machinery: over the 60
+days, dollar-weighted across every day to expiry, the 5-10c crypto touch
+rungs took $153,746 and paid back $196,613 (+28 per $100) and the 10-20c
+ones took $303,161 and paid back $395,932 (+31), the only tail bands on
+the site where the dollars that bought the longshot came out ahead.
+
+What it is worth, and what it is not. About 0.8 such rungs a night (353 in
+fourteen months, in bunches before the weekly and monthly expiries), on
+liquid books (median lifetime volume of a 5-20c touch rung $95,000, Bitcoin
+weekly rungs $224,000, so a few hundred dollars at the ask is plausible);
+bought a cent above the mid and after the 0.04 taker fee the expectation is
+roughly +110 per $100 at 2-5c and +145 at 5-10c, which at $200 a rung is
+$200-300 expected on a night that has one, with the stake lost on 85-90% of
+them. The wins are clustered: of the 32 sub-5c touch hits read against the
+schedule, 10 fell in the week of 2 February 2026, 7 in the week of 17
+August 2026 and 4 in the week of 6 October 2025, two thirds in three weeks;
+by quarter the 5-10c rungs came in 1 of 13, 1 of 14, 10 of 25, 2 of 17 and 7
+of 34, so two quarters of five carry it and the other three ran at about
+their price. It was found after the fact, by splitting six groups into
+types, bands and horizons, which is the search that produces false
+positives; a count of 42 against 15 survives any correction for that, the
+clustering does not go away with any correction, and a year of touch rungs
+is a dozen correlated events, not 353 draws. Under this project's own rules
+(section 19: a model is tested against outcomes it has not seen before it
+is believed) it is a hypothesis with a mechanism and one year of support,
+not a strategy: the forward test is a nightly list at 00:00 UTC of every
+crypto "reach" rung priced 2-10c at the mid with a day or less to its
+scheduled expiry, the ask and its depth recorded, scored at resolution, for
+two or three months, with no money on it. It is recorded here so that the
+closing decision is made knowing it.
+
+**Reading 2, the closes further out, on the sample.** The 0-2c band a day
+before the end held 617 markets priced 0.5c that came in 0.8% (0.3..1.9);
+2-5c, 132 at 3.2c came in 3.8% (1.6..8.6); 5-10c, 148 at 7.0c came in 7.4%
+(4.2..12.8). Seven days out: 316 at 0.6c came in 0.6%, 95 at 3.2c came in
+3.2%, 97 at 7.0c came in 3.1% (1.1..8.7). Thirty days out: 139 at 0.5c came
+in 1.4% (0.4..5.1), 68 at 3.3c came in 1.5% (0.3..7.9), 46 at 7.3c came in
+10.9% (4.7..23.0). Every interval covers the price and none is narrower
+than the price itself, which is why reading 1 had to be a census: to tell
+a 3c contract worth 4c from one worth 3c at 95% takes about 1,100 markets
+in the band at one horizon, and a 2,500-market sample has 70-130 there.
+
+**Reading 3, the tape: the dollars disagree with the count, in the
+direction adverse selection predicts.** Size-weighted over every trade,
+the cheap side of the 0-2c band ($130,383 staked at 0.5c) came in 1.72% of
+the time and paid its buyers +229 per $100 (± 164); 2-5c ($282,011 at 3.3c)
+came in 9.67%, +190 (± 107); 5-10c ($694,675 at 7.3c) came in 8.57%, +18
+(± 42); 10-20c ($1.85M at 14.2c) came in 11.4%, −20 (± 21). Half the staked
+dollars in every band were a taker buying the longshot, half a taker
+selling it, and both halves show the same return, so this is not "the
+informed side wins", it is where the dollars sit: a longshot that is coming
+in trades heavily on its way up through 2c, 5c and 10c, a longshot that
+dies trades once at 1c and never again. The count view (reading 1) is what
+a trader who puts a fixed stake on every tail would see; the dollar view is
+what his fills would look like if he sold them, because the seller of a
+longshot is filled most when the longshot is coming alive. Politics shows
+the gap plainly: by dollars traded the 5-10c political tail came in 9.35%
+against its 7.3c price, by count it came in less than it cost. Sports is
+the exception where even the dollars say the tail is dear: −89 (± 8) per
+$100 under 2c, −60 (± 13) at 5-10c, −29 (± 16) at 10-20c on $338,000
+staked, which is section 15's "sports longshot buyers win" reversed on a
+sample three times the size with the direction kept.
+
+**Crypto was one week, mostly.** Of the 66 sub-5c crypto touch rungs that
+came in during the fourteen months (actual-end reading), 22 did so in the
+week of 17 August 2026, when Bitcoin went from about $68,000 through
+$76,000, Ethereum from $2,000 through $2,300 and XRP from $1.10 through
+$1.60 in four days: every "reach $X" weekly and monthly rung, every "above
+$X on the 19th/20th/21st" strike and every range in that direction came in
+together, across BTC, ETH, SOL and XRP; the week of 2 February 2026 holds
+another 12 and the week of 6 October 2025 another 11, so three weeks hold
+two thirds of a year's tail hits. The tape's +570 (± 384) per $100 on
+sub-2c crypto tails over the 60 days and the +202 (± 293) on
+`bitcoin-hit-price-monthly` ($129,738 staked) are the August week. That is
+what a fat tail in the underlying does to a ladder: the tail outcomes are
+one event, not 22, and a 60-day window holds one of them.
+
+**What the overpricing is worth to a seller, by the tape.** The count view
+is what a trader who sold one share of every tail would see: in the stock
+ladders a 3.14c rung the night before expiry pays 1.57c on average, so the
+seller keeps half the premium on 97c of capital for a day or two, 0.8 per
+$100 of capital per rung under 2c and 1.6 at 2-5c; in politics 0.8-2.0;
+before the fee (0.04 × p(1−p), about 0.1c a share here) and before the
+spread, which on a 3c rung is one or two cents and takes a third to two
+thirds of that. But the seller does not get one fill per rung; he gets the
+fills the tape shows, and the tape weights them where the dollars are.
+Finance tails under 5c on the 300 sampled ladders traded $8,054 of premium
+in 60 days, about $27 a market, which scaled to the 3,547 eligible finance
+markets of the window is roughly $1,600 a day of premium across every
+stock, metal and oil rung on the site; the seller who took all of it kept,
+after the fee, +0.36 per $100 of capital per position under 2c (held 4.9
+days on average) and +0.59 at 2-5c (8.2 days): 0.07% a day, as the
+counterparty to every buyer. In politics the dollar-weighted seller lost
+(−0.49, −5.02 and −2.44 per $100 of capital in the three bands under 10c,
+held two to three weeks) while the count said he should have earned
+0.8-2.0, because the premium that trades sits in the rungs that are waking
+up. That is the adverse selection of sections 14 and 15 in a new place:
+the tail is overpriced on the count of contracts and fairly priced on the
+count of dollars, and a seller's fills are dollars. It is also 17c's
+longshot selling with the horizon shortened from months to a day, which
+removes the capital charge and leaves the fill problem.
+
+**The answer.** The fat tail of the underlying is in the prices, and then
+some. Across 40,000 resolved markets read at their daily closes, in every
+group, the least probable contracts pay out at half their price or less
+under 5c and about their price from 5c up; the stock ladders, the closest
+thing here to an option chain, are the sharpest case (a 3c rung the night
+before expiry comes in 1.6% of the time). That is the favourite-longshot
+bias the literature describes, in the direction opposite to the one you
+asked about, and the trade it implies is the seller's, whose realised edge
+on the dollars that actually trade is 0.07% a day in the ladders and
+negative in politics. The one place the contract pays more than it costs is
+the one your analogy names most exactly: the crypto touch rungs still alive
+on their last night, barriers priced like terminal strikes, 42 hits where
+15 were due, +110 to +145 per $100 at the ask, two quarters of five
+carrying it, found after the fact and untested forward. The large tail
+outcome that actually occurred in the window (crypto, 19-22 August) shows
+why months of data cannot settle a tail: one move resolved 22 rungs at
+once, so a year's tail hits are three weeks' events, and whoever is on the
+other side of them is paid in the other 49. Nothing here changes section
+22 for the account: no fat-tail buyer's edge exists to run on the site at
+large, the seller's edge is the LP rig's arithmetic again, tenths of a
+percent a day on the fills one can get with a left tail that arrives in
+clusters, and the touch ladders are a hypothesis to paper-test for a
+season, not a strategy to fund.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
@@ -3525,3 +3848,4 @@ python -m pm_scanner yield --budget 10000 --min-reward 0 --min-depth 10000 --top
 * Section 17: Polymarket docs [Liquidity Rewards](https://docs.polymarket.com/programs/liquidity-rewards) (scoring formula, sampling, single-sided rule), [Maker Rebates](https://docs.polymarket.com/programs/maker-rebates), [Fees](https://docs.polymarket.com/trading/fees), [Market Details: liquidity reward settings](https://docs.polymarket.com/market-data/market-details#liquidity-reward-settings); CLOB `GET /rewards/markets/current` (paged, 18,600 markets on 30 Sep 2026); Gamma `/markets?condition_ids=` (20 per call; `closed=true` for resolved markets); help centre [Liquidity Rewards](https://help.polymarket.com/en/articles/13364466-liquidity-rewards) (payout at ~midnight UTC, $1 daily minimum, two-sided below 10c); reports in `data/ladder_snapshots_2026-09-30.txt`, `data/rewards_survey_2026-09-30.txt`, `data/rewards_survey_tiers_2026-09-30.txt`, `data/rewards_pocket_2026-09-30.txt`.
 * Section 18: Polymarket docs [Wallets and Authentication](https://docs.polymarket.com/trading/wallets-auth) (Deposit Wallets, Relayer API keys, `SecureClient.create`), [Place Orders](https://docs.polymarket.com/trading/place-orders) (post-only limit orders), [Manage Orders](https://docs.polymarket.com/trading/manage-orders), [Deposit](https://docs.polymarket.com/trading/bridge/deposit) (USDC on Polygon wrapped to pUSD), [Python SDK](https://docs.polymarket.com/getting-started/python) (`polymarket-client` 0.11); CLOB `GET /rewards/markets/{condition_id}` (`market_competitiveness`), orders-scoring and user-earnings endpoints via the SDK.
 * Section 19: Gamma `/series?slug=` and `/events?series_id=&closed=` for the 44 recurring series (events saved 1 Oct 2026; the trimmed offline fixture is `tests/fixtures/counts_events.json`); market rule texts quoted from the events' descriptions. Upstream feeds named: [USGS FDSN event web service](https://earthquake.usgs.gov/fdsnws/event/1/) (`query?format=csv&starttime=&minmagnitude=`), [IMF PortWatch](https://portwatch.imf.org/) (daily chokepoint transit calls), [SPC storm reports](https://www.spc.noaa.gov/climo/reports/) (`YYMMDD_rpts_torn.csv`) and the [NCEI tornado time series](https://www.ncei.noaa.gov/access/monitoring/tornadoes/time-series), [Wikimedia pageviews API](https://wikimedia.org/api/rest_v1/#/Pageviews%20data) and Mestyán, Yasseri, Kertész (2013), [Early Prediction of Movie Box Office Success Based on Wikipedia Activity Big Data](https://doi.org/10.1371/journal.pone.0071226), [Copernicus Climate Pulse](https://pulse.climate.copernicus.eu/) (ERA5 daily global temperature) and the [GISTEMP table](https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt), [USDA AMS Egg Markets Overview](https://www.ams.usda.gov/market-news/egg-market-news-reports) and [FRED APU0000708111](https://fred.stlouisfed.org/series/APU0000708111), [CDC FluView / FluSurv-NET](https://www.cdc.gov/fluview/index.html), [NHSN hospital respiratory data](https://data.cdc.gov/) and [WastewaterSCAN](https://data.wastewaterscan.org/), [SEC EDGAR full-text search](https://efts.sec.gov/LATEST/search-index) (424B4 filings) and [Jay Ritter's IPO data](https://site.warrington.ufl.edu/ritter/ipo-data/), [Factbase](https://factba.se/) (White House daily guidance archive), xtracker.polymarket.com "Export Data" (per tracked account). Public Truth Social archive checked and found to have a gap from October 2025 to April 2026: [stiles/trump-truth-social-archive](https://github.com/stiles/trump-truth-social-archive). Headroom report in `data/headroom_2026-10-01.txt`. Section 19e: per-market `closedTime` / `umaEndDate` from the same Gamma events (the early NO resolutions of count brackets), trade tapes from data-api `/trades`; reports and re-scorable rows in `data/crossings_2026-10-01/`.
+* Section 21f: Page, L. and Clemen, R. T., "Do prediction markets produce well-calibrated probability forecasts?", Economic Journal 123 (568), 2013, 491-513 ([Duke, author copy](https://people.duke.edu/~clemen/bio/Published%20Papers/45.PredictionMarkets-Page&Clemen-EJ-2013.pdf); 1,787 Intrade markets, the favourite-longshot bias growing with time to expiry, and the no-interest-on-parked-money mechanism); the 2026 Polymarket calibration database on arXiv ([2606.04217](https://arxiv.org/abs/2606.04217): 188,509 resolved binary markets, November 2022 to December 2025, Brier skill 0.398, longshots overpriced and favourites underpriced; read from the search summary, the host is not reachable from here); [Empirical calibration of Polymarket: analysis of 7,661 markets](https://www.lesswrong.com/posts/Hruc6Gwo3vBZFGb6v/empirical-calibration-of-polymarket-analysis-of-7-661) (extremes well calibrated, mid-range mispriced). Data: Gamma `/events?closed=true&end_date_min=&end_date_max=&exclude_tag_id=102127` by day (offset cap about 2,000; `tag_id=21` for crypto, the `finance` tag for the stock ladders, by week back to August 2025); CLOB `/prices-history?interval=max&fidelity=1440` per market (answers for markets closed a year ago); data-api `/trades?market=&limit=10000&offset=` (newest first, offsets past 10,000 answered). Reports in `data/tails_2026-10-07.txt` (tape and sample closes), `data/tails_closes_*_2026-10-07.txt` (the daily-close census per group), `data/tails_frozen_60d_2026-10-07.txt` (the discarded frozen-field shortcut).

@@ -1,0 +1,96 @@
+finance: daily closes for 6844 of 7337 markets read (7337 eligible at volume >= $1,000); the close used for h=1 was on average 1.52 days before the close time (median 1.00)
+
+A1. The cheap side at the last daily close at least 1 day(s) before the close time
+  [all finance]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   1302  1.29    0.38   0.16..0.90        -70.3          +0.92
+    0.02-0.05   1098  3.14    1.82   1.18..2.80        -42.1          +1.37
+    0.05-0.10    893  7.06    7.95   6.35..9.91        +12.6          -0.96
+    0.10-0.20    896 14.44   14.06  11.94..16.49        -2.6          +0.44
+  [hit (touch)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   1302  1.29    0.38   0.16..0.90        -70.3          +0.92
+    0.02-0.05   1098  3.14    1.82   1.18..2.80        -42.1          +1.37
+    0.05-0.10    893  7.06    7.95   6.35..9.91        +12.6          -0.96
+    0.10-0.20    896 14.44   14.06  11.94..16.49        -2.6          +0.44
+
+A3. The cheap side at the last daily close at least 3 day(s) before the close time
+  [all finance]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    785  1.17    0.51   0.20..1.30        -56.6          +0.67
+    0.02-0.05    877  3.19    1.60   0.95..2.66        -49.9          +1.64
+    0.05-0.10    736  7.01    5.71   4.25..7.62        -18.6          +1.40
+    0.10-0.20    818 14.62   12.96  10.83..15.43       -11.3          +1.94
+  [hit (touch)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    785  1.17    0.51   0.20..1.30        -56.6          +0.67
+    0.02-0.05    877  3.19    1.60   0.95..2.66        -49.9          +1.64
+    0.05-0.10    736  7.01    5.71   4.25..7.62        -18.6          +1.40
+    0.10-0.20    818 14.62   12.96  10.83..15.43       -11.3          +1.94
+
+A7. The cheap side at the last daily close at least 7 day(s) before the close time
+  [all finance]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    445  1.21    0.00   0.00..0.86       -100.0          +1.22
+    0.02-0.05    521  3.23    0.38   0.11..1.39        -88.1          +2.94
+    0.05-0.10    319  6.92    6.58   4.35..9.85         -4.9          +0.36
+    0.10-0.20    224 14.67   17.41  13.01..22.91       +18.7          -3.22
+  [hit (touch)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    445  1.21    0.00   0.00..0.86       -100.0          +1.22
+    0.02-0.05    521  3.23    0.38   0.11..1.39        -88.1          +2.94
+    0.05-0.10    319  6.92    6.58   4.35..9.85         -4.9          +0.36
+    0.10-0.20    224 14.67   17.41  13.01..22.91       +18.7          -3.22
+
+C. By quarter (h = 1): the tails under 5c and 5-10c
+    quarter    n<5c     q came in   95% interval  net/$100 | n 5-10c     q came in  net/$100
+    2025-Q4     126  1.89    0.00  -0.00..2.96      -100.0 |      21  7.11    0.00    -100.0
+    2026-Q1     455  1.84    0.00   0.00..0.84      -100.0 |      38  6.85    5.26     -23.2
+    2026-Q2     885  2.19    0.79   0.38..1.62       -63.8 |     317  7.03    9.15     +30.1
+    2026-Q3     900  2.28    2.00   1.27..3.14       -12.5 |     481  7.10    8.32     +17.1
+    2026-Q4      34  2.04    0.00   0.00..10.15     -100.0 |      36  6.89    0.00    -100.0
+
+F. The same markets by Gamma's frozen day-before price (lastTradePrice - oneDayPriceChange) against the daily close: the frozen figure's tails and how often they came in, versus the close's
+  [frozen]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   1134  0.89    1.50   0.94..2.39        +68.8          -0.62
+    0.02-0.05    739  3.20    2.98   1.97..4.47         -7.0          +0.23
+    0.05-0.10    547  7.29    8.04   6.05..10.63       +10.3          -0.81
+    0.10-0.20    478 14.36   12.97  10.25..16.28        -9.6          +1.62
+  [daily close]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    870  1.30    0.57   0.25..1.34        -55.9          +0.74
+    0.02-0.05    887  3.19    2.25   1.46..3.46        -29.3          +0.97
+    0.05-0.10    807  7.09    8.55   6.81..10.68       +20.6          -1.57
+    0.10-0.20    849 14.47   14.49  12.28..17.02        +0.1          -0.02
+    |frozen - close| on the cheap side: median 2.6c, 90th percentile 17.6c, n 3413
+
+D. Tail hits (q < 5c at the close a day before, came in): 25 in 8 weeks; busiest 2026-W27 6 (24%), top three 60%
+    2026-W19 3, 2026-W22 4, 2026-W27 6, 2026-W28 1, 2026-W29 1, 2026-W31 2, 2026-W32 3, 2026-W34 5
+
+E. The hits, dated
+   2026-05-07 hit (touch)  silver-hit-price-weekly        | Will Silver (XAGUSD) hit (HIGH) $81 Week of May 4 2026?                q 0.045 vol 3,613
+   2026-05-07 hit (touch)  silver-hit-price-weekly        | Will Silver (XAGUSD) hit (HIGH) $82 Week of May 4 2026?                q 0.035 vol 1,561
+   2026-05-08 hit (touch)  nvidia-hit-price-weekly        | Will NVIDIA (NVDA) hit (HIGH) $216 Week of May 4 2026?                 q 0.035 vol 7,279
+   2026-05-29 hit (touch)  palantir-hit-price-monthly     | Will Palantir Technologies Inc. (PLTR) hit (HIGH) $150 in May?         q 0.025 vol 39,147
+   2026-05-29 hit (touch)  palantir-hit-price-monthly     | Will Palantir Technologies Inc. (PLTR) hit (HIGH) $156 in May?         q 0.017 vol 14,816
+   2026-05-29 hit (touch)  palantir-hit-price-weekly      | Will Palantir Technologies Inc. (PLTR) hit (HIGH) $150 Week of May 25  q 0.050 vol 13,095
+   2026-05-29 hit (touch)  robinhood-hit-price-weekly     | Will Robinhood Markets, Inc. (HOOD) hit (HIGH) $90 Week of May 25 2026 q 0.045 vol 1,398
+   2026-07-01 hit (touch)  meta-hit-price-weekly          | Will Meta Platforms, Inc. (META) hit (HIGH) $620 Week of June 29 2026? q 0.033 vol 2,888
+   2026-07-02 hit (touch)  apple-hit-price-weekly         | Will Apple (AAPL) hit (HIGH) $300 Week of June 29 2026?                q 0.033 vol 4,960
+   2026-07-02 hit (touch)  apple-hit-price-weekly         | Will Apple (AAPL) hit (HIGH) $304 Week of June 29 2026?                q 0.024 vol 2,229
+   2026-07-02 hit (touch)  apple-hit-price-weekly         | Will Apple (AAPL) hit (HIGH) $308 Week of June 29 2026?                q 0.030 vol 5,618
+   2026-07-02 hit (touch)  palantir-hit-price-weekly      | Will Palantir Technologies Inc. (PLTR) hit (HIGH) $129 Week of June 29 q 0.045 vol 6,019
+   2026-07-02 hit (touch)  palantir-hit-price-weekly      | Will Palantir Technologies Inc. (PLTR) hit (HIGH) $132 Week of June 29 q 0.033 vol 2,565
+   2026-07-10 hit (touch)  natural-gas-hit-price-weekly   | Will Natural Gas (NG) hit (LOW) $2.90 Week of July 6 2026?             q 0.039 vol 5,996
+   2026-07-17 hit (touch)  robinhood-hit-price-weekly     | Will Robinhood Markets, Inc. (HOOD) hit (LOW) $97.50 Week of July 13 2 q 0.017 vol 3,990
+   2026-07-31 hit (touch)  amazon-hit-price-monthly       | Will Amazon.com, Inc. (AMZN) hit (HIGH) $272 in July?                  q 0.039 vol 5,343
+   2026-07-31 hit (touch)  microsoft-hit-price-monthly    | Will Microsoft Corporation (MSFT) hit (HIGH) $465 in July?             q 0.041 vol 26,195
+   2026-08-04 hit (touch)  spy-hit-price-weekly           | Will S&P 500 (SPY) hit (HIGH) $770 Week of August 3 2026?              q 0.015 vol 5,323
+   2026-08-05 hit (touch)  gold-hit-price-weekly          | Will Gold (XAUUSD) hit (HIGH) $4,250 Week of August 3 2026?            q 0.039 vol 15,072
+   2026-08-06 hit (touch)  gold-hit-price-weekly          | Will Gold (XAUUSD) hit (HIGH) $4,300 Week of August 3 2026?            q 0.004 vol 24,311
+   2026-08-21 hit (touch)  coin-hit-month                 | Will Coinbase Global, Inc. (COIN) hit (HIGH) $190 in August?           q 0.040 vol 3,653
+   2026-08-21 hit (touch)  gold-hit-price-weekly          | Will Gold (XAUUSD) hit (HIGH) $4,550 Week of August 17 2026?           q 0.045 vol 7,406
+   2026-08-21 hit (touch)  gold-hit-price-weekly          | Will Gold (XAUUSD) hit (HIGH) $4,600 Week of August 17 2026?           q 0.025 vol 3,457
+   2026-08-21 hit (touch)  silver-hit-price-weekly        | Will Silver (XAGUSD) hit (HIGH) $69 Week of August 17 2026?            q 0.035 vol 7,027
+   2026-08-21 hit (touch)  silver-hit-price-weekly        | Will Silver (XAGUSD) hit (HIGH) $70 Week of August 17 2026?            q 0.015 vol 11,860

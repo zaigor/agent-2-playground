@@ -1,0 +1,104 @@
+crypto (end = scheduled, series hit-price): daily closes for 3679 of 8835 markets read (8835 eligible at volume >= $1,000); the close used for h=1 was on average 2.37 days before the close time (median 1.17)
+
+A1. The cheap side at the last daily close at least 1 day(s) before the close time
+  [all crypto]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   2861  0.36    0.38   0.21..0.69         +8.3          -0.03
+    0.02-0.05    247  3.10    8.50   5.63..12.65      +174.6          -5.58
+    0.05-0.10    106  7.10   19.81  13.34..28.40      +178.9         -13.68
+    0.10-0.20    156 14.78   18.59  13.27..25.42       +25.8          -4.47
+  [hit (touch)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   2861  0.36    0.38   0.21..0.69         +8.3          -0.03
+    0.02-0.05    247  3.10    8.50   5.63..12.65      +174.6          -5.58
+    0.05-0.10    106  7.10   19.81  13.34..28.40      +178.9         -13.68
+    0.10-0.20    156 14.78   18.59  13.27..25.42       +25.8          -4.47
+
+A3. The cheap side at the last daily close at least 3 day(s) before the close time
+  [all crypto]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   2200  0.59    0.73   0.45..1.18        +22.5          -0.13
+    0.02-0.05    514  3.04    4.67   3.16..6.85        +53.6          -1.68
+    0.05-0.10    210  6.77    9.05   5.87..13.70       +33.7          -2.45
+    0.10-0.20    264 14.20   14.39  10.67..19.14        +1.4          -0.22
+  [hit (touch)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   2200  0.59    0.73   0.45..1.18        +22.5          -0.13
+    0.02-0.05    514  3.04    4.67   3.16..6.85        +53.6          -1.68
+    0.05-0.10    210  6.77    9.05   5.87..13.70       +33.7          -2.45
+    0.10-0.20    264 14.20   14.39  10.67..19.14        +1.4          -0.22
+
+A7. The cheap side at the last daily close at least 7 day(s) before the close time
+  [all crypto]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    731  0.53    0.00   0.00..0.52       -100.0          +0.53
+    0.02-0.05    119  3.10    2.52   0.86..7.15        -18.7          +0.60
+    0.05-0.10     76  6.90    9.21   4.53..17.81       +33.4          -2.48
+    0.10-0.20     97 14.40    5.15   2.22..11.50       -64.2         +10.80
+  [hit (touch)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    731  0.53    0.00   0.00..0.52       -100.0          +0.53
+    0.02-0.05    119  3.10    2.52   0.86..7.15        -18.7          +0.60
+    0.05-0.10     76  6.90    9.21   4.53..17.81       +33.4          -2.48
+    0.10-0.20     97 14.40    5.15   2.22..11.50       -64.2         +10.80
+
+C. By quarter (h = 1): the tails under 5c and 5-10c
+    quarter    n<5c     q came in   95% interval  net/$100 | n 5-10c     q came in  net/$100
+    2025-Q3     216  0.95    1.39   0.47..4.00       +46.2 |      13  6.45    7.69     +19.2
+    2025-Q4     671  0.54    0.75   0.32..1.73       +38.5 |      14  7.17    7.14      -0.4
+    2026-Q1     744  0.54    1.88   1.12..3.13      +249.7 |      25  7.50   40.00    +433.3
+    2026-Q2     698  0.52    0.29   0.08..1.04       -45.1 |      17  7.34   11.76     +60.3
+    2026-Q3     671  0.57    1.19   0.61..2.33      +109.8 |      34  6.93   20.59    +196.9
+    2026-Q4     108  0.64    0.00   0.00..3.43      -100.0 |       3  6.90    0.00    -100.0
+
+F. The same markets by Gamma's frozen day-before price (lastTradePrice - oneDayPriceChange) against the daily close: the frozen figure's tails and how often they came in, versus the close's
+  [frozen]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    966  0.63    3.52   2.53..4.88       +462.8          -2.91
+    0.02-0.05    190  3.17   11.58   7.77..16.91      +264.9          -8.68
+    0.05-0.10     95  7.08   22.11  14.94..31.44      +212.0         -16.17
+    0.10-0.20    101 14.09   37.62  28.79..47.36      +167.1         -27.40
+  [daily close]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   1113  0.48    0.99   0.55..1.76       +105.5          -0.51
+    0.02-0.05    161  3.20   13.04   8.69..19.12      +307.4         -10.17
+    0.05-0.10     80  7.21   26.25  17.86..36.82      +264.0         -20.52
+    0.10-0.20    129 14.79   22.48  16.13..30.42       +52.0          -9.02
+    |frozen - close| on the cheap side: median 0.4c, 90th percentile 10.7c, n 1483
+
+D. Tail hits (q < 5c at the close a day before, came in): 32 in 11 weeks; busiest 2026-W05 10 (31%), top three 66%
+    2025-W33 2, 2025-W39 1, 2025-W41 4, 2025-W44 1, 2026-W04 2, 2026-W05 10, 2026-W06 2, 2026-W19 1, 2026-W22 1, 2026-W31 1, 2026-W34 7
+
+E. The hits, dated
+   2025-08-11 hit (touch)  bitcoin-hit-price-weekly       | Will Bitcoin reach $120K August 4–10?                                  q 0.011 vol 625,992
+   2025-08-11 hit (touch)  bitcoin-hit-price-weekly       | Will Bitcoin reach $122K August 4–10?                                  q 0.019 vol 539,006
+   2025-09-22 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum dip to $4,300 September 15-21?                           q 0.037 vol 61,548
+   2025-10-10 hit (touch)  bitcoin-hit-price-weekly       | Will Bitcoin dip to $114,000 October 6-12?                             q 0.047 vol 139,630
+   2025-10-10 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum dip to $3,900 October 6-12?                              q 0.033 vol 245,883
+   2025-10-10 hit (touch)  xrp-hit-price-weekly           | Will XRP dip to $2.30 October 6-12?                                    q 0.007 vol 111,191
+   2025-10-10 hit (touch)  xrp-hit-price-weekly           | Will XRP dip to $2.40 October 6-12?                                    q 0.022 vol 30,472
+   2025-10-27 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum reach $4,200 October 20-26?                              q 0.032 vol 325,228
+   2026-01-19 hit (touch)  solana-hit-price-weekly        | Will Solana dip to $130 January 12-18?                                 q 0.015 vol 94,581
+   2026-01-19 hit (touch)  xrp-hit-price-weekly           | Will XRP dip to $1.90 January 12-18?                                   q 0.018 vol 53,681
+   2026-01-31 hit (touch)  bitcoin-hit-price-monthly      | Will Bitcoin dip to $80,000 in January?                                q 0.026 vol 6,752,277
+   2026-01-31 hit (touch)  bitcoin-hit-price-weekly       | Will Bitcoin dip to $76,000 January 26-1?                              q 0.015 vol 382,546
+   2026-01-31 hit (touch)  bitcoin-hit-price-weekly       | Will Bitcoin dip to $78,000 January 26-1?                              q 0.030 vol 390,021
+   2026-01-31 hit (touch)  bnb-hit-price-monthly          | Will BNB dip to $800 in January?                                       q 0.034 vol 44,458
+   2026-01-31 hit (touch)  dogecoin-hit-price-monthly     | Will Dogecoin dip to $0.10 in January?                                 q 0.040 vol 49,687
+   2026-01-31 hit (touch)  ethereum-hit-price-monthly     | Will Ethereum dip to $2,400 in January?                                q 0.023 vol 1,703,286
+   2026-01-31 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum dip to $2,300 January 26-1?                              q 0.013 vol 167,354
+   2026-01-31 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum dip to $2,400 January 26-1?                              q 0.018 vol 260,905
+   2026-01-31 hit (touch)  solana-hit-price-monthly       | Will Solana dip to $100 in January?                                    q 0.025 vol 1,265,790
+   2026-01-31 hit (touch)  solana-hit-price-weekly        | Will Solana dip to $100 January 26-1?                                  q 0.025 vol 154,322
+   2026-02-02 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum dip to $2,200 January 26-1?                              q 0.048 vol 392,548
+   2026-02-05 hit (touch)  xrp-hit-price-weekly           | Will XRP dip to $1.20 February 2-8?                                    q 0.048 vol 66,158
+   2026-05-10 hit (touch)  xrp-hit-price-weekly           | Will XRP reach $1.50 May 4-10?                                         q 0.042 vol 13,497
+   2026-05-30 hit (touch)  bnb-hit-price-monthly          | Will BNB reach $700 in May?                                            q 0.009 vol 4,376
+   2026-07-31 hit (touch)  bitcoin-hit-price-monthly      | Will Bitcoin dip to $62,500 in July?                                   q 0.035 vol 1,351,957
+   2026-08-19 hit (touch)  bitcoin-hit-price-weekly       | Will Bitcoin reach $70,000 August 17-23?                               q 0.024 vol 172,940
+   2026-08-19 hit (touch)  ethereum-hit-price-monthly     | Will Ethereum reach $2,300 in August?                                  q 0.030 vol 234,408
+   2026-08-19 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum reach $2,100 August 17-23?                               q 0.049 vol 37,736
+   2026-08-19 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum reach $2,200 August 17-23?                               q 0.019 vol 83,771
+   2026-08-19 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum reach $2,300 August 17-23?                               q 0.005 vol 65,602
+   2026-08-19 hit (touch)  xrp-hit-price-weekly           | Will XRP reach $1.10 August 17-23?                                     q 0.036 vol 5,570
+   2026-08-20 hit (touch)  xrp-hit-price-weekly           | Will XRP reach $1.30 August 17-23?                                     q 0.038 vol 24,961
