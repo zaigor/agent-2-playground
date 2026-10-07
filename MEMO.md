@@ -3971,6 +3971,45 @@ the bid on a 3c tail is not a cent under the mid, it is one to three cents
 under it, and the depth there is tens of dollars. The leg stays as
 registered; this is what it is for.
 
+**The first night, continued (7 Oct, 21:10 and 21:24 UTC, from the laptop;
+the hour is not the registered one).** The laptop's crontab fired at 00:10
+Jerusalem time, which is 21:10 UTC: cron keeps the machine's clock, so the
+"00:05" of the registered line is 00:05 Jerusalem there and the nightly
+reading will be at about 21:05-21:25 UTC, three hours before the registered
+hour. That is recorded here as the hour the record actually keeps and is not
+pre-registered; it changes nothing about which markets are read once, since
+the window is 24-48 hours from the reading and each market crosses it on one
+night whatever the hour. The first firing failed at once (`python: command
+not found`; the laptop has `python3` only) and the script committed its log
+alone; the script now takes `python3` where `python` is missing. The second
+firing, at 21:24 UTC, read 3,328 open events and 318 markets in the window
+and sold 21. After the scorer's one-per-market-per-night rule the night
+holds 31 sell positions (19 stock-ladder rungs at a mean bid of 1.26c, 10
+"other" at 1.91c, 2 politics at 1.00c), a median of $54 of depth at the bid,
+all 31 cut below $100 by it; the record holds 895 lines over three readings.
+
+**What the finance leg is selling, read against 21f before any result.**
+Seventeen of the 19 stock-ladder rungs sold tonight are `*-hit-price-weekly`
+touch rungs (SPY, NVDA, TSLA, PLTR, MU, META, MSFT, HOOD, RKLB, EWY,
+silver); the other two are an OpenAI valuation rung and an Amazon "finish
+above" rung. That is what 21f's finance census was made of (its "all
+finance" and "hit (touch)" tables are the same 1,302/1,098/893/896 rungs),
+so the leg is the one the census priced: 1,098 rungs at a 3.14c mid came in
+1.82%, +1.37 per $100 of capital at the mid. But the census's by-quarter
+table (`data/tails_closes_finance_touch_2026-10-07.txt`, section C) shows
+the discount closing: the under-5c stock touch rungs came in 0.00% in
+2025-Q4 and 2026-Q1 (581 rungs), 0.79% in 2026-Q2 (885 at 2.19c) and 2.00%
+in 2026-Q3 (900 at 2.28c, interval 1.27-3.14). At the Q3 rate a rung sold at
+tonight's mean bid of 1.26c returns 1.26c and pays a dollar 2.0% of the
+time: about −0.7 per $100 of capital before the fee. The same table for the
+other two groups, 2026-Q3 only (the earlier quarters are a handful of
+markets): politics 1,077 rungs at 1.87c came in 0.84% (+0.2 per $100 at
+tonight's 1.00c bid), "other" 1,743 at 2.15c came in 1.20% (+0.7 at 1.91c).
+So the backtest's own latest quarter, at tonight's bids, projects the
+finance leg to lose a little and the other two to earn a fraction of a cent
+a share, all inside their intervals. The legs stay as registered; the test
+is what will say which quarter this one resembles. Nothing was changed.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
