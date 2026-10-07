@@ -1,3 +1,52 @@
 2026-10-07T21:10:01Z paper nightly
 scripts/paper_nightly.sh: line 10: python: command not found
 scripts/paper_nightly.sh: line 11: python: command not found
+2026-10-07T21:24:01Z paper nightly
+3328 open events on the days the window touches
+paper snapshot 2026-10-07 21:24 UTC: 318 markets end in 24-48h
+  record finance: 249, record other: 30, record politics: 18, sell_tail finance: 12, sell_tail other: 8, sell_tail politics: 1
+
+BUY the touch rung at the ask (2-10c): none tonight
+
+buy_touch_wide, recorded apart (10-20c): none tonight
+
+SELL the tail at its bid (2-5c): 21
+  group    series                         question                                                   side    mid    bid    ask    depth   fill  shares       $     h
+  finance  spy-hit-price-weekly           Will S&P 500 (SPY) hit (HIGH) $800 Week of October 5 2026? YES    2.15   1.00   3.30        4   1.00     3.9    3.90  46.6
+  finance  robinhood-hit-price-weekly     Will Robinhood Markets, Inc. (HOOD) hit (LOW) $95 Week of  YES    2.25   1.00   3.50        4   1.00     4.0    3.96  46.6
+  finance  silver-hit-price-weekly        Will Silver (XAGUSD) hit (HIGH) $65 Week of October 5 2026 YES    2.50   1.00   4.00      351   1.00   101.0  100.00  47.6
+  finance  spy-hit-price-weekly           Will S&P 500 (SPY) hit (HIGH) $810 Week of October 5 2026? YES    2.75   1.00   4.50        0   1.00     0.3    0.31  46.6
+  finance  nvidia-hit-price-weekly        Will NVIDIA (NVDA) hit (HIGH) $252 Week of October 5 2026? YES    3.50   1.00   6.00       30   1.00    30.0   29.70  46.6
+  finance  micron-hit-price-weekly        Will Micron Technology, Inc. (MU) hit (LOW) $900 Week of O YES    3.55   1.10   6.00       43   1.10    42.9   42.40  46.6
+  finance  meta-hit-price-weekly          Will Meta Platforms, Inc. (META) hit (HIGH) $770 Week of O YES    4.00   1.00   7.00       10   1.00    10.0    9.90  46.6
+  finance  tesla-hit-price-weekly         Will Tesla, Inc. (TSLA) hit (HIGH) $397.50 Week of October YES    4.50   2.00   7.00      561   2.00   102.0  100.00  46.6
+  finance  spy-hit-price-weekly           Will S&P 500 (SPY) hit (HIGH) $790 Week of October 5 2026? YES    4.50   1.00   8.00       10   1.00    10.0    9.90  46.6
+  finance  palantir-hit-price-weekly      Will Palantir Technologies Inc. (PLTR) hit (HIGH) $210 Wee YES    4.70   3.40   6.00      200   3.40   103.5  100.00  46.6
+  finance  amazon-multi-strikes-weekly    Will Amazon (AMZN) finish week of October 5 above $240?    NO     4.90   1.20   8.60        5   1.20     5.3    5.25  46.6
+  finance  micron-hit-price-weekly        Will Micron Technology, Inc. (MU) hit (LOW) $990 Week of O YES    4.95   1.00   8.90       10   1.00    10.0    9.90  46.6
+  other    earnings-call-mentions         Will PepsiCo say "Fiscal" 5+ times during earnings call?   YES    2.00   1.00   3.00      100   1.00   100.0   99.00  30.6
+  other    earnings-call-mentions         Will PepsiCo say "Margin" during earnings call?            NO     2.50   1.00   4.00       50   1.00    50.0   49.50  30.6
+  other    ted-cruz-daily-tweets          Will Ted Cruz post 140-159 posts from October 2 to October YES    3.55   2.10   5.00      100   2.10   100.0   97.90  42.6
+  other    elon-tweets                    Will Elon Musk post 280-299 tweets from October 2 to Octob YES    3.70   3.60   3.80      302   3.60   103.7  100.00  42.6
+  other    all-in-podcast                 Will "Hundred" or "Thousand" or "Million" be said 10+ time NO     3.70   2.00   5.40      100   2.00   100.0   98.00  46.7
+  other    trump-truth-social             Will Donald Trump post 200+ Truth Social posts from Octobe YES    4.10   2.20   6.00       11   2.20    10.9   10.67  42.6
+  other    all-in-podcast                 Will "Battleground" be said during the next episode of the YES    4.50   1.00   8.00    1,250   1.00   101.0  100.00  46.7
+  other    mrbeast-views-day-1            Will MrBeast's next video get between 170 and 172 million  YES    4.50   3.00   6.00       50   3.00    49.7   48.17  30.6
+  politics                                Will the Labour Party candidate win 30-35% of the vote in  YES    4.00   1.00   7.00    1,000   1.00   101.0  100.00  26.6
+
+appended 318 lines to data/paper/snapshots.jsonl
+paper score: 895 recorded lines over 3 snapshots; P&L after the taker fee, per $100 staked (buys) or of capital (sells); 'depth' is the median dollars that were at the fill level
+
+buy_touch: no positions yet
+
+buy_touch_wide: no positions yet
+
+sell_tail: 31 positions, 0 resolved, 0 came in; depth at the fill $54 median, 31 positions cut by depth
+  group       pos  res hits  price         $       P&L per $100
+  finance      19    0    0   1.26      0.00     +0.00     +0.0
+  other        10    0    0   1.91      0.00     +0.00     +0.0
+  politics      2    0    0   1.00      0.00     +0.00     +0.0
+  week        pos  res hits         $       P&L per $100
+  2026-W41     31    0    0      0.00     +0.00     +0.0
+
+wrote data/paper/score_2026-10-07.txt
