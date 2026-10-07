@@ -295,9 +295,14 @@ def score(rows: list[dict[str, Any]], resolutions: dict[str, dict[str, Any]]) ->
     """Each leg's paper P&L after the taker fee against its prices; unresolved positions are counted
     but not scored. A buy wins when the cheap side comes in; a sell wins when it does not."""
     legs: dict[str, dict[str, Any]] = {}
+    seen: set[tuple[str, str]] = set()  # one position per market per UTC day: a second reading the same night is a duplicate, not a second trade
     for r in rows:
         if r.get("leg") == "record" or not r.get("price") or not r.get("shares"):
             continue
+        key_day = (str(r.get("market_id")), str(r.get("snapshot", ""))[:10])
+        if key_day in seen:
+            continue
+        seen.add(key_day)
         res = resolutions.get(r["condition_id"])
         key = r["leg"]
         L = legs.setdefault(key, {"positions": 0, "resolved": 0, "hits": 0, "sum_price": 0.0, "dollars": 0.0, "pnl": 0.0, "fees": 0.0, "weeks": defaultdict(lambda: {"positions": 0, "resolved": 0, "hits": 0, "dollars": 0.0, "pnl": 0.0}), "groups": defaultdict(lambda: {"positions": 0, "resolved": 0, "hits": 0, "dollars": 0.0, "pnl": 0.0, "sum_price": 0.0}), "depth_dollars": [], "capped": 0})

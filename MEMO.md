@@ -3881,6 +3881,96 @@ public data: its tails came in 2.09% for a 3.13c price, the thinnest
 seller's margin of the five, and the market was already sharper than the
 public forecasts in sections 12-14.
 
+### 21g. The paper test (7 Oct, pre-registered): buying the touch rungs, writing the tails, no money
+
+**Why a paper test.** 21f found one buyer's edge (the crypto touch rungs on
+their last night) after the fact, and a seller's edge by the count of
+contracts that the tape says disappears in the fills. Both are claims about
+what a live book would give at a fixed hour, and both can be settled without
+money by reading that book at that hour and scoring the result. The rules
+below were written before the first reading was scored and are not to be
+changed; a change after the fact is marked as such in this section.
+
+**The tool.** `python -m pm_scanner paper --snapshot --score --dir
+data/paper` (module `pm_scanner/paper.py`, tests in `tests/test_paper.py`;
+it reads Gamma and the CLOB only and holds no key; `lp.py` stays the only
+code that moves money). `scripts/paper_nightly.sh` runs it and commits the
+record; the crontab line is in the script. The record is
+`data/paper/snapshots.jsonl`, one line per market read, and the score is
+written to `data/paper/score_<date>.txt`.
+
+**The reading.** Nightly at 00:05 UTC (the backtest's closes were the
+00:00 UTC midpoints): every open binary market whose scheduled end (Gamma
+`endDate`) is 24-48 hours away, the 5- and 15-minute series excluded, with
+its live book: YES bid and ask, their sizes, the mid, the cheap side (YES if
+the mid is at or under 50c, else NO) and its own bid, ask and depth. One
+position per market per UTC day: a second reading the same night is a
+duplicate and the scorer ignores it.
+
+**Leg 1, buy_touch.** A crypto "reach $X" rung of a weekly or monthly
+ladder (series `*-hit-price-weekly` or `*-hit-price-monthly`; the daily
+ladders were not in the backtest's reading and are only recorded) whose YES
+mid is 2-10c and whose ask is within 5c of the mid: a paper buy at the ask,
+$20 or the ask's depth, whichever is less. Rungs with a mid of 10-20c are
+written as `buy_touch_wide` and scored apart (21f: +26 per $100 with the
+interval reaching fair). The backtest's figures to beat: 247 rungs at 3.10c
+came in 8.50%, 106 at 7.10c came in 19.81%.
+
+**Leg 2, sell_tail.** In politics, the "other" group (tweet counts, box
+office, rankings, mentions) and the stock, metal and oil ladders: a market
+whose cheap side's mid is 2-5c and whose bid is at least 1c, sold at that
+bid (as a taker, which is buying the other side at its ask), $100 of
+capital or the bid's depth, whichever is less. Not weather, not sports, not
+the crypto non-touch ladders (21f: −0.24 at the bid). The backtest's count
+figures to beat: +0.84 (politics), +0.43 (other), +0.43 (finance) per $100
+of capital per position at a bid assumed one cent under the mid; the tape's
+dollar figures: negative outside the stock ladders.
+
+**Everything else** in the window is written as `record` only where the
+calibration record wants it: touch rungs under 50c, the three sell groups
+under 10c.
+
+**Scoring.** Gamma's resolution for each market; a buy wins when the cheap
+side comes in, a sell when it does not; the taker fee is Gamma's
+`feeSchedule.rate` times p(1−p) at the fill price; P&L is reported after
+the fee per $100 staked (buys) or of capital (sells), per group and per ISO
+week of the snapshot, with the hit rate against the mean fill price and its
+Wilson interval; and the depth that was at the fill level (median dollars)
+with the count of positions cut below their size by it, which is the
+capacity reading and is reported, not judged.
+
+**Duration and decision, written now.** Twelve weeks from 7 October 2026
+(to 30 December), or until buy_touch holds 100 positions, whichever is
+later. buy_touch passes if its P&L per $100 after the fee is positive and
+the lower 95% bound of its hit rate is above the mean ask paid (the buyer
+profits even at the bound); it fails if its hit rate is below the mean ask
+paid; anything between is inconclusive and extends the test by twelve
+weeks. Each sell_tail group passes if its P&L per $100 of capital after the
+fee is positive, the upper 95% bound of its hit rate is below the mean bid
+received, and no week lost more than 10% of that week's capital; it fails
+if its P&L is negative or any week lost more than 25%; anything between is
+inconclusive. A pass is the condition for discussing money, not a decision
+to spend it; the stake and the abort rules would be written here first, as
+in 18.
+
+**The first reading (7 Oct, 20:30 UTC, from the container, not the
+registered hour; a second reading at 20:35 UTC was an accident of the
+commit and is kept in the record as the duplicate the scorer ignores).**
+14,059 markets ended in the window, 12,166 of them sports and 1,048 weather
+(dropped from the record under the rule above; the first file was pruned to
+it, and that pruning is noted here). No touch rung was in the window: the
+weekly ladders end on Mondays at 04:00 UTC, so the Saturday night reading
+is theirs, and the monthly ladders' last night is 30 October. Forty-nine
+markets in the three sell groups had a 2-5c mid; 23 of them had a bid under
+a cent and were recorded, not sold; 26 were sold: 14 stock-ladder rungs at
+a mean bid of 1.27c, 10 "other" markets at 1.91c, 2 politics at 1.00c,
+against mids of 2.0-4.9c, with a median of $57 of depth at the bid, and
+every one of the 26 was cut below its $100 of capital by that depth. Two
+things the backtest assumed are already visible as wrong on the sell side:
+the bid on a 3c tail is not a cent under the mid, it is one to three cents
+under it, and the depth there is tens of dollars. The leg stays as
+registered; this is what it is for.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
@@ -3904,3 +3994,4 @@ public forecasts in sections 12-14.
 * Section 18: Polymarket docs [Wallets and Authentication](https://docs.polymarket.com/trading/wallets-auth) (Deposit Wallets, Relayer API keys, `SecureClient.create`), [Place Orders](https://docs.polymarket.com/trading/place-orders) (post-only limit orders), [Manage Orders](https://docs.polymarket.com/trading/manage-orders), [Deposit](https://docs.polymarket.com/trading/bridge/deposit) (USDC on Polygon wrapped to pUSD), [Python SDK](https://docs.polymarket.com/getting-started/python) (`polymarket-client` 0.11); CLOB `GET /rewards/markets/{condition_id}` (`market_competitiveness`), orders-scoring and user-earnings endpoints via the SDK.
 * Section 19: Gamma `/series?slug=` and `/events?series_id=&closed=` for the 44 recurring series (events saved 1 Oct 2026; the trimmed offline fixture is `tests/fixtures/counts_events.json`); market rule texts quoted from the events' descriptions. Upstream feeds named: [USGS FDSN event web service](https://earthquake.usgs.gov/fdsnws/event/1/) (`query?format=csv&starttime=&minmagnitude=`), [IMF PortWatch](https://portwatch.imf.org/) (daily chokepoint transit calls), [SPC storm reports](https://www.spc.noaa.gov/climo/reports/) (`YYMMDD_rpts_torn.csv`) and the [NCEI tornado time series](https://www.ncei.noaa.gov/access/monitoring/tornadoes/time-series), [Wikimedia pageviews API](https://wikimedia.org/api/rest_v1/#/Pageviews%20data) and Mestyán, Yasseri, Kertész (2013), [Early Prediction of Movie Box Office Success Based on Wikipedia Activity Big Data](https://doi.org/10.1371/journal.pone.0071226), [Copernicus Climate Pulse](https://pulse.climate.copernicus.eu/) (ERA5 daily global temperature) and the [GISTEMP table](https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt), [USDA AMS Egg Markets Overview](https://www.ams.usda.gov/market-news/egg-market-news-reports) and [FRED APU0000708111](https://fred.stlouisfed.org/series/APU0000708111), [CDC FluView / FluSurv-NET](https://www.cdc.gov/fluview/index.html), [NHSN hospital respiratory data](https://data.cdc.gov/) and [WastewaterSCAN](https://data.wastewaterscan.org/), [SEC EDGAR full-text search](https://efts.sec.gov/LATEST/search-index) (424B4 filings) and [Jay Ritter's IPO data](https://site.warrington.ufl.edu/ritter/ipo-data/), [Factbase](https://factba.se/) (White House daily guidance archive), xtracker.polymarket.com "Export Data" (per tracked account). Public Truth Social archive checked and found to have a gap from October 2025 to April 2026: [stiles/trump-truth-social-archive](https://github.com/stiles/trump-truth-social-archive). Headroom report in `data/headroom_2026-10-01.txt`. Section 19e: per-market `closedTime` / `umaEndDate` from the same Gamma events (the early NO resolutions of count brackets), trade tapes from data-api `/trades`; reports and re-scorable rows in `data/crossings_2026-10-01/`.
 * Section 21f: Page, L. and Clemen, R. T., "Do prediction markets produce well-calibrated probability forecasts?", Economic Journal 123 (568), 2013, 491-513 ([Duke, author copy](https://people.duke.edu/~clemen/bio/Published%20Papers/45.PredictionMarkets-Page&Clemen-EJ-2013.pdf); 1,787 Intrade markets, the favourite-longshot bias growing with time to expiry, and the no-interest-on-parked-money mechanism); the 2026 Polymarket calibration database on arXiv ([2606.04217](https://arxiv.org/abs/2606.04217): 188,509 resolved binary markets, November 2022 to December 2025, Brier skill 0.398, longshots overpriced and favourites underpriced; read from the search summary, the host is not reachable from here); [Empirical calibration of Polymarket: analysis of 7,661 markets](https://www.lesswrong.com/posts/Hruc6Gwo3vBZFGb6v/empirical-calibration-of-polymarket-analysis-of-7-661) (extremes well calibrated, mid-range mispriced). Data: Gamma `/events?closed=true&end_date_min=&end_date_max=&exclude_tag_id=102127` by day (offset cap about 2,000; `tag_id=21` for crypto, the `finance` tag for the stock ladders, by week back to August 2025); CLOB `/prices-history?interval=max&fidelity=1440` per market (answers for markets closed a year ago); data-api `/trades?market=&limit=10000&offset=` (newest first, offsets past 10,000 answered). Reports in `data/tails_2026-10-07.txt` (tape and sample closes), `data/tails_closes_*_2026-10-07.txt` (the daily-close census per group), `data/tails_frozen_60d_2026-10-07.txt` (the discarded frozen-field shortcut).
+* Section 21g: the paper record `data/paper/snapshots.jsonl` and scores `data/paper/score_<date>.txt`, written by `python -m pm_scanner paper` (Gamma `/events?closed=false&active=true&end_date_min=&end_date_max=&exclude_tag_id=102127`, CLOB `POST /books`, Gamma `/markets?condition_ids=` for resolutions); `scripts/paper_nightly.sh`.

@@ -93,11 +93,13 @@ def test_score_pays_a_buy_that_came_in_and_a_sell_that_died_after_the_fee(tmp_pa
     ]
     path = tmp_path / "snapshots.jsonl"
     assert append_jsonl(path, rows) == 6 and len(read_jsonl(path)) == 6
+    dup = Candidate(**{**rows[0].to_dict(), "snapshot": (NOW + timedelta(hours=1)).isoformat()})  # the same market read again the same night
+    assert append_jsonl(path, [dup]) == 1
     res = {"c1": {"y": 1}, "c2": {"y": 0}, "c3": {"y": 0}, "c4": {"y": 0}}  # c5 still open; c4's NO came in (YES resolved 0), so that sell lost
     sc = score(read_jsonl(path), res)
     b = sc["buy_touch"]
     fee = 0.04 * 0.06 * 0.94 * 100
-    assert b["positions"] == 2 and b["resolved"] == 2 and b["hits"] == 1 and b["mean_price"] == 0.06
+    assert b["positions"] == 2 and b["resolved"] == 2 and b["hits"] == 1 and b["mean_price"] == 0.06  # the second reading of market 1 is not a third position
     assert abs(b["pnl"] - (100 * (1 - 0.06) - fee + 100 * (0 - 0.06) - fee)) < 1e-9 and abs(b["dollars"] - 12.0) < 1e-9
     s = sc["sell_tail"]
     fee_s = 0.04 * 0.02 * 0.98 * 100
@@ -105,5 +107,5 @@ def test_score_pays_a_buy_that_came_in_and_a_sell_that_died_after_the_fee(tmp_pa
     assert abs(s["pnl"] - ((100 * 0.02 - fee_s) + (100 * (0.02 - 1.0) - fee_s))) < 1e-9 and abs(s["dollars"] - 196.0) < 1e-9
     assert s["groups"]["politics"]["resolved"] == 1 and s["groups"]["finance"]["hits"] == 1 and "2026-W41" in s["weeks"]
     assert "record" not in sc
-    text = render_score(sc, 6, 1)
+    text = render_score(sc, 7, 2)
     assert "buy_touch: 2 positions, 2 resolved, 1 came in" in text and "sell_tail: 3 positions, 2 resolved, 1 came in" in text and "buy_touch_wide: no positions yet" in text
