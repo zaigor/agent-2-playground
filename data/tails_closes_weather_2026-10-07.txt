@@ -1,0 +1,82 @@
+weather: daily closes for 4956 of 5000 markets read (25867 eligible at volume >= $1,000); the close used for h=1 was on average 1.14 days before the close time (median 1.00)
+
+A1. The cheap side at the last daily close at least 1 day(s) before the close time
+  [all weather]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    385  1.24    0.78   0.27..2.27        -36.9          +0.46
+    0.02-0.05    521  3.14    2.11   1.18..3.74        -32.7          +1.06
+    0.05-0.10    425  6.80    6.35   4.40..9.09         -6.6          +0.48
+    0.10-0.20    400 14.67   14.00  10.94..17.74        -4.6          +0.79
+  [other]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    385  1.24    0.78   0.27..2.27        -36.9          +0.46
+    0.02-0.05    521  3.14    2.11   1.18..3.74        -32.7          +1.06
+    0.05-0.10    425  6.80    6.35   4.40..9.09         -6.6          +0.48
+    0.10-0.20    400 14.67   14.00  10.94..17.74        -4.6          +0.79
+
+A3. The cheap side at the last daily close at least 3 day(s) before the close time
+  [all weather]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02     11  0.96    9.09   1.62..37.74      +847.9          -8.21
+    0.02-0.05      7  3.12   14.29   2.57..51.31      +357.7         -11.52
+    0.05-0.10      8  7.49   25.00   7.15..59.07      +233.6         -18.92
+    0.10-0.20     11 15.53    9.09   1.62..37.74       -41.5          +7.63
+  [other]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02     11  0.96    9.09   1.62..37.74      +847.9          -8.21
+    0.02-0.05      7  3.12   14.29   2.57..51.31      +357.7         -11.52
+    0.05-0.10      8  7.49   25.00   7.15..59.07      +233.6         -18.92
+    0.10-0.20     11 15.53    9.09   1.62..37.74       -41.5          +7.63
+
+A7. The cheap side at the last daily close at least 7 day(s) before the close time
+  [all weather]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02      8  0.92    0.00   0.00..32.44      -100.0          +0.93
+    0.02-0.05      6  2.85   33.33   9.68..70.00     +1069.6         -31.38
+    0.05-0.10      5  6.90    0.00  -0.00..43.45      -100.0          +7.41
+    0.10-0.20     14 12.79   14.29   4.01..39.94       +11.7          -1.72
+  [other]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02      8  0.92    0.00   0.00..32.44      -100.0          +0.93
+    0.02-0.05      6  2.85   33.33   9.68..70.00     +1069.6         -31.38
+    0.05-0.10      5  6.90    0.00  -0.00..43.45      -100.0          +7.41
+    0.10-0.20     14 12.79   14.29   4.01..39.94       +11.7          -1.72
+
+C. By quarter (h = 1): the tails under 5c and 5-10c
+    quarter    n<5c     q came in   95% interval  net/$100 | n 5-10c     q came in  net/$100
+    2026-Q3     839  2.32    1.43   0.82..2.48       -38.2 |     373  6.75    4.83     -28.5
+    2026-Q4      67  2.51    2.99   0.82..10.25      +19.2 |      52  7.14   17.31    +142.3
+
+F. The same markets by Gamma's frozen day-before price (lastTradePrice - oneDayPriceChange) against the daily close: the frozen figure's tails and how often they came in, versus the close's
+  [frozen]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    490  1.01    1.43   0.69..2.92        +41.1          -0.42
+    0.02-0.05    391  3.30    1.53   0.71..3.31        -53.5          +1.83
+    0.05-0.10    344  7.15    6.98   4.73..10.17        -2.4          +0.18
+    0.10-0.20    254 13.79   11.81   8.40..16.36       -14.3          +2.29
+  [daily close]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    334  1.25    0.90   0.31..2.61        -28.0          +0.35
+    0.02-0.05    490  3.16    2.24   1.26..3.97        -28.9          +0.94
+    0.05-0.10    409  6.79    6.36   4.37..9.15         -6.4          +0.46
+    0.10-0.20    384 14.70   14.58  11.40..18.46        -0.8          +0.14
+    |frozen - close| on the cheap side: median 2.0c, 90th percentile 9.5c, n 1617
+
+D. Tail hits (q < 5c at the close a day before, came in): 14 in 9 weeks; busiest 2026-W37 2 (14%), top three 43%
+    2026-W32 1, 2026-W33 1, 2026-W35 2, 2026-W36 1, 2026-W37 2, 2026-W38 2, 2026-W39 1, 2026-W40 2, 2026-W41 2
+
+E. The hits, dated
+   2026-08-08 other        chongqing-daily-weather        | Will the highest temperature in Chongqing be 30°C on August 8?         q 0.040 vol 7,778
+   2026-08-16 other        madrid-daily-weather           | Will the highest temperature in Madrid be 30°C or below on August 15?  q 0.013 vol 38,937
+   2026-08-25 other        hong-kong-daily-weather        | Will the highest temperature in Hong Kong be 33°C on August 24?        q 0.035 vol 30,107
+   2026-08-26 other        dallas-daily-weather           | Will the highest temperature in Dallas be between 100-101°F on August  q 0.045 vol 11,626
+   2026-09-03 other        chengdu-daily-weather          | Will the highest temperature in Chengdu be 28°C on September 3?        q 0.005 vol 17,618
+   2026-09-07 other        manila-daily-weather           | Will the highest temperature in Manila be 27°C on September 7?         q 0.035 vol 5,122
+   2026-09-12 other        seoul-daily-weather            | Will the highest temperature in Seoul (Incheon) be 23°C on September 1 q 0.030 vol 19,074
+   2026-09-17 other        cape-town-daily-weather        | Will the highest temperature in Cape Town be 20°C on September 17?     q 0.040 vol 5,095
+   2026-09-18 other        Will there be a power grid eme | Will there be a power grid emergency in the Mid-Atlantic before Octobe q 0.015 vol 3,753
+   2026-09-22 other        istanbul-daily-weather         | Will the highest temperature in Istanbul be 23°C on September 22?      q 0.030 vol 13,931
+   2026-09-28 other        busan-daily-weather            | Will the highest temperature in Busan be 26°C on September 28?         q 0.040 vol 5,568
+   2026-09-28 other        lucknow-daily-weather          | Will the highest temperature in Lucknow be 32°C on September 28?       q 0.045 vol 4,230
+   2026-10-06 other        atlanta-daily-weather          | Will the highest temperature in Atlanta be between 74-75°F on October  q 0.029 vol 7,557
+   2026-10-07 other        panama-daily-weather           | Will the highest temperature in Panama City be 29°C on October 6?      q 0.033 vol 3,520

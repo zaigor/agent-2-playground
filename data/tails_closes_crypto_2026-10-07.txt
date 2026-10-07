@@ -1,0 +1,189 @@
+crypto: daily closes for 8336 of 12000 markets read (44412 eligible at volume >= $1,000); the close used for h=1 was on average 1.44 days before the close time (median 1.00)
+
+A1. The cheap side at the last daily close at least 1 day(s) before the close time
+  [all crypto]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   2983  1.38    1.01   0.71..1.43        -27.1          +0.38
+    0.02-0.05   1880  2.94    1.86   1.34..2.58        -36.6          +1.11
+    0.05-0.10    793  6.98    5.67   4.27..7.51        -18.7          +1.41
+    0.10-0.20    858 14.69   15.73  13.45..18.32        +7.1          -1.22
+  [hit (touch)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    430  1.30    2.09   1.10..3.93        +60.6          -0.80
+    0.02-0.05    213  2.94    4.69   2.57..8.43        +59.8          -1.81
+    0.05-0.10     59  6.77   16.95   9.48..28.46      +150.5         -10.92
+    0.10-0.20     62 15.05   30.65  20.58..42.97      +103.6         -18.36
+  [multi-strikes (ends above)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   1347  1.38    0.97   0.56..1.64        -30.1          +0.42
+    0.02-0.05    847  2.90    1.30   0.73..2.31        -55.2          +1.65
+    0.05-0.10    347  6.93    4.61   2.86..7.36        -33.5          +2.49
+    0.10-0.20    326 14.60   11.04   8.08..14.91       -24.4          +4.16
+  [neg-risk range]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    999  1.43    0.80   0.41..1.57        -43.9          +0.64
+    0.02-0.05    727  2.95    1.24   0.65..2.34        -58.0          +1.76
+    0.05-0.10    325  7.07    4.62   2.82..7.47        -34.8          +2.65
+    0.10-0.20    394 14.83   17.51  14.08..21.57       +18.1          -3.15
+  [other]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    207  1.29    0.00   0.00..1.82       -100.0          +1.30
+    0.02-0.05     93  3.14    5.38   2.32..11.97       +71.0          -2.31
+    0.05-0.10     62  7.02    6.45   2.54..15.45        -8.2          +0.62
+    0.10-0.20     76 14.09   14.47   8.28..24.09        +2.7          -0.44
+
+A3. The cheap side at the last daily close at least 3 day(s) before the close time
+  [all crypto]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   1287  1.40    2.56   1.83..3.58        +83.7          -1.18
+    0.02-0.05   1750  3.05    2.11   1.54..2.90        -30.7          +0.96
+    0.05-0.10   1120  7.05    6.79   5.46..8.41         -3.7          +0.28
+    0.10-0.20   1316 14.52   13.53  11.78..15.48        -6.9          +1.17
+  [hit (touch)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    187  1.23    3.21   1.48..6.82       +160.2          -2.00
+    0.02-0.05    192  3.05    5.21   2.85..9.32        +70.6          -2.22
+    0.05-0.10     88  6.85    7.95   3.91..15.52       +16.1          -1.18
+    0.10-0.20     85 14.40   10.59   5.67..18.91       -26.5          +4.45
+  [multi-strikes (ends above)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    563  1.46    3.37   2.17..5.21       +131.8          -1.95
+    0.02-0.05    797  3.05    1.76   1.05..2.93        -42.5          +1.34
+    0.05-0.10    482  7.04    6.43   4.57..8.98         -8.7          +0.66
+    0.10-0.20    475 14.55   13.47  10.69..16.84        -7.4          +1.26
+  [neg-risk range]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    406  1.45    1.72   0.84..3.52        +18.9          -0.28
+    0.02-0.05    670  3.03    1.64   0.92..2.92        -45.8          +1.43
+    0.05-0.10    486  7.11    7.00   5.05..9.62         -1.6          +0.12
+    0.10-0.20    664 14.59   13.86  11.43..16.69        -5.0          +0.86
+  [other]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    131  1.20    0.76   0.13..4.20        -36.5          +0.44
+    0.02-0.05     91  3.13    2.20   0.60..7.66        -29.8          +0.96
+    0.05-0.10     64  6.91    6.25   2.46..15.00        -9.6          +0.71
+    0.10-0.20     92 14.06   14.13   8.45..22.69        +0.5          -0.08
+
+A7. The cheap side at the last daily close at least 7 day(s) before the close time
+  [all crypto]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02    135  1.20    2.22   0.76..6.33        +84.8          -1.03
+    0.02-0.05    127  3.21    0.79   0.14..4.33        -75.4          +2.50
+    0.05-0.10     60  6.88    8.33   3.61..18.07       +21.1          -1.56
+    0.10-0.20     49 14.13   20.41  11.48..33.64       +44.4          -7.31
+  [hit (touch)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02     71  1.19    4.23   1.45..11.70      +256.3          -3.08
+    0.02-0.05     64  3.26    0.00   0.00..5.66       -100.0          +3.37
+    0.05-0.10     22  6.83    9.09   2.53..27.82       +33.2          -2.43
+    0.10-0.20     19 15.18   21.05   8.51..43.33       +38.7          -6.92
+  [multi-strikes (ends above)]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.05-0.10      2  6.58    0.00   0.00..65.76      -100.0          +7.04
+    0.10-0.20      1 14.00    0.00   0.00..79.35      -100.0         +16.28
+  [neg-risk range]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.05-0.10      3  7.50   33.33   6.15..79.23      +344.4         -27.93
+    0.10-0.20      3 14.67   33.33   6.15..79.23      +127.3         -21.87
+  [other]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02     64  1.22    0.00   0.00..5.66       -100.0          +1.24
+    0.02-0.05     63  3.15    1.59   0.28..8.46        -49.7          +1.62
+    0.05-0.10     33  6.88    6.06   1.68..19.61       -11.9          +0.88
+    0.10-0.20     26 13.31   19.23   8.51..37.88       +44.5          -6.83
+
+C. By quarter (h = 1): the tails under 5c and 5-10c
+    quarter    n<5c     q came in   95% interval  net/$100 | n 5-10c     q came in  net/$100
+    2025-Q1       5  1.76    0.00  -0.00..43.45     -100.0 | 
+    2025-Q2       3  2.78    0.00   0.00..56.15     -100.0 |       1  9.00    0.00    -100.0
+    2025-Q3     281  2.01    1.42   0.55..3.60       -29.1 |      78  7.07    5.13     -27.4
+    2025-Q4    1374  2.07    0.80   0.45..1.43       -61.3 |     264  7.07    5.30     -25.0
+    2026-Q1    1200  1.93    1.67   1.08..2.56       -13.4 |     172  6.98    9.88     +41.6
+    2026-Q2    1073  1.97    1.03   0.57..1.83       -47.9 |     138  6.85    5.07     -26.0
+    2026-Q3     847  1.94    2.24   1.44..3.48       +15.8 |     132  6.87    2.27     -66.9
+    2026-Q4      80  1.87    0.00  -0.00..4.58      -100.0 |       8  7.27    0.00    -100.0
+
+F. The same markets by Gamma's frozen day-before price (lastTradePrice - oneDayPriceChange) against the daily close: the frozen figure's tails and how often they came in, versus the close's
+  [frozen]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   2237  0.67    1.74   1.28..2.37       +159.9          -1.08
+    0.02-0.05    494  3.14    4.05   2.64..6.17        +29.0          -0.94
+    0.05-0.10    219  7.20   10.50   7.10..15.27       +45.8          -3.56
+    0.10-0.20    204 14.07   20.59  15.61..26.66       +46.3          -7.58
+  [daily close]
+    q band         n     q came in   95% interval buyer/$100 seller/$100cap
+    0.00-0.02   1363  1.38    2.05   1.43..2.95        +48.3          -0.68
+    0.02-0.05   1023  3.00    3.03   2.14..4.27         +1.2          -0.04
+    0.05-0.10    476  6.93    8.61   6.41..11.48       +24.2          -1.81
+    0.10-0.20    521 14.78   22.65  19.26..26.44       +53.2          -9.23
+    |frozen - close| on the cheap side: median 1.7c, 90th percentile 11.5c, n 3383
+
+D. Tail hits (q < 5c at the close a day before, came in): 65 in 20 weeks; busiest 2026-W34 14 (22%), top three 54%
+    2025-W33 1, 2025-W36 1, 2025-W39 2, 2025-W41 6, 2025-W45 3, 2025-W47 1, 2025-W49 1, 2026-W03 1, 2026-W04 1, 2026-W05 14, 2026-W06 4, 2026-W14 1, 2026-W19 1, 2026-W23 7, 2026-W25 1, 2026-W26 1, 2026-W29 1, 2026-W34 14, 2026-W38 3, 2026-W39 1
+
+E. The hits, dated
+   2025-08-15 other        btc-weekly-brackets            | Will the price of Bitcoin be between $116K and $118K on August 15?     q 0.030 vol 448,389
+   2025-09-01 other        metaplanet                     | Will Metaplanet hold 20k+ BTC by August 31?                            q 0.030 vol 10,744
+   2025-09-22 multi-strike ethereum-multi-strikes-weekly  | Will the price of Ethereum be above $4,300 on September 22?            q 0.041 vol 28,870
+   2025-09-22 neg-risk ran ethereum-neg-risk-weekly       | Will the price of Ethereum be between $4,100 and $4,200 on September 2 q 0.016 vol 17,896
+   2025-10-10 other        xrp-monthly-prices             | Will XRP dip to $2.00 in October?                                      q 0.029 vol 315,421
+   2025-10-11 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum dip to $3,800 October 6-12?                              q 0.013 vol 85,251
+   2025-10-11 hit (touch)  xrp-hit-price-weekly           | Will XRP dip to $2.50 October 6-12?                                    q 0.016 vol 21,284
+   2025-10-11 multi-strike bitcoin-multi-strikes-weekly   | Will the price of Bitcoin be above $114,000 on October 11?             q 0.018 vol 118,030
+   2025-10-11 neg-risk ran ethereum-neg-risk-weekly       | Will the price of Ethereum be less than $4,000 on October 11?          q 0.022 vol 64,785
+   2025-10-12 multi-strike bitcoin-multi-strikes-weekly   | Will the price of Bitcoin be above $114,000 on October 12?             q 0.016 vol 146,259
+   2025-11-04 multi-strike btc-multi-strikes-weekly       | Will the price of Bitcoin be above $104,000 on November 4?             q 0.024 vol 686,712
+   2025-11-04 multi-strike solana-multi-strikes-weekly    | Will the price of Solana be above $160 on November 4?                  q 0.023 vol 111,369
+   2025-11-04 neg-risk ran ethereum-neg-risk-weekly       | Will the price of Ethereum be less than $3,600 on November 4?          q 0.042 vol 46,464
+   2025-11-18 other        Total commitments for the Solo | Over $100M committed to the Solomon public sale?                       q 0.042 vol 953,489
+   2025-12-03 neg-risk ran bitcoin-neg-risk-weekly        | Will the price of Bitcoin be between $92,000 and $94,000 on December 3 q 0.033 vol 173,674
+   2026-01-14 neg-risk ran ethereum-neg-risk-weekly       | Will the price of Ethereum be between $3,300 and $3,400 on January 14? q 0.024 vol 84,255
+   2026-01-19 hit (touch)  xrp-hit-price-weekly           | Will XRP dip to $1.90 January 12-18?                                   q 0.025 vol 53,681
+   2026-01-28 hit (touch)  hyperliquid-hit-price-monthly  | Will Hyperliquid hit $34 in January?                                   q 0.011 vol 72,624
+   2026-01-30 neg-risk ran bitcoin-neg-risk-weekly        | Will the price of Bitcoin be between $82,000 and $84,000 on January 30 q 0.036 vol 357,257
+   2026-01-31 hit (touch)  bitcoin-hit-price-weekly       | Will Bitcoin dip to $76,000 January 26-1?                              q 0.025 vol 382,546
+   2026-01-31 hit (touch)  bitcoin-hit-price-weekly       | Will Bitcoin dip to $78,000 January 26-1?                              q 0.006 vol 390,021
+   2026-01-31 hit (touch)  bnb-hit-price-monthly          | Will BNB dip to $800 in January?                                       q 0.049 vol 44,458
+   2026-01-31 hit (touch)  ethereum-hit-price-monthly     | Will Ethereum dip to $2,400 in January?                                q 0.008 vol 1,703,286
+   2026-01-31 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum dip to $2,300 January 26-1?                              q 0.011 vol 167,354
+   2026-01-31 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum dip to $2,500 January 26-1?                              q 0.042 vol 117,632
+   2026-01-31 hit (touch)  xrp-hit-price-monthly          | Will XRP dip to $1.60 in January?                                      q 0.046 vol 523,637
+   2026-01-31 multi-strike ethereum-multi-strikes-weekly  | Will the price of Ethereum be above $2,600 on January 31?              q 0.023 vol 186,955
+   2026-01-31 neg-risk ran ethereum-neg-risk-weekly       | Will the price of Ethereum be less than $2,500 on January 31?          q 0.013 vol 98,873
+   2026-02-01 multi-strike btc-multi-strikes-weekly       | Will the price of Bitcoin be above $80,000 on February 1?              q 0.020 vol 748,947
+   2026-02-01 multi-strike ethereum-multi-strikes-weekly  | Will the price of Ethereum be above $2,400 on February 1?              q 0.008 vol 203,028
+   2026-02-01 neg-risk ran bitcoin-neg-risk-weekly        | Will the price of Bitcoin be less than $80,000 on February 1?          q 0.015 vol 191,721
+   2026-02-02 multi-strike btc-multi-strikes-weekly       | Will the price of Bitcoin be above $80,000 on February 2?              q 0.037 vol 1,140,075
+   2026-02-05 hit (touch)  bitcoin-hit-price-weekly       | Will Bitcoin dip to $64,000 February 2-8?                              q 0.027 vol 164,863
+   2026-02-05 hit (touch)  xrp-hit-price-weekly           | Will XRP dip to $1.20 February 2-8?                                    q 0.036 vol 66,158
+   2026-02-05 multi-strike solana-multi-strikes-weekly    | Will the price of Solana be above $90 on February 5?                   q 0.037 vol 110,838
+   2026-04-02 other        Crypto Twitter mindshare ATH b | Proph3T mindshare all time high by March 31?                           q 0.045 vol 56,203
+   2026-05-10 hit (touch)  xrp-hit-price-weekly           | Will XRP reach $1.50 May 4-10?                                         q 0.033 vol 13,497
+   2026-06-03 multi-strike ethereum-multi-strikes-weekly  | Will the price of Ethereum be above $1,900 on June 3?                  q 0.045 vol 87,163
+   2026-06-03 neg-risk ran bitcoin-neg-risk-weekly        | Will the price of Bitcoin be between $66,000 and $68,000 on June 3?    q 0.024 vol 93,120
+   2026-06-03 neg-risk ran ethereum-neg-risk-weekly       | Will the price of Ethereum be between $1,800 and $1,900 on June 3?     q 0.041 vol 5,057
+   2026-06-04 hit (touch)  solana-hit-price-weekly        | Will Solana dip to $70 June 1-7?                                       q 0.049 vol 8,204
+   2026-06-04 multi-strike ethereum-multi-strikes-weekly  | Will the price of Ethereum be above $1,800 on June 4?                  q 0.019 vol 111,643
+   2026-06-04 multi-strike solana-multi-strikes-weekly    | Will the price of Solana be above $70 on June 4?                       q 0.016 vol 35,003
+   2026-06-05 multi-strike xrp-multi-strikes-weekly       | Will the price of XRP be above $1.10 on June 5?                        q 0.028 vol 176,355
+   2026-06-15 multi-strike ethereum-multi-strikes-weekly  | Will the price of Ethereum be above $1,800 on June 15?                 q 0.015 vol 193,032
+   2026-06-25 neg-risk ran bitcoin-neg-risk-weekly        | Will the price of Bitcoin be between $58,000 and $60,000 on June 25?   q 0.048 vol 71,753
+   2026-07-15 neg-risk ran ethereum-neg-risk-weekly       | Will the price of Ethereum be between $1,900 and $2,000 on July 15?    q 0.024 vol 6,243
+   2026-08-19 multi-strike btc-multi-strikes-weekly       | Will the price of Bitcoin be above $68,000 on August 19?               q 0.005 vol 670,138
+   2026-08-20 hit (touch)  xrp-hit-price-weekly           | Will XRP reach $1.20 August 17-23?                                     q 0.015 vol 24,297
+   2026-08-20 multi-strike btc-multi-strikes-weekly       | Will the price of Bitcoin be above $68,000 on August 20?               q 0.012 vol 392,069
+   2026-08-20 multi-strike btc-multi-strikes-weekly       | Will the price of Bitcoin be above $72,000 on August 20?               q 0.001 vol 591,044
+   2026-08-20 neg-risk ran bitcoin-neg-risk-weekly        | Will the price of Bitcoin be greater than $72,000 on August 20?        q 0.001 vol 42,555
+   2026-08-20 neg-risk ran ethereum-neg-risk-weekly       | Will the price of Ethereum be greater than $2,300 on August 20?        q 0.001 vol 12,103
+   2026-08-21 hit (touch)  bitcoin-hit-price-weekly       | Will Bitcoin reach $78,000 August 17-23?                               q 0.002 vol 166,074
+   2026-08-21 hit (touch)  ethereum-hit-price-weekly      | Will Ethereum reach $2,400 August 17-23?                               q 0.001 vol 110,169
+   2026-08-21 hit (touch)  solana-hit-price-weekly        | Will Solana reach $90 August 17-23?                                    q 0.025 vol 17,832
+   2026-08-21 multi-strike btc-multi-strikes-weekly       | Will the price of Bitcoin be above $70,000 on August 21?               q 0.005 vol 385,277
+   2026-08-21 multi-strike btc-multi-strikes-weekly       | Will the price of Bitcoin be above $72,000 on August 21?               q 0.005 vol 443,219
+   2026-08-21 neg-risk ran bitcoin-neg-risk-weekly        | Will the price of Bitcoin be greater than $72,000 on August 21?        q 0.015 vol 32,198
+   2026-08-21 neg-risk ran ethereum-neg-risk-weekly       | Will the price of Ethereum be greater than $2,300 on August 21?        q 0.015 vol 5,418
+   2026-08-22 multi-strike xrp-multi-strikes-weekly       | Will the price of XRP be above $1.30 on August 22?                     q 0.023 vol 28,374
+   2026-09-19 multi-strike btc-multi-strikes-weekly       | Will the price of Bitcoin be above $80,000 on September 19?            q 0.013 vol 221,815
+   2026-09-19 multi-strike ethereum-multi-strikes-weekly  | Will the price of Ethereum be above $2,600 on September 19?            q 0.011 vol 59,737
+   2026-09-20 neg-risk ran bitcoin-neg-risk-weekly        | Will the price of Bitcoin be between $80,000 and $82,000 on September  q 0.019 vol 27,899
+   2026-09-22 multi-strike btc-multi-strikes-weekly       | Will the price of Bitcoin be above $86,000 on September 22?            q 0.021 vol 245,658
