@@ -3826,6 +3826,61 @@ percent a day on the fills one can get with a left tail that arrives in
 clusters, and the touch ladders are a hypothesis to paper-test for a
 season, not a strategy to fund.
 
+
+**The seller's book, week by week (7 Oct, late; your question "which market
+is the safest to write").** One share of every tail priced 2-5c at the
+close a day before the end, sold at the close ("mid") or a cent under it
+less the 0.04 taker fee ("bid"), per $100 of the seller's capital (97c a
+share); the ladders against their scheduled end, the rest against the
+actual end. Full table with the 5-10c and 1-5c bands and 48 families in
+`data/tails_seller_safety_2026-10-07.txt`.
+
+| group | sold | hits | came in | mid, per $100 | bid, per $100 | weeks | positions a week | losing weeks | worst week (hits/positions) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| finance ladders | 1,956 | 33 | 1.69% | +1.60 | +0.43 | 52 | 32 | 15 | −12.8 (4/27, W22 2026) |
+| crypto ladders, not touch | 1,054 | 23 | 2.18% | +0.91 | −0.24 | 61 | 16 | 15 | −19.4 (4/19, W23 2026) |
+| crypto touch ladders | 247 | 21 | 8.50% | −5.58 | −6.73 | 58 | 4 | 8 | −75.3 (3/4, W41 2025) |
+| politics | 533 | 6 | 1.13% | +1.99 | +0.84 | 29 | 6 | 4 | −2.5 (1/22, W37 2026) |
+| other | 896 | 15 | 1.67% | +1.59 | +0.43 | 16 | 64 | 3 | −1.8 (2/55, W38 2026) |
+| weather | 526 | 11 | 2.09% | +1.08 | −0.08 | 10 | 60 | 3 | −49.7 (1/2, W41 2026) |
+
+Reading it. A sold 3c tail that comes in costs 97c, the premium of about
+thirty that die, so the book's safety is the hit rate and how the hits
+bunch, not the average. By the count, politics and the "other" group
+(tweet counts, box office, Rotten Tomatoes, Netflix ranks) are the safest:
+one hit in 89 and one in 60, no week worse than −2.5 and −1.8 per $100 of
+that week's capital, four losing weeks in 29 and three in 16, and +0.84 and
++0.43 per $100 per position after the spread and fee. The stock ladders
+pay +0.43 at the bid but had a week with four hits in 27 positions (−12.8)
+and, at 5-10c, nine in 33 (−23). Crypto's non-touch ladders do not pay at
+the bid (−0.24) and lose 19 in their worst week. Weather's worst week is a
+two-position week with one hit; in its ordinary weeks of sixty positions it
+pays about nothing after the spread (−0.08). Selling the touch rungs loses
+in every band, which is the exception above seen from the other side: it
+is the one tail to buy, not write.
+
+Then the dollars, which is where the count misleads. The families that
+never lost a share in the fourteen months (21 of 48 with forty or more
+sold: the far rungs of the SPY, oil, NVIDIA and Microsoft ladders, the XRP
+and Solana weekly ranges, the tweet and box-office ladders, 1,826 rungs
+between them) are also the emptiest: on the 60-day tape their 2-5c rungs
+traded $53 (XRP ranges), $103 (SPY), $27 (oil), $249 (box office) and
+$1,902 (Elon tweets) of premium in two months, a few dollars a week each,
+and a seller is the counterparty to that or to nothing. Where the dollars
+are, the dollar-weighted seller after the fee earned +0.36 to +0.59 per
+$100 of capital per 5-8 day position in the stock ladders (0.07% a day) and
+lost in politics (−0.49 to −5.02), in "other" (−6.94 at 2-5c: the Netflix
+and AI-ranking rungs that flip) and in weather (−4.59 at 2-5c), because the
+premium that trades sits in the rungs that are coming alive. So the honest
+ranking is: by count politics is the safest book to write and crypto the
+worst; by the dollars one can actually sell, none of them pays more than
+the LP rig did, and the left tail is the same shape, a cluster of hits in
+one week paying back a quarter's premium (finance W22 2026, crypto W05 and
+W23 2026, touch W41 2025 and W34 2026). Weather is not made safer by its
+public data: its tails came in 2.09% for a 3.13c price, the thinnest
+seller's margin of the five, and the market was already sharper than the
+public forecasts in sections 12-14.
+
 ## Sources
 
 * Polymarket fees: [Help Center: Trading Fees](https://help.polymarket.com/en/articles/13364478-trading-fees), [Start Polymarket fee guide](https://startpolymarket.com/learn/polymarket-fees/), [Crypticorn fee breakdown](https://www.crypticorn.com/polymarket-fees-explained/)
