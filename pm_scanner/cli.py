@@ -879,6 +879,16 @@ def build_parser() -> argparse.ArgumentParser:
     yd.add_argument("--json", type=Path, default=None, help="write every row, its fills and its daily series here")
     yd.add_argument("--fixtures", type=Path, default=None, help="unused here: the scan reads live public data")
 
+    pp = sub.add_parser("paper", help="paper test of the tail trades (memo 21f/21g, no money): nightly, list every market ending in 24-48h with its book and write paper fills for the registered legs; then score them against Gamma's resolutions")
+    pp.add_argument("--snapshot", action="store_true", help="take tonight's reading and append it to the record")
+    pp.add_argument("--score", action="store_true", help="read the record back, fetch resolutions and report each leg")
+    pp.add_argument("--dir", type=Path, default=Path("data/paper"), help="where the record lives (snapshots.jsonl) and the score is written")
+    pp.add_argument("--buy-stake", type=float, default=20.0, help="paper dollars per bought touch rung, cut to the ask's depth")
+    pp.add_argument("--sell-capital", type=float, default=100.0, help="paper capital per sold tail, cut to the bid's depth")
+    pp.add_argument("--min-volume", type=float, default=0.0, help="ignore markets with less lifetime volume than this (0: none ignored; the record keeps everything)")
+    pp.add_argument("--window", default="24,48", help="hours to the scheduled end, low,high (the registered rule: 24,48)")
+    pp.add_argument("--fixtures", type=Path, default=None, help="unused here: the test reads live public data")
+
     f = sub.add_parser("fee", help="compute the fee for a hypothetical order")
     f.add_argument("--platform", choices=["polymarket", "kalshi"], required=True)
     f.add_argument("--price", type=float, required=True)
@@ -933,6 +943,47 @@ def _run_requote(args, source) -> int:
         args.json.write_text(json.dumps([{"market": name, "replays": [r.to_dict() for r in reps]} for name, reps in rows], indent=1, default=str))
         print(f"\nwrote {args.json}")
     return 0
+
+
+def _run_paper(args, source) -> int:
+    from .paper import append_jsonl, fetch_open_events, gamma_resolutions, read_jsonl, render_score, render_snapshot, score, snapshot
+
+    log = lambda msg: print(msg, file=sys.stderr, flush=True)  # noqa: E731
+    if not (args.snapshot or args.score):
+        print("paper: say --snapshot, --score or both", file=sys.stderr)
+        return 2
+    record = args.dir / "snapshots.jsonl"
+    now = utcnow()
+    rc = 0
+    if args.snapshot:
+        try:
+            lo, hi = (float(x) for x in args.window.split(","))
+            events = fetch_open_events(source.http, now, window=(lo, hi))
+            log(f"{len(events)} open events on the days the window touches")
+            rows = snapshot(events, source.poly_books, now, window=(lo, hi), buy_stake=args.buy_stake, sell_capital=args.sell_capital, min_volume=args.min_volume)
+        except Exception as exc:  # noqa: BLE001
+            print(f"paper snapshot failed: {exc}", file=sys.stderr)
+            return 2
+        n = append_jsonl(record, rows)
+        print(render_snapshot(rows, now))
+        print(f"\nappended {n} lines to {record}")
+    if args.score:
+        rows = read_jsonl(record)
+        if not rows:
+            print(f"paper: nothing recorded in {record}", file=sys.stderr)
+            return 1
+        try:
+            res = gamma_resolutions(source.http, [r["condition_id"] for r in rows if r.get("leg") != "record"])
+        except Exception as exc:  # noqa: BLE001
+            print(f"paper score failed: {exc}", file=sys.stderr)
+            return 2
+        sc = score(rows, res)
+        text = render_score(sc, len(rows), len({r["snapshot"] for r in rows}))
+        print(text)
+        out = args.dir / f"score_{now:%Y-%m-%d}.txt"
+        out.write_text(text + "\n")
+        print(f"\nwrote {out}")
+    return rc
 
 
 def _run_yield(args, source) -> int:
@@ -1176,6 +1227,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_requote(args, source)
     if args.cmd == "yield":
         return _run_yield(args, source)
+    if args.cmd == "paper":
+        return _run_paper(args, source)
 
     kwargs = _scan_kwargs(args)
 
